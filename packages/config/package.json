@@ -11,9 +11,9 @@
     "./eslint/base": "./eslint/base.js",
     "./eslint/next": "./eslint/next.js",
     "./tailwind": "./tailwind/index.js",
-    "./typescript/base": "./typescript/base.json",
-    "./typescript/next": "./typescript/next.json",
-    "./typescript/library": "./typescript/library.json"
+    "./typescript/base.json": "./typescript/base.json",
+    "./typescript/next.json": "./typescript/next.json",
+    "./typescript/library.json": "./typescript/library.json"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

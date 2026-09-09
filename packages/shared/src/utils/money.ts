@@ -8,8 +8,17 @@ const BRL = new Intl.NumberFormat('pt-BR', {
   currency: 'BRL',
 });
 
+/**
+ * O Intl separa "R$" do valor com espaço não-quebrável (U+00A0/U+202F).
+ * Normalizamos para espaço comum: o caractere invisível vaza para busca,
+ * comparação de string e comanda impressa.
+ */
+function normalizeSpaces(value: string): string {
+  return value.replace(/[\u00a0\u202f]/g, ' ');
+}
+
 export function formatCents(cents: number): string {
-  return BRL.format(cents / 100);
+  return normalizeSpaces(BRL.format(cents / 100));
 }
 
 /** "R$ 12,50", "12,50" ou "12.50" → 1250 */

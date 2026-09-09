@@ -17,7 +17,7 @@ export interface ComplementChoice {
   quantity: number;
 }
 
-export interface CartItemInput {
+export interface CartItemPricingInput {
   productName: string;
   /// Preço unitário; para venda por peso, o preço do quilo.
   unitPriceCents: number;
@@ -42,7 +42,7 @@ export interface CartItemPrice {
   complementsCents: number;
 }
 
-export function calculateCartItem(item: CartItemInput): CartItemPrice {
+export function calculateCartItem(item: CartItemPricingInput): CartItemPrice {
   const complementsCents = (item.complements ?? []).reduce(
     (sum, complement) => sum + complement.priceCents * complement.quantity,
     0,
@@ -78,7 +78,7 @@ export function calculateCartItem(item: CartItemInput): CartItemPrice {
 }
 
 export interface OrderTotalsInput {
-  items: CartItemInput[];
+  items: CartItemPricingInput[];
   deliveryFeeCents: number;
   discountCents?: number;
   surchargeCents?: number;
