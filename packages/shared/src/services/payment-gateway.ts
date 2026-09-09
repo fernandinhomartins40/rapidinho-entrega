@@ -54,12 +54,7 @@ export interface CardChargeInput {
 }
 
 export type PaymentStatusName =
-  | 'PENDING'
-  | 'AUTHORIZED'
-  | 'PAID'
-  | 'REFUNDED'
-  | 'FAILED'
-  | 'CANCELLED';
+  'PENDING' | 'AUTHORIZED' | 'PAID' | 'REFUNDED' | 'FAILED' | 'CANCELLED';
 
 export interface ChargeResult {
   externalId: string;

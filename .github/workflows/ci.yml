@@ -1,0 +1,126 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '10.33.0'
+
+jobs:
+  verificar:
+    name: Lint, tipos, testes e build
+    runs-on: ubuntu-latest
+
+    # O typecheck e o seed tocam o banco, então ele sobe junto com o job.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: rapidinho
+          POSTGRES_PASSWORD: rapidinho
+          POSTGRES_DB: rapidinho_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U rapidinho"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://rapidinho:rapidinho@localhost:5432/rapidinho_test?schema=public
+      REDIS_URL: redis://localhost:6379
+      AUTH_SECRET: chave-de-teste-com-mais-de-32-caracteres-aqui
+      S3_ENDPOINT: http://localhost:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: rapidinho
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_PUBLIC_URL: http://localhost/uploads
+      NEXT_PUBLIC_WEB_URL: http://localhost
+      NEXT_PUBLIC_ADMIN_URL: http://localhost/painel
+      NEXT_PUBLIC_SOCKET_URL: http://localhost
+      NEXT_TELEMETRY_DISABLED: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: Gerar o Prisma Client
+        run: pnpm db:generate
+
+      - name: Aplicar migrations
+        run: pnpm --filter @rapidinho/database exec prisma migrate deploy
+
+      - name: Verificar formatação
+        run: pnpm format:check
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Checagem de tipos
+        run: pnpm typecheck
+
+      - name: Testes de unidade
+        run: pnpm test
+
+      - name: Seed (valida que a carga inicial continua funcionando)
+        run: pnpm db:seed
+
+      - name: Build
+        run: pnpm build
+
+  docker:
+    name: Build das imagens
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build da imagem do app do cliente
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: false
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
+
+      - name: Build da imagem do painel
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/admin/Dockerfile
+          push: false
+          cache-from: type=gha,scope=admin
+          cache-to: type=gha,mode=max,scope=admin

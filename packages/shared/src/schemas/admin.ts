@@ -43,12 +43,7 @@ export const planSchema = z.object({
 export const boostPackageSchema = z.object({
   name: z.string().min(2).max(80),
   description: z.string().max(500).optional(),
-  placement: z.enum([
-    'HOME_HIGHLIGHT',
-    'TOP_BANNER',
-    'CATEGORY_HIGHLIGHT',
-    'SEARCH_PRIORITY',
-  ]),
+  placement: z.enum(['HOME_HIGHLIGHT', 'TOP_BANNER', 'CATEGORY_HIGHLIGHT', 'SEARCH_PRIORITY']),
   priceCents: centsSchema,
   durationDays: z.number().int().min(1).max(365),
   priority: z.number().int().min(0).max(1000).default(0),
@@ -78,14 +73,14 @@ export const couponSchema = z
     endsAt: z.coerce.date().nullable().optional(),
     isActive: z.boolean().default(true),
   })
-  .refine(
-    (data) => data.discountType !== 'PERCENTAGE' || data.discountValue <= 100,
-    { message: 'Percentual não pode passar de 100', path: ['discountValue'] },
-  )
-  .refine(
-    (data) => data.discountType === 'FREE_DELIVERY' || data.discountValue > 0,
-    { message: 'Informe o valor do desconto', path: ['discountValue'] },
-  )
+  .refine((data) => data.discountType !== 'PERCENTAGE' || data.discountValue <= 100, {
+    message: 'Percentual não pode passar de 100',
+    path: ['discountValue'],
+  })
+  .refine((data) => data.discountType === 'FREE_DELIVERY' || data.discountValue > 0, {
+    message: 'Informe o valor do desconto',
+    path: ['discountValue'],
+  })
   .refine((data) => data.scope !== 'STORE' || data.storeId != null, {
     message: 'Cupom de loja precisa de uma loja',
     path: ['storeId'],

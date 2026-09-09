@@ -65,9 +65,7 @@ export type ServerEnv = z.infer<typeof serverEnvSchema>;
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
 
 function formatIssues(error: z.ZodError): string {
-  return error.issues
-    .map((issue) => `  - ${issue.path.join('.')}: ${issue.message}`)
-    .join('\n');
+  return error.issues.map((issue) => `  - ${issue.path.join('.')}: ${issue.message}`).join('\n');
 }
 
 /**
@@ -104,9 +102,7 @@ export function parsePublicEnv(source: Record<string, string | undefined>): Publ
   const parsed = publicEnvSchema.safeParse(source);
 
   if (!parsed.success) {
-    throw new Error(
-      `Variáveis públicas inválidas:\n${formatIssues(parsed.error)}`,
-    );
+    throw new Error(`Variáveis públicas inválidas:\n${formatIssues(parsed.error)}`);
   }
 
   return parsed.data;

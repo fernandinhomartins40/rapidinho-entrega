@@ -26,6 +26,7 @@
     "prisma": "^6.19.3",
     "dotenv": "^16.4.7",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "@rapidinho/shared": "workspace:*"
   }
 }

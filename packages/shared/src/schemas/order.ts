@@ -82,10 +82,10 @@ export const checkoutSchema = z
     message: 'Escolha um endereço de entrega',
     path: ['addressId'],
   })
-  .refine(
-    (data) => data.paymentMethod !== 'CREDIT_CARD_ONLINE' || data.cardToken != null,
-    { message: 'Dados do cartão ausentes', path: ['cardToken'] },
-  )
+  .refine((data) => data.paymentMethod !== 'CREDIT_CARD_ONLINE' || data.cardToken != null, {
+    message: 'Dados do cartão ausentes',
+    path: ['cardToken'],
+  })
   .refine(
     (data) =>
       data.paymentMethod !== 'CASH_ON_DELIVERY' ||

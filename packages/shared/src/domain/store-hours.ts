@@ -91,10 +91,7 @@ function windowContains(window: StoreHourWindow, minuteOfDay: number): boolean {
 }
 
 /** Janela do dia anterior que ainda está valendo (madrugada). */
-function overnightFromPreviousDay(
-  window: StoreHourWindow,
-  minuteOfDay: number,
-): boolean {
+function overnightFromPreviousDay(window: StoreHourWindow, minuteOfDay: number): boolean {
   if (window.closesAt <= MINUTES_IN_DAY) return false;
   return minuteOfDay < window.closesAt - MINUTES_IN_DAY;
 }

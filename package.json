@@ -29,7 +29,10 @@
       "esbuild",
       "sharp",
       "unrs-resolver"
-    ]
+    ],
+    "overrides": {
+      "@auth/core": "0.37.2"
+    }
   },
   "devDependencies": {
     "@rapidinho/config": "workspace:*",

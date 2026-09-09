@@ -54,10 +54,10 @@ export const storeDeliverySettingsSchema = z
     avgDeliveryTimeMinutes: z.number().int().min(1).max(240),
     acceptsPickup: z.boolean(),
   })
-  .refine(
-    (data) => data.deliveryFeeMode !== 'BY_DISTANCE' || data.pricePerKmCents > 0,
-    { message: 'Defina o preço por km', path: ['pricePerKmCents'] },
-  );
+  .refine((data) => data.deliveryFeeMode !== 'BY_DISTANCE' || data.pricePerKmCents > 0, {
+    message: 'Defina o preço por km',
+    path: ['pricePerKmCents'],
+  });
 
 export const storePaymentSettingsSchema = z
   .object({

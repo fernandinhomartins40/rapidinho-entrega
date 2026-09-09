@@ -41,23 +41,23 @@ compartilhados, tudo containerizado atrás de um único Nginx.
 
 ## 3. Stack
 
-| Camada | Escolha | Justificativa |
-|---|---|---|
-| Linguagem | TypeScript strict em tudo | consistência, segurança de tipos ponta a ponta |
-| Framework web | Next.js 14+ App Router | SSR/PWA/rotas de API no mesmo app |
-| ORM | Prisma | schema único versionado em `packages/database` |
-| Banco | PostgreSQL 16 | full-text search nativo, JSON, extensões |
-| Cache/fila/realtime transport | Redis 7 | BullMQ + adapter do Socket.io |
-| Storage de imagens | MinIO (S3-compatible) | sem dependência de serviço pago no início |
-| Auth | Auth.js (NextAuth) v5, sessão em banco (Prisma adapter) | suporta múltiplos papéis e provedores (OTP + social) |
-| Realtime | **Socket.io self-hosted sobre Redis adapter** | mantém a filosofia "sem serviço pago obrigatório" já usada com MinIO; evita lock-in em Pusher/Ably. Interface abstrata em `packages/shared/realtime` permite trocar por Ably depois sem tocar nos consumidores. |
-| Filas/jobs | BullMQ sobre Redis | processamento de imagem, notificações, cobrança de planos, expiração de boost |
-| Pagamento — Pix/cartão online | **Mercado Pago** como implementação default do gateway | maior adoção e melhor suporte a Pix + cartão no Brasil. Todo acesso passa por uma interface `PaymentGateway` em `packages/shared`, então Asaas (ou outro) pode ser plugado como segunda implementação sem tocar em checkout/pedido. |
-| WhatsApp | **Evolution API (self-hosted)** como implementação default | evita depender de aprovação/custo da Cloud API da Meta na fase inicial; fica atrás de uma interface `WhatsAppProvider`, trocável por Cloud API depois. |
-| E-mail transacional | Resend | API simples, bom free tier |
-| Erros/observabilidade | Sentry + logs estruturados (Pino) | |
-| Testes | Vitest (unidade) + Playwright (E2E dos fluxos críticos) | |
-| CI | GitHub Actions | lint, typecheck, test, build |
+| Camada                        | Escolha                                                    | Justificativa                                                                                                                                                                                                                       |
+| ----------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Linguagem                     | TypeScript strict em tudo                                  | consistência, segurança de tipos ponta a ponta                                                                                                                                                                                      |
+| Framework web                 | Next.js 14+ App Router                                     | SSR/PWA/rotas de API no mesmo app                                                                                                                                                                                                   |
+| ORM                           | Prisma                                                     | schema único versionado em `packages/database`                                                                                                                                                                                      |
+| Banco                         | PostgreSQL 16                                              | full-text search nativo, JSON, extensões                                                                                                                                                                                            |
+| Cache/fila/realtime transport | Redis 7                                                    | BullMQ + adapter do Socket.io                                                                                                                                                                                                       |
+| Storage de imagens            | MinIO (S3-compatible)                                      | sem dependência de serviço pago no início                                                                                                                                                                                           |
+| Auth                          | Auth.js (NextAuth) v5, sessão em banco (Prisma adapter)    | suporta múltiplos papéis e provedores (OTP + social)                                                                                                                                                                                |
+| Realtime                      | **Socket.io self-hosted sobre Redis adapter**              | mantém a filosofia "sem serviço pago obrigatório" já usada com MinIO; evita lock-in em Pusher/Ably. Interface abstrata em `packages/shared/realtime` permite trocar por Ably depois sem tocar nos consumidores.                     |
+| Filas/jobs                    | BullMQ sobre Redis                                         | processamento de imagem, notificações, cobrança de planos, expiração de boost                                                                                                                                                       |
+| Pagamento — Pix/cartão online | **Mercado Pago** como implementação default do gateway     | maior adoção e melhor suporte a Pix + cartão no Brasil. Todo acesso passa por uma interface `PaymentGateway` em `packages/shared`, então Asaas (ou outro) pode ser plugado como segunda implementação sem tocar em checkout/pedido. |
+| WhatsApp                      | **Evolution API (self-hosted)** como implementação default | evita depender de aprovação/custo da Cloud API da Meta na fase inicial; fica atrás de uma interface `WhatsAppProvider`, trocável por Cloud API depois.                                                                              |
+| E-mail transacional           | Resend                                                     | API simples, bom free tier                                                                                                                                                                                                          |
+| Erros/observabilidade         | Sentry + logs estruturados (Pino)                          |                                                                                                                                                                                                                                     |
+| Testes                        | Vitest (unidade) + Playwright (E2E dos fluxos críticos)    |                                                                                                                                                                                                                                     |
+| CI                            | GitHub Actions                                             | lint, typecheck, test, build                                                                                                                                                                                                        |
 
 Todas as integrações externas (gateway de pagamento, WhatsApp, SMS/OTP,
 e-mail, storage) são acessadas por trás de uma interface definida em

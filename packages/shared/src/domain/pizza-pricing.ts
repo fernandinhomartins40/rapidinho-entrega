@@ -22,8 +22,7 @@ export interface PizzaPriceInput {
 }
 
 export type PizzaPriceResult =
-  | { valid: true; basePriceCents: number; totalCents: number }
-  | { valid: false; reason: string };
+  { valid: true; basePriceCents: number; totalCents: number } | { valid: false; reason: string };
 
 export function calculatePizzaPrice(input: PizzaPriceInput): PizzaPriceResult {
   if (input.flavors.length === 0) {

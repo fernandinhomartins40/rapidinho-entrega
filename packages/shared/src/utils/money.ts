@@ -26,9 +26,7 @@ export function parseCurrencyToCents(input: string): number {
   const digits = input.replace(/[^\d,.-]/g, '').trim();
   if (digits === '') return 0;
 
-  const normalized = digits.includes(',')
-    ? digits.replace(/\./g, '').replace(',', '.')
-    : digits;
+  const normalized = digits.includes(',') ? digits.replace(/\./g, '').replace(',', '.') : digits;
 
   const value = Number(normalized);
   if (!Number.isFinite(value)) return 0;

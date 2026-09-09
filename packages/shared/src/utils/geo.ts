@@ -22,9 +22,7 @@ export function distanceInMeters(from: Coordinates, to: Coordinates): number {
 
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRadians(from.latitude)) *
-      Math.cos(toRadians(to.latitude)) *
-      Math.sin(dLon / 2) ** 2;
+    Math.cos(toRadians(from.latitude)) * Math.cos(toRadians(to.latitude)) * Math.sin(dLon / 2) ** 2;
 
   return Math.round(EARTH_RADIUS_METERS * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 }

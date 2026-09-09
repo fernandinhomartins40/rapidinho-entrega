@@ -7,8 +7,7 @@ import { applyCoupon, type CouponRule } from './coupon';
 import { canTransition, isFinalStatus } from './order-status';
 
 /** 2025-03-10 é uma segunda-feira. Horários em America/Sao_Paulo (UTC-3). */
-const monday = (hour: number, minute = 0) =>
-  new Date(Date.UTC(2025, 2, 10, hour + 3, minute));
+const monday = (hour: number, minute = 0) => new Date(Date.UTC(2025, 2, 10, hour + 3, minute));
 
 describe('horário de funcionamento', () => {
   const hours = [
@@ -213,9 +212,7 @@ describe('cálculo do carrinho', () => {
 
   it('comissão incide sobre a mercadoria, não sobre a entrega', () => {
     const totals = calculateOrderTotals({
-      items: [
-        { productName: 'Pizza', unitPriceCents: 5000, quantity: 1, sellingUnit: 'UNIT' },
-      ],
+      items: [{ productName: 'Pizza', unitPriceCents: 5000, quantity: 1, sellingUnit: 'UNIT' }],
       deliveryFeeCents: 700,
       commissionRate: 10,
     });
@@ -228,9 +225,7 @@ describe('cálculo do carrinho', () => {
 
   it('desconto nunca deixa o total negativo', () => {
     const totals = calculateOrderTotals({
-      items: [
-        { productName: 'Refri', unitPriceCents: 800, quantity: 1, sellingUnit: 'UNIT' },
-      ],
+      items: [{ productName: 'Refri', unitPriceCents: 800, quantity: 1, sellingUnit: 'UNIT' }],
       deliveryFeeCents: 500,
       discountCents: 99999,
     });
@@ -289,10 +284,7 @@ describe('cupom', () => {
   });
 
   it('recusa cupom de outra loja', () => {
-    const result = applyCoupon(
-      { ...baseCoupon, scope: 'STORE', storeId: 'outra-loja' },
-      context,
-    );
+    const result = applyCoupon({ ...baseCoupon, scope: 'STORE', storeId: 'outra-loja' }, context);
     expect(result.valid).toBe(false);
   });
 

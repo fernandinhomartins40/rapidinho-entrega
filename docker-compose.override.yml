@@ -1,0 +1,20 @@
+# Ajustes de DESENVOLVIMENTO local.
+#
+# O compose carrega este arquivo automaticamente. Em produção use
+# `docker compose -f docker-compose.yml up -d`, que ignora este override —
+# lá o banco não deve ter porta publicada no host.
+
+services:
+  postgres:
+    ports:
+      - '5432:5432'
+
+  redis:
+    ports:
+      - '6379:6379'
+
+  minio:
+    ports:
+      - '9000:9000'
+      # Console web do MinIO, para inspecionar os arquivos enviados.
+      - '9001:9001'

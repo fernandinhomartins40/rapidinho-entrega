@@ -35,8 +35,7 @@ export interface CouponContext {
 }
 
 export type CouponResult =
-  | { valid: true; discountCents: number; freeDelivery: boolean }
-  | { valid: false; reason: string };
+  { valid: true; discountCents: number; freeDelivery: boolean } | { valid: false; reason: string };
 
 /**
  * Valida e calcula o desconto de um cupom.
@@ -65,10 +64,7 @@ export function applyCoupon(coupon: CouponRule, context: CouponContext): CouponR
   if (coupon.usageLimit != null && coupon.usageCount >= coupon.usageLimit) {
     return { valid: false, reason: 'Este cupom esgotou' };
   }
-  if (
-    coupon.usagePerUser != null &&
-    context.userRedemptionCount >= coupon.usagePerUser
-  ) {
+  if (coupon.usagePerUser != null && context.userRedemptionCount >= coupon.usagePerUser) {
     return { valid: false, reason: 'Você já usou este cupom' };
   }
   if (coupon.firstOrderOnly && !context.isFirstOrder) {
@@ -92,9 +88,7 @@ export function applyCoupon(coupon: CouponRule, context: CouponContext): CouponR
       : coupon.discountValue;
 
   const capped =
-    coupon.maxDiscountCents != null
-      ? Math.min(rawDiscount, coupon.maxDiscountCents)
-      : rawDiscount;
+    coupon.maxDiscountCents != null ? Math.min(rawDiscount, coupon.maxDiscountCents) : rawDiscount;
 
   return {
     valid: true,

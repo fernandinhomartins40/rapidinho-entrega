@@ -1,0 +1,191 @@
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+  worker_connections 2048;
+}
+
+http {
+  include /etc/nginx/mime.types;
+  default_type application/octet-stream;
+
+  log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                  '$status $body_bytes_sent "$http_referer" '
+                  '"$http_user_agent" "$http_x_forwarded_for" rt=$request_time';
+  access_log /var/log/nginx/access.log main;
+
+  sendfile on;
+  tcp_nopush on;
+  tcp_nodelay on;
+  keepalive_timeout 65;
+  server_tokens off;
+
+  # Upload de foto de produto: o cliente já comprime antes de subir, mas a
+  # margem evita erro 413 em foto de celular sem compressão.
+  client_max_body_size 20m;
+  client_body_timeout 60s;
+
+  gzip on;
+  gzip_vary on;
+  gzip_comp_level 5;
+  gzip_min_length 512;
+  gzip_proxied any;
+  gzip_types
+    text/plain text/css text/xml text/javascript
+    application/json application/javascript application/xml+rss
+    application/manifest+json image/svg+xml font/woff font/woff2;
+
+  # O público usa 3G e celular antigo: manter conexões abertas com o upstream
+  # corta o custo de handshake a cada navegação.
+  upstream web_upstream {
+    server web:3000;
+    keepalive 32;
+  }
+
+  upstream admin_upstream {
+    server admin:3001;
+    keepalive 32;
+  }
+
+  upstream minio_upstream {
+    server minio:9000;
+    keepalive 16;
+  }
+
+  map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+  }
+
+  # Proteção contra força bruta no OTP e abuso da busca.
+  limit_req_zone $binary_remote_addr zone=otp_zone:10m rate=6r/m;
+  limit_req_zone $binary_remote_addr zone=api_zone:10m rate=30r/s;
+
+  proxy_http_version 1.1;
+  proxy_set_header Host $host;
+  proxy_set_header X-Real-IP $remote_addr;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  proxy_set_header X-Forwarded-Host $host;
+  proxy_set_header Upgrade $http_upgrade;
+  proxy_set_header Connection $connection_upgrade;
+  proxy_connect_timeout 10s;
+  proxy_send_timeout 60s;
+  proxy_read_timeout 60s;
+
+  # ---------------------------------------------------------------------------
+  # Produção: um domínio para o cliente, outro para o painel.
+  # ---------------------------------------------------------------------------
+  server {
+    listen 80;
+    server_name ${WEB_DOMAIN};
+
+    location = /nginx-health {
+      access_log off;
+      return 200 "ok\n";
+    }
+
+    location /uploads/ {
+      proxy_pass http://minio_upstream/;
+      proxy_set_header Connection '';
+      # Nome de arquivo carrega hash: o conteúdo nunca muda sob a mesma URL.
+      proxy_cache_valid 200 30d;
+      add_header Cache-Control 'public, max-age=31536000, immutable';
+    }
+
+    location /api/auth/otp {
+      limit_req zone=otp_zone burst=3 nodelay;
+      proxy_pass http://web_upstream;
+    }
+
+    location /api/ {
+      limit_req zone=api_zone burst=60 nodelay;
+      proxy_pass http://web_upstream;
+    }
+
+    location /socket.io/ {
+      proxy_pass http://web_upstream;
+      proxy_read_timeout 3600s;
+      proxy_send_timeout 3600s;
+    }
+
+    location / {
+      proxy_pass http://web_upstream;
+    }
+  }
+
+  server {
+    listen 80;
+    server_name ${ADMIN_DOMAIN};
+
+    location = /nginx-health {
+      access_log off;
+      return 200 "ok\n";
+    }
+
+    location /uploads/ {
+      proxy_pass http://minio_upstream/;
+      proxy_set_header Connection '';
+      add_header Cache-Control 'public, max-age=31536000, immutable';
+    }
+
+    # A tela de pedidos do lojista depende de WebSocket: polling não atende.
+    location /socket.io/ {
+      proxy_pass http://admin_upstream;
+      proxy_read_timeout 3600s;
+      proxy_send_timeout 3600s;
+    }
+
+    location / {
+      proxy_pass http://admin_upstream;
+    }
+  }
+
+  # ---------------------------------------------------------------------------
+  # Desenvolvimento local (sem DNS): roteia por caminho na mesma porta.
+  # `/` vai para o app do cliente e `/painel` para o admin.
+  # ---------------------------------------------------------------------------
+  server {
+    listen 80 default_server;
+    server_name _;
+
+    location = /nginx-health {
+      access_log off;
+      return 200 "ok\n";
+    }
+
+    location /uploads/ {
+      proxy_pass http://minio_upstream/;
+      proxy_set_header Connection '';
+      add_header Cache-Control 'public, max-age=31536000, immutable';
+    }
+
+    location /painel {
+      proxy_pass http://admin_upstream;
+      proxy_set_header X-Forwarded-Prefix /painel;
+    }
+
+    location /painel/socket.io/ {
+      proxy_pass http://admin_upstream/socket.io/;
+      proxy_read_timeout 3600s;
+      proxy_send_timeout 3600s;
+    }
+
+    location /api/auth/otp {
+      limit_req zone=otp_zone burst=3 nodelay;
+      proxy_pass http://web_upstream;
+    }
+
+    location /socket.io/ {
+      proxy_pass http://web_upstream;
+      proxy_read_timeout 3600s;
+      proxy_send_timeout 3600s;
+    }
+
+    location / {
+      proxy_pass http://web_upstream;
+    }
+  }
+}

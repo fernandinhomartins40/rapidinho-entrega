@@ -96,10 +96,7 @@ export function calculateDeliveryFee(input: DeliveryFeeInput): DeliveryFeeResult
       };
     }
 
-    const distanceMeters = estimatedRouteMeters(
-      input.storeCoordinates,
-      input.addressCoordinates,
-    );
+    const distanceMeters = estimatedRouteMeters(input.storeCoordinates, input.addressCoordinates);
 
     if (distanceMeters > input.deliveryRadiusMeters) {
       return {

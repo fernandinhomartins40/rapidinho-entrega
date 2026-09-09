@@ -1,5 +1,9 @@
 import { percentOfCents, weightPriceCents } from '../utils/money';
-import { calculatePizzaPrice, type PizzaFlavorChoice, type PizzaPricingRule } from './pizza-pricing';
+import {
+  calculatePizzaPrice,
+  type PizzaFlavorChoice,
+  type PizzaPricingRule,
+} from './pizza-pricing';
 
 /**
  * Preço de um item e total do pedido.
@@ -103,10 +107,7 @@ export function calculateOrderTotals(input: OrderTotalsInput): OrderTotals {
     0,
   );
 
-  const discountCents = Math.min(
-    input.discountCents ?? 0,
-    subtotalCents + input.deliveryFeeCents,
-  );
+  const discountCents = Math.min(input.discountCents ?? 0, subtotalCents + input.deliveryFeeCents);
   const surchargeCents = input.surchargeCents ?? 0;
 
   const totalCents = Math.max(
