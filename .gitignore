@@ -1,0 +1,36 @@
+node_modules
+.pnpm-store
+
+# builds
+.next
+out
+dist
+build
+.turbo
+*.tsbuildinfo
+
+# env
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# testes
+coverage
+playwright-report
+test-results
+.playwright
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# editores / SO
+.DS_Store
+.idea
+.vscode/*
+!.vscode/extensions.json
+
+# dados locais de containers
+docker/data

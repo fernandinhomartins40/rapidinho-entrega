@@ -1,0 +1,1835 @@
+// =============================================================================
+// Rapidinho Entrega — schema de dados
+//
+// Convenções:
+//  - Valores monetários são sempre Int em CENTAVOS (evita erro de ponto
+//    flutuante e ambiguidade de serialização). Nunca Float para dinheiro.
+//  - Percentuais usam Decimal(5,2) (ex.: 12.50 = 12,5%).
+//  - Toda entidade de negócio referencia City (plataforma é multi-cidade
+//    desde o primeiro commit) e, quando pertence a um lojista, Store.
+//  - Pedidos guardam SNAPSHOT dos dados (nome/preço do produto, endereço),
+//    porque o catálogo muda e o histórico não pode mudar junto.
+// =============================================================================
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pg_trgm, unaccent]
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum UserRole {
+  CUSTOMER
+  STORE_OWNER
+  STORE_STAFF
+  COURIER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+  DELETED
+}
+
+/// Segmento amplo da loja. Existe apenas onde há diferença REAL de regra ou de
+/// UI (ex.: venda por peso em mercado/açougue). A categorização fina que o
+/// cliente enxerga vive em StoreCategory, que é dado editável pelo admin.
+enum StoreSegment {
+  MARKET
+  PHARMACY
+  RESTAURANT
+  OTHER
+}
+
+enum StoreStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum StoreStaffRole {
+  OWNER
+  MANAGER
+  OPERATOR
+}
+
+enum DocumentType {
+  CPF
+  CNPJ
+}
+
+/// Como a loja cobra a entrega. Configurável por loja.
+enum DeliveryFeeMode {
+  FIXED
+  BY_DISTANCE
+  BY_ZONE
+  FREE
+}
+
+enum SellingUnit {
+  UNIT
+  WEIGHT_KG
+}
+
+enum ProductType {
+  SIMPLE
+  PIZZA
+}
+
+/// Regra de preço quando a pizza tem mais de um sabor.
+enum PizzaPricingRule {
+  HIGHEST_PRICE
+  AVERAGE_PRICE
+}
+
+enum MediaContext {
+  PRODUCT
+  STORE_LOGO
+  STORE_COVER
+  PROMO_BANNER
+  CATEGORY_ICON
+  COURIER_DOCUMENT
+  STORE_DOCUMENT
+  PIZZA_FLAVOR
+}
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  RECEIVED
+  ACCEPTED
+  PREPARING
+  READY
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  REJECTED
+}
+
+enum OrderType {
+  DELIVERY
+  PICKUP
+}
+
+enum PaymentMethod {
+  PIX
+  CREDIT_CARD_ONLINE
+  CASH_ON_DELIVERY
+  CARD_ON_DELIVERY
+}
+
+enum PaymentStatus {
+  PENDING
+  AUTHORIZED
+  PAID
+  REFUNDED
+  FAILED
+  CANCELLED
+  /// Pagamento acontece na entrega: nada a cobrar online.
+  ON_DELIVERY
+}
+
+enum PaymentProvider {
+  MERCADOPAGO
+  ASAAS
+  FAKE
+  /// Pagamento fora da plataforma (dinheiro/maquininha na entrega).
+  OFFLINE
+}
+
+/// Quem recebe o dinheiro do pedido.
+enum SettlementMode {
+  /// Plataforma recebe e repassa ao lojista (split ou repasse manual).
+  PLATFORM_COLLECTS
+  /// Lojista recebe direto; plataforma cobra a comissão depois.
+  STORE_COLLECTS
+}
+
+enum CourierType {
+  /// Entregador contratado pela própria loja.
+  STORE_OWNED
+  /// Frota compartilhada da plataforma.
+  PLATFORM
+}
+
+enum CourierStatus {
+  PENDING_APPROVAL
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum VehicleType {
+  MOTORCYCLE
+  BICYCLE
+  CAR
+  ON_FOOT
+}
+
+enum DeliveryStatus {
+  PENDING
+  ASSIGNED
+  ACCEPTED
+  PICKED_UP
+  DELIVERED
+  CANCELLED
+  REFUSED
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  FREE_DELIVERY
+}
+
+/// Quem paga o desconto do cupom.
+enum CouponScope {
+  PLATFORM
+  STORE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  TRIALING
+}
+
+enum InvoiceStatus {
+  OPEN
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum BoostPlacement {
+  HOME_HIGHLIGHT
+  TOP_BANNER
+  CATEGORY_HIGHLIGHT
+  SEARCH_PRIORITY
+}
+
+enum BoostStatus {
+  SCHEDULED
+  ACTIVE
+  EXPIRED
+  CANCELLED
+}
+
+enum NotificationChannel {
+  PUSH
+  WHATSAPP
+  EMAIL
+  SMS
+}
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  FAILED
+  READ
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
+enum DataRequestType {
+  EXPORT
+  DELETION
+}
+
+enum DataRequestStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  REJECTED
+}
+
+// =============================================================================
+// CIDADES — a plataforma é multi-cidade desde o início
+// =============================================================================
+
+model City {
+  id        String  @id @default(cuid())
+  name      String
+  slug      String  @unique
+  state     String  @db.Char(2)
+  ibgeCode  String? @unique
+  isActive  Boolean @default(false)
+
+  /// Coordenadas do centro da cidade, usadas para detecção automática e para
+  /// o cálculo de distância quando a loja cobra por km.
+  latitude  Float?
+  longitude Float?
+  /// Raio de atendimento padrão da cidade em metros.
+  serviceRadiusMeters Int @default(15000)
+
+  /// Comissão padrão da cidade quando a loja não tem plano com valor próprio.
+  defaultCommissionRate Decimal @default(10.00) @db.Decimal(5, 2)
+  /// Taxa de entrega sugerida para lojas novas (centavos).
+  defaultDeliveryFeeCents Int @default(500)
+  /// Preço por km quando a loja usa cobrança por distância (centavos).
+  defaultPricePerKmCents Int @default(150)
+
+  launchedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  stores        Store[]
+  addresses     Address[]
+  orders        Order[]
+  couriers      Courier[]
+  banners       Banner[]
+  coupons       Coupon[]
+  neighborhoods Neighborhood[]
+
+  @@index([isActive])
+  @@map("cities")
+}
+
+/// Bairros/zonas conhecidas da cidade. Serve tanto para autocompletar endereço
+/// quanto para taxa de entrega por zona.
+model Neighborhood {
+  id     String @id @default(cuid())
+  cityId String
+  city   City   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  name   String
+  slug   String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  addresses      Address[]
+  deliveryZones  DeliveryZone[]
+
+  @@unique([cityId, slug])
+  @@index([cityId])
+  @@map("neighborhoods")
+}
+
+// =============================================================================
+// USUÁRIOS, AUTENTICAÇÃO E PAPÉIS
+// =============================================================================
+
+model User {
+  id            String     @id @default(cuid())
+  /// Telefone é o identificador principal (login por OTP). E164 sem máscara.
+  phone         String?    @unique
+  phoneVerified DateTime?
+  email         String?    @unique
+  emailVerified DateTime?
+  name          String?
+  document      String?
+  documentType  DocumentType?
+  role          UserRole   @default(CUSTOMER)
+  status        UserStatus @default(ACTIVE)
+
+  avatarId String?      @unique
+  avatar   MediaAsset?  @relation("UserAvatar", fields: [avatarId], references: [id], onDelete: SetNull)
+
+  /// LGPD: consentimento explícito e data.
+  acceptedTermsAt   DateTime?
+  acceptedPrivacyAt DateTime?
+  marketingOptIn    Boolean   @default(false)
+
+  lastLoginAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  accounts          Account[]
+  sessions          Session[]
+  addresses         Address[]
+  orders            Order[]
+  storeStaff        StoreStaff[]
+  courier           Courier?
+  reviews           Review[]
+  carts             Cart[]
+  pushSubscriptions PushSubscription[]
+  notifications     NotificationLog[]
+  couponRedemptions CouponRedemption[]
+  auditLogs         AuditLog[]           @relation("AuditActor")
+  impersonations    ImpersonationLog[]   @relation("Impersonator")
+  impersonatedBy    ImpersonationLog[]   @relation("Impersonated")
+  dataRequests      DataRequest[]
+  consents          ConsentRecord[]
+
+  @@index([role, status])
+  @@index([phone])
+  @@map("users")
+}
+
+/// Auth.js — contas de provedores externos (login social opcional).
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+/// Auth.js — sessão persistida em banco.
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+/// Código OTP enviado por WhatsApp/SMS. Guarda apenas o HASH do código.
+model OtpCode {
+  id          String    @id @default(cuid())
+  phone       String
+  codeHash    String
+  attempts    Int       @default(0)
+  consumedAt  DateTime?
+  expiresAt   DateTime
+  requestIp   String?
+  createdAt   DateTime  @default(now())
+
+  @@index([phone, expiresAt])
+  @@map("otp_codes")
+}
+
+// =============================================================================
+// MÍDIA — toda imagem do sistema passa por aqui
+// =============================================================================
+
+/// Uma imagem processada. O upload original nunca é servido em listagem:
+/// o pipeline gera thumb/medium/large e um placeholder blur em base64.
+model MediaAsset {
+  id      String       @id @default(cuid())
+  context MediaContext
+
+  /// Chaves no bucket S3/MinIO.
+  originalKey String
+  thumbKey    String?
+  mediumKey   String?
+  largeKey    String?
+
+  /// data URI minúsculo para carregamento progressivo.
+  blurDataUrl String? @db.Text
+
+  mimeType String
+  width    Int?
+  height   Int?
+  sizeBytes Int?
+  /// Hash do conteúdo, usado no nome do arquivo e para deduplicação.
+  checksum String?
+
+  /// false enquanto a fila de processamento ainda não gerou as variantes.
+  isProcessed Boolean @default(false)
+
+  uploadedById String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userAvatar        User?             @relation("UserAvatar")
+  storeLogo         Store?            @relation("StoreLogo")
+  storeCover        Store?            @relation("StoreCover")
+  products          Product[]
+  pizzaFlavors      PizzaFlavor[]
+  menuCategories    MenuCategory[]
+  banners           Banner[]
+  storeCategories   StoreCategory[]
+  courierDocuments  CourierDocument[]
+  storeDocuments    StoreDocument[]
+
+  @@index([context])
+  @@index([checksum])
+  @@map("media_assets")
+}
+
+// =============================================================================
+// LOJAS
+// =============================================================================
+
+/// Categoria de loja no marketplace (supermercado, farmácia, pizzaria...).
+/// É DADO, não código: novas categorias entram pelo painel do super admin.
+model StoreCategory {
+  id       String       @id @default(cuid())
+  name     String
+  slug     String       @unique
+  segment  StoreSegment @default(OTHER)
+  iconId   String?
+  icon     MediaAsset?  @relation(fields: [iconId], references: [id], onDelete: SetNull)
+  /// Emoji ou nome de ícone lucide, para não depender de upload.
+  iconName String?
+  sortOrder Int         @default(0)
+  isActive Boolean      @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stores Store[]
+
+  @@index([isActive, sortOrder])
+  @@map("store_categories")
+}
+
+model Store {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  description String?      @db.Text
+  segment     StoreSegment @default(OTHER)
+  status      StoreStatus  @default(PENDING_APPROVAL)
+
+  cityId     String
+  city       City          @relation(fields: [cityId], references: [id])
+  categoryId String?
+  category   StoreCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  /// MEI é a realidade da maioria: aceita CPF ou CNPJ.
+  document     String
+  documentType DocumentType
+  legalName    String?
+  phone        String
+  whatsapp     String?
+  email        String?
+
+  logoId  String?     @unique
+  logo    MediaAsset? @relation("StoreLogo", fields: [logoId], references: [id], onDelete: SetNull)
+  coverId String?     @unique
+  cover   MediaAsset? @relation("StoreCover", fields: [coverId], references: [id], onDelete: SetNull)
+
+  // --- Endereço da loja -------------------------------------------------
+  street         String
+  number         String?
+  neighborhood   String
+  referencePoint String?
+  zipCode        String?
+  latitude       Float?
+  longitude      Float?
+
+  // --- Regras de entrega -----------------------------------------------
+  deliveryFeeMode     DeliveryFeeMode @default(FIXED)
+  deliveryFeeCents    Int             @default(500)
+  pricePerKmCents     Int             @default(150)
+  freeDeliveryAboveCents Int?
+  deliveryRadiusMeters   Int          @default(8000)
+  minOrderCents          Int          @default(0)
+  avgPrepTimeMinutes     Int          @default(30)
+  avgDeliveryTimeMinutes Int          @default(20)
+  acceptsPickup          Boolean      @default(true)
+
+  // --- Pagamento --------------------------------------------------------
+  acceptsPix            Boolean        @default(true)
+  acceptsCardOnline     Boolean        @default(false)
+  acceptsCashOnDelivery Boolean        @default(true)
+  acceptsCardOnDelivery Boolean        @default(true)
+  settlementMode        SettlementMode @default(STORE_COLLECTS)
+  pixKey                String?
+
+  // --- Pizza ------------------------------------------------------------
+  pizzaPricingRule PizzaPricingRule @default(HIGHEST_PRICE)
+
+  // --- Operação ---------------------------------------------------------
+  /// Pausa de emergência ("fechar agora"), independente do horário cadastrado.
+  isPausedUntil DateTime?
+  pauseReason   String?
+  /// Alerta sonoro na tela de pedidos.
+  soundAlertEnabled Boolean @default(true)
+  /// Aceite automático de pedidos (loja com fluxo simples).
+  autoAcceptOrders  Boolean @default(false)
+
+  // --- Métricas cacheadas (recalculadas por job) ------------------------
+  ratingAverage Decimal @default(0) @db.Decimal(3, 2)
+  ratingCount   Int     @default(0)
+  orderCount    Int     @default(0)
+
+  approvedAt   DateTime?
+  approvedById String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  staff          StoreStaff[]
+  hours          StoreHour[]
+  closures       StoreClosure[]
+  deliveryZones  DeliveryZone[]
+  menuCategories MenuCategory[]
+  products       Product[]
+  complementGroups ComplementGroup[]
+  pizzaSizes     PizzaSize[]
+  pizzaFlavors   PizzaFlavor[]
+  pizzaExtras    PizzaExtra[]
+  orders         Order[]
+  carts          Cart[]
+  coupons        Coupon[]
+  couriers       Courier[]
+  reviews        Review[]
+  subscription   StoreSubscription?
+  invoices       PlanInvoice[]
+  boosts         StoreBoost[]
+  payouts        Payout[]
+  documents      StoreDocument[]
+  banners        Banner[]
+
+  @@index([cityId, status])
+  @@index([categoryId])
+  @@index([status])
+  @@map("stores")
+}
+
+/// Documentos enviados pelo lojista para aprovação (contrato social, RG...).
+model StoreDocument {
+  id      String @id @default(cuid())
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  label   String
+  fileId  String
+  file    MediaAsset @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  reviewedAt   DateTime?
+  reviewedById String?
+  isApproved   Boolean?
+  rejectReason String?
+
+  createdAt DateTime @default(now())
+
+  @@index([storeId])
+  @@map("store_documents")
+}
+
+/// Vínculo usuário ↔ loja. É a base do isolamento multi-tenant: nenhuma query
+/// de loja pode confiar em storeId vindo da URL sem checar este vínculo.
+model StoreStaff {
+  id      String         @id @default(cuid())
+  storeId String
+  store   Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role    StoreStaffRole @default(OPERATOR)
+  isActive Boolean       @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storeId, userId])
+  @@index([userId])
+  @@map("store_staff")
+}
+
+/// Horário de funcionamento por dia da semana (0 = domingo).
+/// Vários registros no mesmo dia permitem intervalo (almoço/janta).
+model StoreHour {
+  id        String @id @default(cuid())
+  storeId   String
+  store     Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  weekday   Int
+  /// Minutos desde a meia-noite. 1080 = 18:00. Fechamento pode passar da
+  /// meia-noite (ex.: abre 18:00 fecha 02:00 → closesAt 1560).
+  opensAt   Int
+  closesAt  Int
+  isActive  Boolean @default(true)
+
+  @@index([storeId, weekday])
+  @@map("store_hours")
+}
+
+/// Feriado ou fechamento programado.
+model StoreClosure {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  startsAt  DateTime
+  endsAt    DateTime
+  reason    String?
+
+  createdAt DateTime @default(now())
+
+  @@index([storeId, startsAt, endsAt])
+  @@map("store_closures")
+}
+
+/// Taxa de entrega por bairro/zona (DeliveryFeeMode.BY_ZONE).
+model DeliveryZone {
+  id             String  @id @default(cuid())
+  storeId        String
+  store          Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  neighborhoodId String?
+  neighborhood   Neighborhood? @relation(fields: [neighborhoodId], references: [id], onDelete: SetNull)
+  /// Nome livre, para zonas que não são um bairro cadastrado.
+  name           String
+  feeCents       Int
+  minOrderCents  Int?
+  estimatedMinutes Int?
+  isActive       Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([storeId, isActive])
+  @@map("delivery_zones")
+}
+
+// =============================================================================
+// CATÁLOGO
+// =============================================================================
+
+/// Categoria do cardápio dentro da loja (Bebidas, Pizzas, Hortifruti...).
+model MenuCategory {
+  id          String  @id @default(cuid())
+  storeId     String
+  store       Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  imageId     String?
+  image       MediaAsset? @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+
+  @@unique([storeId, name])
+  @@index([storeId, sortOrder])
+  @@map("menu_categories")
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  storeId     String
+  store       Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  categoryId  String?
+  category    MenuCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  name        String
+  description String?     @db.Text
+  imageId     String?
+  image       MediaAsset? @relation(fields: [imageId], references: [id], onDelete: SetNull)
+
+  productType ProductType @default(SIMPLE)
+
+  /// Preço de venda. Para venda por peso, é o preço do quilo.
+  priceCents         Int
+  /// Preço "de", riscado. Sempre maior que priceCents quando presente.
+  compareAtPriceCents Int?
+
+  sellingUnit      SellingUnit @default(UNIT)
+  /// Incremento de peso permitido, em gramas (ex.: 100 = de 100 em 100 g).
+  weightStepGrams  Int?
+  minWeightGrams   Int?
+
+  /// Código interno/EAN, usado na importação de planilha.
+  sku      String?
+  barcode  String?
+
+  isAvailable Boolean @default(true)
+  /// Pausa temporária de um clique, sem apagar o produto.
+  pausedUntil DateTime?
+  /// Controle de estoque simples: null = não controla.
+  stockQuantity Int?
+
+  /// Serve para ordenar e destacar dentro da categoria.
+  sortOrder  Int     @default(0)
+  isFeatured Boolean @default(false)
+
+  /// Máximo de sabores quando productType = PIZZA e a loja não usa PizzaSize.
+  maxFlavors Int?
+
+  soldCount Int @default(0)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  complementGroups ProductComplementGroup[]
+  orderItems       OrderItem[]
+  cartItems        CartItem[]
+
+  @@index([storeId, isAvailable])
+  @@index([categoryId, sortOrder])
+  @@index([storeId, sku])
+  @@map("products")
+}
+
+/// Grupo de complementos/adicionais (ex.: "Escolha o ponto da carne").
+/// Pertence à loja e pode ser reaproveitado em vários produtos.
+model ComplementGroup {
+  id          String  @id @default(cuid())
+  storeId     String
+  store       Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  isRequired  Boolean @default(false)
+  minChoices  Int     @default(0)
+  maxChoices  Int     @default(1)
+  /// Permite escolher a mesma opção mais de uma vez (ex.: 2x bacon).
+  allowRepeat Boolean @default(false)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  options  ComplementOption[]
+  products ProductComplementGroup[]
+
+  @@index([storeId, isActive])
+  @@map("complement_groups")
+}
+
+model ComplementOption {
+  id          String  @id @default(cuid())
+  groupId     String
+  group       ComplementGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  priceCents  Int     @default(0)
+  isAvailable Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orderItemComplements OrderItemComplement[]
+  cartItemComplements  CartItemComplement[]
+
+  @@index([groupId, sortOrder])
+  @@map("complement_options")
+}
+
+/// Relação N-N produto ↔ grupo de complementos, com ordenação por produto.
+model ProductComplementGroup {
+  id        String @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  groupId   String
+  group     ComplementGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sortOrder Int    @default(0)
+
+  @@unique([productId, groupId])
+  @@index([productId, sortOrder])
+  @@map("product_complement_groups")
+}
+
+// =============================================================================
+// PIZZA — tamanhos, sabores e bordas são entidades próprias da loja
+// =============================================================================
+
+model PizzaSize {
+  id         String @id @default(cuid())
+  storeId    String
+  store      Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name       String
+  description String?
+  /// Quantos sabores cabem neste tamanho.
+  maxFlavors Int    @default(1)
+  slices     Int?
+  sortOrder  Int    @default(0)
+  isActive   Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  flavorPrices PizzaFlavorPrice[]
+  orderItems   OrderItem[]
+  cartItems    CartItem[]
+
+  @@unique([storeId, name])
+  @@index([storeId, sortOrder])
+  @@map("pizza_sizes")
+}
+
+model PizzaFlavor {
+  id          String  @id @default(cuid())
+  storeId     String
+  store       Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name        String
+  description String? @db.Text
+  imageId     String?
+  image       MediaAsset? @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  /// Agrupamento visual (Tradicionais, Especiais, Doces).
+  groupName   String?
+  isAvailable Boolean @default(true)
+  sortOrder   Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  prices           PizzaFlavorPrice[]
+  orderItemFlavors OrderItemPizzaFlavor[]
+  cartItemFlavors  CartItemPizzaFlavor[]
+
+  @@unique([storeId, name])
+  @@index([storeId, isAvailable])
+  @@map("pizza_flavors")
+}
+
+/// Preço de um sabor em cada tamanho.
+model PizzaFlavorPrice {
+  id         String @id @default(cuid())
+  flavorId   String
+  flavor     PizzaFlavor @relation(fields: [flavorId], references: [id], onDelete: Cascade)
+  sizeId     String
+  size       PizzaSize   @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+  priceCents Int
+
+  @@unique([flavorId, sizeId])
+  @@map("pizza_flavor_prices")
+}
+
+/// Borda recheada, massa e outros extras de pizza.
+model PizzaExtra {
+  id         String @id @default(cuid())
+  storeId    String
+  store      Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name       String
+  /// "CRUST" (massa) ou "EDGE" (borda). String livre para não travar o lojista.
+  kind       String @default("EDGE")
+  priceCents Int    @default(0)
+  isAvailable Boolean @default(true)
+  sortOrder  Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orderItems OrderItem[]
+  cartItems  CartItem[]
+
+  @@index([storeId, kind])
+  @@map("pizza_extras")
+}
+
+// =============================================================================
+// ENDEREÇOS — o interior não tem CEP nem número confiável
+// =============================================================================
+
+model Address {
+  id     String @id @default(cuid())
+  userId String?
+  user   User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  label          String?
+  street         String
+  /// Opcional de propósito: "casa da esquina", "sem número".
+  number         String?
+  complement     String?
+  neighborhoodId String?
+  neighborhoodRef Neighborhood? @relation(fields: [neighborhoodId], references: [id], onDelete: SetNull)
+  /// Texto livre, porque nem todo bairro está cadastrado.
+  neighborhood   String
+  /// Ponto de referência: obrigatório na experiência, o que salva a entrega.
+  referencePoint String?
+  zipCode        String?
+
+  cityId String
+  city   City   @relation(fields: [cityId], references: [id])
+
+  latitude  Float?
+  longitude Float?
+
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  orders Order[]
+  carts  Cart[]
+
+  @@index([userId])
+  @@index([cityId])
+  @@map("addresses")
+}
+
+// =============================================================================
+// CARRINHO — persistente por loja
+// =============================================================================
+
+model Cart {
+  id      String @id @default(cuid())
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  addressId String?
+  address   Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  couponId  String?
+  coupon    Coupon?  @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
+  notes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items CartItem[]
+
+  @@unique([userId, storeId])
+  @@index([userId])
+  @@map("carts")
+}
+
+model CartItem {
+  id     String @id @default(cuid())
+  cartId String
+  cart   Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  quantity Int @default(1)
+  /// Para venda por peso: quantidade em gramas escolhida pelo cliente.
+  weightGrams Int?
+
+  // Pizza
+  pizzaSizeId String?
+  pizzaSize   PizzaSize? @relation(fields: [pizzaSizeId], references: [id], onDelete: Cascade)
+  pizzaExtraId String?
+  pizzaExtra   PizzaExtra? @relation(fields: [pizzaExtraId], references: [id], onDelete: SetNull)
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  complements CartItemComplement[]
+  flavors     CartItemPizzaFlavor[]
+
+  @@index([cartId])
+  @@map("cart_items")
+}
+
+model CartItemComplement {
+  id         String @id @default(cuid())
+  cartItemId String
+  cartItem   CartItem @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
+  optionId   String
+  option     ComplementOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  quantity   Int @default(1)
+
+  @@index([cartItemId])
+  @@map("cart_item_complements")
+}
+
+model CartItemPizzaFlavor {
+  id         String @id @default(cuid())
+  cartItemId String
+  cartItem   CartItem @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
+  flavorId   String
+  flavor     PizzaFlavor @relation(fields: [flavorId], references: [id], onDelete: Cascade)
+
+  @@unique([cartItemId, flavorId])
+  @@map("cart_item_pizza_flavors")
+}
+
+// =============================================================================
+// PEDIDOS
+// =============================================================================
+
+model Order {
+  id     String @id @default(cuid())
+  /// Número curto e legível, exibido ao cliente e na comanda.
+  number String @unique
+
+  cityId  String
+  city    City   @relation(fields: [cityId], references: [id])
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id])
+  userId  String?
+  user    User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  type   OrderType   @default(DELIVERY)
+  status OrderStatus @default(RECEIVED)
+
+  // --- Snapshot do cliente e do endereço --------------------------------
+  customerName  String
+  customerPhone String
+  addressId     String?
+  address       Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  /// Cópia do endereço no momento do pedido: o cliente pode editar depois.
+  addressSnapshot Json?
+
+  // --- Valores (centavos) ------------------------------------------------
+  subtotalCents    Int
+  deliveryFeeCents Int @default(0)
+  discountCents    Int @default(0)
+  /// Acréscimo eventual (taxa de serviço, embalagem).
+  surchargeCents   Int @default(0)
+  totalCents       Int
+  /// Comissão retida pela plataforma neste pedido.
+  commissionCents  Int @default(0)
+  commissionRate   Decimal @default(0) @db.Decimal(5, 2)
+
+  couponId String?
+  coupon   Coupon? @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
+  notes String? @db.Text
+
+  // --- Tempos ------------------------------------------------------------
+  estimatedPrepMinutes Int?
+  estimatedReadyAt     DateTime?
+  acceptedAt           DateTime?
+  preparingAt          DateTime?
+  readyAt              DateTime?
+  dispatchedAt         DateTime?
+  deliveredAt          DateTime?
+  cancelledAt          DateTime?
+  cancelReason         String?
+  cancelledBy          String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items         OrderItem[]
+  payment       Payment?
+  delivery      Delivery?
+  statusHistory OrderStatusHistory[]
+  reviews       Review[]
+  couponRedemption CouponRedemption?
+
+  @@index([storeId, status, createdAt])
+  @@index([userId, createdAt])
+  @@index([cityId, createdAt])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  /// Snapshot: o produto pode ser renomeado ou excluído depois.
+  productName String
+  productType ProductType @default(SIMPLE)
+
+  quantity    Int @default(1)
+  weightGrams Int?
+  /// Preço unitário no momento do pedido (ou preço do kg, se por peso).
+  unitPriceCents Int
+  /// unitPrice * quantidade + complementos + extras.
+  totalCents     Int
+
+  // Pizza
+  pizzaSizeId   String?
+  pizzaSize     PizzaSize? @relation(fields: [pizzaSizeId], references: [id], onDelete: SetNull)
+  pizzaSizeName String?
+  pizzaExtraId  String?
+  pizzaExtra    PizzaExtra? @relation(fields: [pizzaExtraId], references: [id], onDelete: SetNull)
+  pizzaExtraName String?
+  pizzaExtraPriceCents Int?
+
+  notes String?
+
+  complements OrderItemComplement[]
+  flavors     OrderItemPizzaFlavor[]
+
+  @@index([orderId])
+  @@map("order_items")
+}
+
+model OrderItemComplement {
+  id          String @id @default(cuid())
+  orderItemId String
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  optionId    String?
+  option      ComplementOption? @relation(fields: [optionId], references: [id], onDelete: SetNull)
+
+  groupName  String
+  optionName String
+  priceCents Int
+  quantity   Int @default(1)
+
+  @@index([orderItemId])
+  @@map("order_item_complements")
+}
+
+model OrderItemPizzaFlavor {
+  id          String @id @default(cuid())
+  orderItemId String
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  flavorId    String?
+  flavor      PizzaFlavor? @relation(fields: [flavorId], references: [id], onDelete: SetNull)
+
+  flavorName String
+  /// Preço do sabor naquele tamanho, para auditar a regra de preço aplicada.
+  priceCents Int
+
+  @@index([orderItemId])
+  @@map("order_item_pizza_flavors")
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  note      String?
+  changedById String?
+  createdAt DateTime    @default(now())
+
+  @@index([orderId, createdAt])
+  @@map("order_status_history")
+}
+
+// =============================================================================
+// PAGAMENTOS
+// =============================================================================
+
+model Payment {
+  id      String @id @default(cuid())
+  orderId String @unique
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  method   PaymentMethod
+  status   PaymentStatus   @default(PENDING)
+  provider PaymentProvider @default(OFFLINE)
+
+  amountCents Int
+  /// "Troco para quanto?" — pagamento em dinheiro na entrega.
+  changeForCents Int?
+
+  /// Identificador do pagamento no gateway.
+  externalId String?
+  /// Payload do Pix copia-e-cola e imagem do QR Code.
+  pixQrCode      String? @db.Text
+  pixQrCodeImage String? @db.Text
+  pixExpiresAt   DateTime?
+
+  /// Split: quanto fica com a plataforma neste pagamento.
+  platformFeeCents Int?
+  settlementMode   SettlementMode @default(STORE_COLLECTS)
+
+  paidAt     DateTime?
+  refundedAt DateTime?
+  failReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events PaymentEvent[]
+
+  @@index([status])
+  @@index([externalId])
+  @@map("payments")
+}
+
+/// Log bruto de webhooks do gateway — indispensável para conciliar.
+model PaymentEvent {
+  id        String  @id @default(cuid())
+  paymentId String?
+  payment   Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  provider   PaymentProvider
+  eventType  String
+  externalId String?
+  payload    Json
+  /// Impede reprocessar o mesmo webhook duas vezes.
+  dedupeKey  String? @unique
+
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([paymentId])
+  @@map("payment_events")
+}
+
+// =============================================================================
+// ENTREGADORES
+// =============================================================================
+
+model Courier {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  cityId String
+  city   City   @relation(fields: [cityId], references: [id])
+  /// Preenchido quando o entregador é da própria loja.
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  type   CourierType   @default(PLATFORM)
+  status CourierStatus @default(PENDING_APPROVAL)
+
+  document     String
+  documentType DocumentType @default(CPF)
+  vehicleType  VehicleType  @default(MOTORCYCLE)
+  vehiclePlate String?
+
+  pixKey String?
+
+  isOnline    Boolean   @default(false)
+  lastSeenAt  DateTime?
+  latitude    Float?
+  longitude   Float?
+
+  ratingAverage Decimal @default(0) @db.Decimal(3, 2)
+  ratingCount   Int     @default(0)
+  deliveryCount Int     @default(0)
+
+  approvedAt   DateTime?
+  approvedById String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  documents  CourierDocument[]
+  deliveries Delivery[]
+  payouts    Payout[]
+  reviews    Review[]
+
+  @@index([cityId, status, isOnline])
+  @@index([storeId])
+  @@map("couriers")
+}
+
+model CourierDocument {
+  id        String @id @default(cuid())
+  courierId String
+  courier   Courier @relation(fields: [courierId], references: [id], onDelete: Cascade)
+
+  label  String
+  fileId String
+  file   MediaAsset @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  isApproved   Boolean?
+  reviewedAt   DateTime?
+  reviewedById String?
+  rejectReason String?
+
+  createdAt DateTime @default(now())
+
+  @@index([courierId])
+  @@map("courier_documents")
+}
+
+model Delivery {
+  id      String @id @default(cuid())
+  orderId String @unique
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  courierId String?
+  courier   Courier? @relation(fields: [courierId], references: [id], onDelete: SetNull)
+
+  status DeliveryStatus @default(PENDING)
+
+  /// Quanto o entregador ganha nesta corrida.
+  earningCents  Int  @default(0)
+  distanceMeters Int?
+
+  assignedAt DateTime?
+  acceptedAt DateTime?
+  pickedUpAt DateTime?
+  deliveredAt DateTime?
+  cancelledAt DateTime?
+  refuseReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([courierId, status])
+  @@index([status])
+  @@map("deliveries")
+}
+
+// =============================================================================
+// PLANOS E ASSINATURAS — editáveis pelo painel, nunca hardcoded
+// =============================================================================
+
+model Plan {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+
+  monthlyPriceCents Int     @default(0)
+  commissionRate    Decimal @default(10.00) @db.Decimal(5, 2)
+
+  /// Limites. null = ilimitado.
+  maxProducts Int?
+  maxPhotos   Int?
+  maxStaff    Int?
+
+  /// Recursos liberados pelo plano, como mapa de flags.
+  /// Ex.: { "reports": true, "coupons": true, "boost": false }
+  features Json @default("{}")
+
+  trialDays Int     @default(0)
+  isActive  Boolean @default(true)
+  isDefault Boolean @default(false)
+  sortOrder Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions StoreSubscription[]
+  invoices      PlanInvoice[]
+
+  @@index([isActive, sortOrder])
+  @@map("plans")
+}
+
+model StoreSubscription {
+  id      String @id @default(cuid())
+  storeId String @unique
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  planId  String
+  plan    Plan   @relation(fields: [planId], references: [id])
+
+  status SubscriptionStatus @default(ACTIVE)
+
+  currentPeriodStart DateTime  @default(now())
+  currentPeriodEnd   DateTime
+  trialEndsAt        DateTime?
+  cancelledAt        DateTime?
+  cancelReason       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, currentPeriodEnd])
+  @@map("store_subscriptions")
+}
+
+model PlanInvoice {
+  id      String @id @default(cuid())
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  planId  String
+  plan    Plan   @relation(fields: [planId], references: [id])
+
+  status      InvoiceStatus @default(OPEN)
+  amountCents Int
+  /// Comissão acumulada do período, cobrada junto da mensalidade.
+  commissionCents Int @default(0)
+
+  periodStart DateTime
+  periodEnd   DateTime
+  dueDate     DateTime
+  paidAt      DateTime?
+
+  externalId String?
+  pixQrCode  String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([storeId, status])
+  @@index([status, dueDate])
+  @@map("plan_invoices")
+}
+
+// =============================================================================
+// IMPULSIONAMENTO
+// =============================================================================
+
+model BoostPackage {
+  id          String         @id @default(cuid())
+  name        String
+  description String?
+  placement   BoostPlacement
+  priceCents  Int
+  durationDays Int
+  /// Peso na ordenação: maior valor aparece antes.
+  priority    Int            @default(0)
+  isActive    Boolean        @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  boosts StoreBoost[]
+
+  @@index([isActive, placement])
+  @@map("boost_packages")
+}
+
+model StoreBoost {
+  id        String @id @default(cuid())
+  storeId   String
+  store     Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  packageId String
+  package   BoostPackage @relation(fields: [packageId], references: [id])
+
+  status    BoostStatus @default(SCHEDULED)
+  startsAt  DateTime
+  endsAt    DateTime
+  paidCents Int         @default(0)
+
+  /// Métricas de alcance.
+  impressions Int @default(0)
+  clicks      Int @default(0)
+  conversions Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, startsAt, endsAt])
+  @@index([storeId])
+  @@map("store_boosts")
+}
+
+model Banner {
+  id      String @id @default(cuid())
+  title   String
+  imageId String
+  image   MediaAsset @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
+  linkUrl String?
+  /// Banner pode apontar para uma loja específica.
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  /// null = todas as cidades.
+  cityId  String?
+  city    City?   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  placement BoostPlacement @default(TOP_BANNER)
+  sortOrder Int            @default(0)
+  isActive  Boolean        @default(true)
+  startsAt  DateTime?
+  endsAt    DateTime?
+
+  impressions Int @default(0)
+  clicks      Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive, placement, sortOrder])
+  @@index([cityId])
+  @@map("banners")
+}
+
+// =============================================================================
+// CUPONS
+// =============================================================================
+
+model Coupon {
+  id          String      @id @default(cuid())
+  code        String
+  description String?
+  scope       CouponScope @default(STORE)
+
+  /// Cupom da loja (scope = STORE) ou global da plataforma (scope = PLATFORM).
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  /// Restringe o cupom global a uma cidade.
+  cityId  String?
+  city    City?   @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  discountType  DiscountType
+  /// Percentual (0-100) ou valor em centavos, conforme discountType.
+  discountValue Int
+  maxDiscountCents Int?
+  minOrderCents    Int @default(0)
+
+  /// null = ilimitado.
+  usageLimit     Int?
+  usagePerUser   Int? @default(1)
+  usageCount     Int  @default(0)
+
+  /// Restringe a clientes que nunca pediram.
+  firstOrderOnly Boolean @default(false)
+
+  startsAt DateTime  @default(now())
+  endsAt   DateTime?
+  isActive Boolean   @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders      Order[]
+  carts       Cart[]
+  redemptions CouponRedemption[]
+
+  @@unique([code, storeId])
+  @@index([isActive, startsAt, endsAt])
+  @@index([storeId])
+  @@map("coupons")
+}
+
+model CouponRedemption {
+  id       String @id @default(cuid())
+  couponId String
+  coupon   Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId  String @unique
+  order    Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  discountCents Int
+  createdAt     DateTime @default(now())
+
+  @@index([couponId, userId])
+  @@map("coupon_redemptions")
+}
+
+// =============================================================================
+// AVALIAÇÕES
+// =============================================================================
+
+model Review {
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  storeId String?
+  store   Store?  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  courierId String?
+  courier   Courier? @relation(fields: [courierId], references: [id], onDelete: Cascade)
+
+  /// 1 a 5.
+  rating  Int
+  comment String? @db.Text
+
+  /// Resposta do lojista.
+  replyText String?  @db.Text
+  repliedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([orderId, storeId])
+  @@unique([orderId, courierId])
+  @@index([storeId, createdAt])
+  @@index([courierId])
+  @@map("reviews")
+}
+
+// =============================================================================
+// NOTIFICAÇÕES
+// =============================================================================
+
+model PushSubscription {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  endpoint String @unique @db.Text
+  p256dh   String
+  auth     String
+  userAgent String?
+
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  @@index([userId])
+  @@map("push_subscriptions")
+}
+
+model NotificationCampaign {
+  id      String @id @default(cuid())
+  title   String
+  body    String @db.Text
+  linkUrl String?
+
+  channel NotificationChannel @default(PUSH)
+
+  /// Segmentação: { "cityIds": [...], "categoryIds": [...], "inactiveDays": 30 }
+  segment Json @default("{}")
+
+  scheduledFor DateTime?
+  sentAt       DateTime?
+  recipientCount Int @default(0)
+  deliveredCount Int @default(0)
+
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  logs NotificationLog[]
+
+  @@index([scheduledFor])
+  @@map("notification_campaigns")
+}
+
+model NotificationLog {
+  id     String @id @default(cuid())
+  userId String?
+  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  campaignId String?
+  campaign   NotificationCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+
+  channel NotificationChannel
+  status  NotificationStatus  @default(QUEUED)
+  title   String
+  body    String              @db.Text
+  /// Referência ao pedido/loja que originou a notificação.
+  entityType String?
+  entityId   String?
+
+  error     String?
+  sentAt    DateTime?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@index([status])
+  @@map("notification_logs")
+}
+
+// =============================================================================
+// FINANCEIRO
+// =============================================================================
+
+/// Repasse do que a plataforma coletou para o lojista ou o entregador.
+model Payout {
+  id      String @id @default(cuid())
+  storeId String?
+  store   Store? @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  courierId String?
+  courier   Courier? @relation(fields: [courierId], references: [id], onDelete: Cascade)
+
+  status      PayoutStatus @default(PENDING)
+  amountCents Int
+  periodStart DateTime
+  periodEnd   DateTime
+
+  paidAt    DateTime?
+  reference String?
+  notes     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([storeId, status])
+  @@index([courierId, status])
+  @@map("payouts")
+}
+
+// =============================================================================
+// AUDITORIA E LGPD
+// =============================================================================
+
+model AuditLog {
+  id      String @id @default(cuid())
+  actorId String?
+  actor   User?  @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  action     String
+  entityType String
+  entityId   String?
+  /// Estado antes e depois, para reconstruir o que mudou.
+  before Json?
+  after  Json?
+
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
+
+/// Registro de "entrar como lojista". Exigido pelo plano: impersonation sempre
+/// com trilha de auditoria.
+model ImpersonationLog {
+  id             String @id @default(cuid())
+  impersonatorId String
+  impersonator   User   @relation("Impersonator", fields: [impersonatorId], references: [id], onDelete: Cascade)
+  impersonatedId String
+  impersonated   User   @relation("Impersonated", fields: [impersonatedId], references: [id], onDelete: Cascade)
+  storeId        String?
+
+  reason    String?
+  ipAddress String?
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  @@index([impersonatorId, startedAt])
+  @@map("impersonation_logs")
+}
+
+model ConsentRecord {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// "terms", "privacy", "marketing"...
+  kind      String
+  version   String
+  granted   Boolean
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, kind])
+  @@map("consent_records")
+}
+
+/// LGPD: exportação e exclusão de dados do titular.
+model DataRequest {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type   DataRequestType
+  status DataRequestStatus @default(PENDING)
+
+  /// Chave do arquivo gerado no storage (exportação).
+  resultKey   String?
+  completedAt DateTime?
+  notes       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, type])
+  @@index([status])
+  @@map("data_requests")
+}
+
+// =============================================================================
+// CONFIGURAÇÃO DA PLATAFORMA
+// =============================================================================
+
+/// Configurações globais editáveis pelo super admin (sem redeploy).
+model PlatformSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+  updatedById String?
+
+  @@map("platform_settings")
+}

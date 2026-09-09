@@ -1,6 +1,6 @@
-# ARCHITECTURE.md — EntregaTudo
+# ARCHITECTURE.md — Rapidinho Entrega
 
-Este documento registra as decisões técnicas do projeto **EntregaTudo**, uma
+Este documento registra as decisões técnicas do projeto **Rapidinho Entrega**, uma
 plataforma de delivery multi-cidade (marketplace) com foco inicial em
 Palmital/PR. Serve como referência viva: deve ser atualizado sempre que uma
 decisão estrutural mudar.
@@ -102,7 +102,7 @@ opcional no schema para não quebrar dados legados), `zipCode?`,
 
 ## 8. Roteamento Nginx
 
-- Produção: `entregatudo.com.br` → `web:3000`; `painel.entregatudo.com.br`
+- Produção: `rapidinhoentrega.com.br` → `web:3000`; `painel.rapidinhoentrega.com.br`
   → `admin:3001`, via `server_name`.
 - Dev local (sem DNS wildcard): path-based, `/` → web, `/painel` → admin,
   usando `X-Forwarded-Prefix` e `basePath` do Next onde necessário.
@@ -125,6 +125,6 @@ grandes de trabalho (não obrigatoriamente uma pausa bloqueante a cada fase).
 - Gateway de pagamento inicial: Mercado Pago (Asaas fica como segunda
   implementação da mesma interface).
 - Provedor de WhatsApp: Evolution API self-hosted.
-- Domínios `entregatudo.com.br` / `painel.entregatudo.com.br` são
+- Domínios `rapidinhoentrega.com.br` / `painel.rapidinhoentrega.com.br` são
   placeholders de configuração — ajustáveis via env var sem mudança de
   código.
