@@ -31,6 +31,14 @@ RUN pnpm --filter @rapidinho/database exec prisma generate
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --filter @rapidinho/admin build
 
+# --- Migrações ---------------------------------------------------------------
+# A imagem final é o standalone do Next e não carrega o CLI do Prisma, que é
+# devDependency. Este estágio existe só para o deploy rodar `migrate deploy`
+# com exatamente a mesma versão do Prisma que a aplicação usa.
+FROM builder AS migrator
+WORKDIR /app
+CMD ["pnpm", "--filter", "@rapidinho/database", "exec", "prisma", "migrate", "deploy"]
+
 # --- Runtime ----------------------------------------------------------------
 FROM base AS runner
 ENV NODE_ENV=production \

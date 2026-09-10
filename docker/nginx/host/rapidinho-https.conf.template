@@ -1,0 +1,52 @@
+# Nginx do HOST — etapa HTTPS.
+#
+# Aplicado depois que o certificado existe. Só entram aqui os domínios que
+# estão de fato no certificado emitido: listar um domínio sem certificado faz
+# o nginx servir o certificado errado e o navegador acusar fraude.
+#
+# As duas linhas do listen 443 são preenchidas pelo deploy: o HTTP/2 mudou de
+# sintaxe no nginx 1.25.1 e a forma nova é "unknown directive" na versão antiga.
+
+server {
+    listen 80;
+    server_name ${SERVER_NAMES};
+
+    # O desafio continua no HTTP: é assim que a renovação funciona.
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+${HTTP2_LISTEN}
+${HTTP2_DIRECTIVE}
+    server_name ${SERVER_NAMES};
+
+    ssl_certificate ${CERT_DIR}/fullchain.pem;
+    ssl_certificate_key ${CERT_DIR}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL_${SITE_NAME}:10m;
+    ssl_session_timeout 1d;
+
+    # O app é um PWA: service worker e notificação push exigem HTTPS de verdade.
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    client_max_body_size 25m;
+
+    location / {
+        proxy_pass http://127.0.0.1:${DEPLOY_PORT};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 86400;
+    }
+}

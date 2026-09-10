@@ -26,17 +26,19 @@ docker compose exec web pnpm --filter @rapidinho/database exec prisma migrate de
 docker compose exec web pnpm db:seed
 ```
 
-| Endereço                | O que é                                  |
-| ----------------------- | ---------------------------------------- |
-| http://localhost        | App do cliente (PWA)                     |
-| http://localhost/painel | Painel do lojista e do super admin       |
-| http://localhost:9001   | Console do MinIO (só em desenvolvimento) |
+| Endereço              | O que é                                  |
+| --------------------- | ---------------------------------------- |
+| http://localhost      | App do cliente (PWA)                     |
+| http://localhost:3001 | Painel do lojista e do super admin       |
+| http://localhost:9001 | Console do MinIO (só em desenvolvimento) |
 
-Em produção o roteamento é por domínio: `rapidinhoentrega.com.br` para o app
-do cliente e `painel.rapidinhoentrega.com.br` para o painel. Ajuste
-`WEB_DOMAIN` e `ADMIN_DOMAIN` no `.env` e use
-`docker compose -f docker-compose.yml up -d`, que ignora o override de
-desenvolvimento (em produção o banco não publica porta no host).
+O painel usa subdomínio próprio (`painel.rapidinhoentrega.com.br`) em produção
+e a porta 3001 em desenvolvimento — servir em `/painel` daria 404, porque o
+Next monta os links a partir da raiz.
+
+Para produção na VPS, veja [`DEPLOY.md`](./DEPLOY.md): o deploy é automático a
+cada push na `main`, com uma única porta externa e o Nginx do host terminando o
+TLS.
 
 ## Desenvolvimento local (sem containers para os apps)
 
@@ -94,6 +96,12 @@ sem duplicar nada.
 | `pnpm db:migrate` | Cria e aplica migration em desenvolvimento |
 | `pnpm db:seed`    | Carga inicial (idempotente)                |
 | `pnpm db:studio`  | Prisma Studio                              |
+
+## Deploy
+
+O deploy em produção roda por GitHub Actions a cada push na `main`. A
+arquitetura de portas, o passo a passo e a operação do dia a dia estão em
+[`DEPLOY.md`](./DEPLOY.md).
 
 ## Decisões técnicas
 

@@ -144,8 +144,12 @@ http {
   }
 
   # ---------------------------------------------------------------------------
-  # Desenvolvimento local (sem DNS): roteia por caminho na mesma porta.
-  # `/` vai para o app do cliente e `/painel` para o admin.
+  # Bloco padrão: atende qualquer Host que não bata com os de cima.
+  #
+  # Serve o app do cliente. O painel NÃO é roteado por caminho aqui de
+  # propósito: o Next gera os links a partir da raiz e um `/painel` no proxy
+  # daria 404 em toda navegação interna. Em produção o painel tem subdomínio
+  # próprio; em desenvolvimento, acesse a porta 3001 direto.
   # ---------------------------------------------------------------------------
   server {
     listen 80 default_server;
@@ -160,17 +164,6 @@ http {
       proxy_pass http://minio_upstream/;
       proxy_set_header Connection '';
       add_header Cache-Control 'public, max-age=31536000, immutable';
-    }
-
-    location /painel {
-      proxy_pass http://admin_upstream;
-      proxy_set_header X-Forwarded-Prefix /painel;
-    }
-
-    location /painel/socket.io/ {
-      proxy_pass http://admin_upstream/socket.io/;
-      proxy_read_timeout 3600s;
-      proxy_send_timeout 3600s;
     }
 
     location /api/auth/otp {

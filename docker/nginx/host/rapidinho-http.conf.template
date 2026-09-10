@@ -1,0 +1,32 @@
+# Nginx do HOST — etapa HTTP.
+#
+# Vigora antes de existir certificado e serve o desafio do Let's Encrypt.
+# Depois que o certificado é emitido, o deploy substitui pelo template HTTPS.
+#
+# Este bloco NÃO é default_server de propósito: a VPS hospeda outros domínios
+# e assumir o default derrubaria os vizinhos.
+
+server {
+    listen 80;
+    server_name ${SERVER_NAMES};
+
+    # Foto de produto vem direto da câmera do lojista.
+    client_max_body_size 25m;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:${DEPLOY_PORT};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # A tela de pedidos do lojista mantém o WebSocket aberto o dia todo.
+        proxy_read_timeout 86400;
+    }
+}

@@ -1,0 +1,200 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  VPS_HOST: 72.60.10.108
+  VPS_USER: root
+  APP_ROOT: /opt/rapidinho
+  SITE_NAME: rapidinho
+  PRIMARY_DOMAIN: rapidinhoentrega.com.br
+  WWW_DOMAIN: www.rapidinhoentrega.com.br
+  ADMIN_DOMAIN: painel.rapidinhoentrega.com.br
+  CANONICAL_URL: https://rapidinhoentrega.com.br
+  SSL_EMAIL: admin@rapidinhoentrega.com.br
+  # Faixa onde o deploy procura porta livre no primeiro run. A escolha é
+  # gravada no .env da VPS e reaproveitada nos deploys seguintes.
+  PORT_RANGE_START: '3100'
+  PORT_RANGE_END: '3199'
+  SSH_OPTS: -o StrictHostKeyChecking=no -o PreferredAuthentications=password -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1 -o ConnectTimeout=20
+
+jobs:
+  verificar:
+    name: Lint, tipos e testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: rapidinho
+          POSTGRES_PASSWORD: rapidinho
+          POSTGRES_DB: rapidinho_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U rapidinho"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://rapidinho:rapidinho@localhost:5432/rapidinho_test?schema=public
+      REDIS_URL: redis://localhost:6379
+      AUTH_SECRET: chave-de-teste-com-mais-de-32-caracteres-aqui
+      S3_ENDPOINT: http://localhost:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: rapidinho
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_PUBLIC_URL: http://localhost/uploads
+      NEXT_PUBLIC_WEB_URL: http://localhost
+      NEXT_PUBLIC_ADMIN_URL: http://localhost/painel
+      NEXT_PUBLIC_SOCKET_URL: http://localhost
+      NEXT_TELEMETRY_DISABLED: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm --filter @rapidinho/database exec prisma migrate deploy
+      - run: pnpm format:check
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm db:seed
+
+  deploy:
+    name: Publicar na VPS
+    needs: verificar
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    environment:
+      name: production
+      url: https://rapidinhoentrega.com.br
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Definir a versão da release
+        id: release
+        run: echo "version=$(git rev-parse --short HEAD)-$(date +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
+
+      - name: Instalar sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Conferir o acesso à VPS
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          if [ -z "${SSHPASS:-}" ]; then
+            echo "::error::O secret VPS_PASSWORD está vazio ou não existe no repositório." >&2
+            exit 1
+          fi
+
+          if ! sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "echo ok"; then
+            echo "::error::Autenticação recusada. Confira o secret VPS_PASSWORD e se PasswordAuthentication/PermitRootLogin estão habilitados na VPS." >&2
+            exit 1
+          fi
+
+      - name: Preparar o ambiente da VPS
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" 'bash -s' < .github/scripts/preparar-vps.sh
+
+      - name: Enviar o código para a VPS
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          RELEASE_DIR="$APP_ROOT/releases/${{ steps.release.outputs.version }}"
+          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "mkdir -p '$RELEASE_DIR'"
+
+          # O .env fica de fora: ele vive na VPS e guarda as senhas geradas.
+          tar \
+            --exclude=.git \
+            --exclude=node_modules \
+            --exclude='./**/node_modules' \
+            --exclude=.next \
+            --exclude='./**/.next' \
+            --exclude=.turbo \
+            --exclude='./**/.turbo' \
+            --exclude=packages/database/generated \
+            --exclude=coverage \
+            --exclude=.env \
+            -czf - . | \
+            sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "tar -xzf - -C '$RELEASE_DIR'"
+
+      - name: Escolher a porta e montar o .env
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          RELEASE_DIR="$APP_ROOT/releases/${{ steps.release.outputs.version }}"
+          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
+            "APP_ROOT='$APP_ROOT' \
+             CANONICAL_URL='$CANONICAL_URL' \
+             PRIMARY_DOMAIN='$PRIMARY_DOMAIN' \
+             ADMIN_DOMAIN='$ADMIN_DOMAIN' \
+             SSL_EMAIL='$SSL_EMAIL' \
+             PORT_RANGE_START='$PORT_RANGE_START' \
+             PORT_RANGE_END='$PORT_RANGE_END' \
+             bash '$RELEASE_DIR/.github/scripts/preparar-env.sh'"
+
+      - name: Subir a aplicação
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          RELEASE_DIR="$APP_ROOT/releases/${{ steps.release.outputs.version }}"
+          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
+            "APP_ROOT='$APP_ROOT' RELEASE='${{ steps.release.outputs.version }}' \
+             bash '$RELEASE_DIR/.github/scripts/remote-deploy.sh'"
+
+      - name: Configurar o Nginx do host (HTTP)
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
+            "APP_ROOT='$APP_ROOT' SITE_NAME='$SITE_NAME' \
+             DOMAINS='$PRIMARY_DOMAIN $WWW_DOMAIN $ADMIN_DOMAIN' \
+             bash '$APP_ROOT/current/.github/scripts/configurar-nginx.sh'"
+
+      - name: Emitir o certificado SSL
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
+            "PRIMARY_DOMAIN='$PRIMARY_DOMAIN' WWW_DOMAIN='$WWW_DOMAIN' \
+             ADMIN_DOMAIN='$ADMIN_DOMAIN' SSL_EMAIL='$SSL_EMAIL' VPS_HOST='$VPS_HOST' \
+             bash '$APP_ROOT/current/.github/scripts/emitir-ssl.sh'"
+
+      - name: Configurar o Nginx do host (HTTPS)
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
+            "APP_ROOT='$APP_ROOT' SITE_NAME='$SITE_NAME' \
+             PRIMARY_DOMAIN='$PRIMARY_DOMAIN' WWW_DOMAIN='$WWW_DOMAIN' ADMIN_DOMAIN='$ADMIN_DOMAIN' \
+             bash '$APP_ROOT/current/.github/scripts/aplicar-https.sh'"
+
+      - name: Conferir o site no ar
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
+            "APP_ROOT='$APP_ROOT' PRIMARY_DOMAIN='$PRIMARY_DOMAIN' ADMIN_DOMAIN='$ADMIN_DOMAIN' \
+             bash '$APP_ROOT/current/.github/scripts/verificar-deploy.sh'"

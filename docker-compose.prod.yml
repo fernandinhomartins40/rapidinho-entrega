@@ -1,0 +1,58 @@
+# Ajustes de PRODUÇÃO (VPS compartilhada com outros sites).
+#
+# Uso: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Passar os dois arquivos com -f é proposital: assim o docker-compose.override.yml
+# de desenvolvimento (que publica Postgres, Redis e MinIO no host) NÃO é
+# carregado. Em produção nenhum desses serviços deve ter porta no host.
+#
+# UMA única porta externa: o nginx deste compose escuta em
+# 127.0.0.1:${DEPLOY_PORT} (definido no .env da VPS) e o nginx do HOST faz o
+# proxy do domínio para ela, terminando o TLS. Prender no loopback impede que
+# alguém alcance a aplicação pela porta numérica, contornando o certificado.
+#
+# Dentro do compose, o nginx roteia para as duas portas internas:
+#   web:3000    → app do cliente (rapidinhoentrega.com.br)
+#   admin:3001  → painel (painel.rapidinhoentrega.com.br)
+
+services:
+  # Roda as migrations e sai. Não sobe com o `up`: o deploy chama sob demanda,
+  # com `--profile ferramentas run --rm migrate`.
+  migrate:
+    profiles: ['ferramentas']
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      target: migrator
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rapidinho}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rapidinho}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [rapidinho]
+
+  nginx:
+    restart: always
+
+  web:
+    restart: always
+    # A VPS é compartilhada com outros sites: sem teto de memória, um pico de
+    # tráfego aqui derruba os vizinhos.
+    mem_limit: 1g
+
+  admin:
+    restart: always
+    mem_limit: 768m
+
+  postgres:
+    restart: always
+    mem_limit: 1g
+
+  redis:
+    restart: always
+    mem_limit: 320m
+
+  minio:
+    restart: always
+    mem_limit: 512m
