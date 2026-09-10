@@ -20,7 +20,7 @@ const nextConfig = {
     ],
   },
   // Módulos com binário nativo não podem passar pelo bundler do servidor.
-  serverExternalPackages: ['@prisma/client', 'sharp', 'ioredis'],
+  serverExternalPackages: ['sharp', 'ioredis'],
   async headers() {
     return [
       {

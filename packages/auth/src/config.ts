@@ -47,7 +47,14 @@ declare module '@auth/core/adapters' {
 }
 
 export const authConfig = {
-  adapter: PrismaAdapter(prisma),
+  /*
+   * O cast é necessário porque o Prisma Client é gerado em caminho próprio
+   * (packages/database/generated) e o adapter tipa contra o pacote publicado
+   * `@prisma/client`. São a mesma classe em tempo de execução; para o
+   * compilador, dois tipos estruturalmente idênticos e grandes demais para ele
+   * comparar.
+   */
+  adapter: PrismaAdapter(prisma as unknown as Parameters<typeof PrismaAdapter>[0]),
   session: {
     strategy: 'database',
     maxAge: 60 * 60 * 24 * 30,

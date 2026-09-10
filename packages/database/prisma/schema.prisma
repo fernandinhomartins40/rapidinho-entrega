@@ -13,7 +13,14 @@
 
 generator client {
   provider        = "prisma-client-js"
+  // Caminho previsível: com pnpm o padrão cai dentro de .pnpm, num diretório
+  // com hash de versão que o build do Next não consegue rastrear.
+  output          = "../generated/client"
   previewFeatures = ["postgresqlExtensions"]
+  // A imagem de produção é Alpine (musl); sem este alvo o container sobe e
+  // quebra na primeira query, porque o engine gerado seria o da máquina de
+  // build (glibc).
+  binaryTargets   = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {

@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { config as loadEnv } from 'dotenv';
-import { PrismaClient, type Prisma } from '@prisma/client';
+import { PrismaClient, type Prisma } from '../../generated/client';
 import { normalizePhoneBR, slugify } from '@rapidinho/shared';
 import {
   BOOST_PACKAGES,

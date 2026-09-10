@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '../generated/client';
 
 /**
  * Singleton do Prisma. Em desenvolvimento o hot-reload do Next recria os

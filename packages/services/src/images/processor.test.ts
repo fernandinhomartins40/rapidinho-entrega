@@ -104,9 +104,9 @@ describe('processamento de imagem', () => {
     } as never);
 
     try {
-      await expect(processAndStoreImage(await makeJpeg(10, 10), 'PRODUCT', storage)).rejects.toThrow(
-        /resolução acima do permitido/,
-      );
+      await expect(
+        processAndStoreImage(await makeJpeg(10, 10), 'PRODUCT', storage),
+      ).rejects.toThrow(/resolução acima do permitido/);
     } finally {
       metadataFalsa.mockRestore();
     }

@@ -46,6 +46,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
 
+# O rastreador do Next não leva o binário do engine para o standalone. Sem
+# esta cópia o container sobe e falha na primeira query.
+COPY --from=builder --chown=nextjs:nodejs /app/packages/database/generated ./packages/database/generated
+
 USER nextjs
 EXPOSE 3000
 
