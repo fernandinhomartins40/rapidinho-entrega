@@ -215,6 +215,9 @@ importers:
       '@rapidinho/config':
         specifier: workspace:*
         version: link:../config
+      eslint:
+        specifier: ^9.17.0
+        version: 9.39.5(jiti@2.7.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -259,6 +262,9 @@ importers:
       dotenv:
         specifier: ^16.4.7
         version: 16.6.1
+      eslint:
+        specifier: ^9.17.0
+        version: 9.39.5(jiti@2.7.0)
       prisma:
         specifier: ^6.19.3
         version: 6.19.3(typescript@5.9.3)
@@ -296,6 +302,9 @@ importers:
       '@types/node':
         specifier: ^22.10.2
         version: 22.20.1
+      eslint:
+        specifier: ^9.17.0
+        version: 9.39.5(jiti@2.7.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -312,6 +321,9 @@ importers:
       '@rapidinho/config':
         specifier: workspace:*
         version: link:../config
+      eslint:
+        specifier: ^9.17.0
+        version: 9.39.5(jiti@2.7.0)
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -385,6 +397,9 @@ importers:
       '@types/react-dom':
         specifier: ^19.0.2
         version: 19.2.7(@types/react@19.2.18)
+      eslint:
+        specifier: ^9.17.0
+        version: 9.39.5(jiti@2.7.0)
       tailwindcss:
         specifier: ^3.4.17
         version: 3.4.19(tsx@4.23.13)

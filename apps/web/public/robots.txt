@@ -1,0 +1,18 @@
+# Rapidinho Entrega — app do cliente
+#
+# As páginas de loja e de produto devem ser indexadas: busca no Google é como
+# muita gente do interior chega até o delivery.
+
+User-agent: *
+Allow: /
+
+# Área logada e rotas de API não têm o que indexar.
+Disallow: /api/
+Disallow: /pedidos/
+Disallow: /conta/
+Disallow: /carrinho
+Disallow: /checkout
+Disallow: /entrar
+Disallow: /completar-cadastro
+
+Sitemap: https://rapidinhoentrega.com.br/sitemap.xml

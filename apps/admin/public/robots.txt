@@ -1,0 +1,7 @@
+# Rapidinho Entrega — painel de gestão
+#
+# Nada aqui deve aparecer em busca: é área restrita a lojistas e à equipe da
+# plataforma.
+
+User-agent: *
+Disallow: /
