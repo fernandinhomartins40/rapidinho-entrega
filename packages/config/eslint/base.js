@@ -23,6 +23,14 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ['dist/**', '.next/**', '.turbo/**', 'node_modules/**', 'coverage/**'],
+    ignores: [
+      'dist/**',
+      '.next/**',
+      '.turbo/**',
+      'node_modules/**',
+      'coverage/**',
+      // Client do Prisma: código gerado, não é nosso para revisar.
+      'generated/**',
+    ],
   },
 );
