@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@rapidinho/auth';
-import { APP_NAME } from '@rapidinho/shared';
+import { Logotipo } from '@/components/marca/logo';
 import { LoginForm } from './login-form';
 
 export const dynamic = 'force-dynamic';
@@ -21,8 +21,8 @@ export default async function EntrarPage({
     <main className="flex min-h-dvh items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm">
         <header className="mb-8 text-center">
-          <h1 className="text-2xl font-bold">{APP_NAME}</h1>
-          <p className="text-muted-foreground mt-1">Painel de gestão</p>
+          <Logotipo className="mx-auto h-11 w-auto" />
+          <h1 className="text-muted-foreground mt-3 text-base font-medium">Painel de gestão</h1>
         </header>
 
         <LoginForm destino={destino ?? '/'} />

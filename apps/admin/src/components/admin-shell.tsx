@@ -19,7 +19,8 @@ import {
   X,
 } from 'lucide-react';
 import { Button, cn } from '@rapidinho/ui';
-import { APP_NAME, type UserRole } from '@rapidinho/shared';
+import { type UserRole } from '@rapidinho/shared';
+import { Logotipo } from '@/components/marca/logo';
 import { sair } from '@/app/actions';
 
 const NAV = [
@@ -81,8 +82,8 @@ export function AdminShell({ user, children }: AdminShellProps) {
       {/* Barra lateral fixa no desktop */}
       <aside className="bg-card hidden border-r lg:flex lg:flex-col">
         <div className="border-b p-4">
-          <p className="font-bold leading-tight">{APP_NAME}</p>
-          <p className="text-muted-foreground text-xs">Plataforma</p>
+          <Logotipo className="h-8 w-auto" />
+          <p className="text-muted-foreground mt-1.5 text-xs">Plataforma</p>
         </div>
         <div className="flex-1 overflow-y-auto p-3">{navegacao}</div>
         <div className="border-t p-3">
@@ -113,7 +114,7 @@ export function AdminShell({ user, children }: AdminShellProps) {
               <Menu className="h-6 w-6" aria-hidden />
             )}
           </Button>
-          <p className="font-bold">{APP_NAME}</p>
+          <Logotipo className="h-7 w-auto" />
         </header>
 
         {menuAberto ? (

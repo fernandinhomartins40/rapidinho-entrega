@@ -19,7 +19,8 @@
     "db:migrate": "pnpm --filter @rapidinho/database migrate",
     "db:push": "pnpm --filter @rapidinho/database push",
     "db:seed": "pnpm --filter @rapidinho/database seed",
-    "db:studio": "pnpm --filter @rapidinho/database studio"
+    "db:studio": "pnpm --filter @rapidinho/database studio",
+    "marca:gerar": "node scripts/gerar-marca.mjs"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
@@ -37,8 +38,10 @@
   "devDependencies": {
     "@rapidinho/config": "workspace:*",
     "@types/node": "^26.5.0",
+    "playwright": "^1.63.0",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.9",
+    "sharp": "^0.33.5",
     "turbo": "^2.3.3",
     "typescript": "^5.7.2"
   }

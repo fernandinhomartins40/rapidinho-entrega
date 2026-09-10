@@ -5,83 +5,102 @@
 /*
  * Tokens do design system.
  *
- * A paleta é quente e de alto contraste: o app é usado na rua, no sol, em tela
- * de celular antigo. Nada de cinza claro sobre branco.
+ * A paleta sai direto do logotipo: azul-marinho profundo do contorno, âmbar
+ * do símbolo e laranja do rastro de velocidade. Contraste alto de propósito —
+ * o app é usado na rua, no sol, em tela de celular antigo.
  */
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 20 14% 12%;
+    /* Texto em azul-marinho da marca, não em preto: casa com o contorno do
+       logotipo e cansa menos a vista em tela clara sob sol. */
+    --foreground: 217 45% 14%;
 
     --card: 0 0% 100%;
-    --card-foreground: 20 14% 12%;
+    --card-foreground: 217 45% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 20 14% 12%;
+    --popover-foreground: 217 45% 14%;
 
-    /* Laranja de entrega: quente, visível e distinto dos concorrentes. */
-    --primary: 20 90% 48%;
-    --primary-foreground: 0 0% 100%;
+    /* Laranja do logotipo. O texto por cima é o navy da marca, e não branco:
+       branco sobre este laranja dá 2,6:1, reprovado na WCAG; o navy dá 5,8:1
+       e é exatamente o par que aparece na caixa de entrega da arte. */
+    --primary: 32 100% 50%;
+    --primary-foreground: 217 64% 12%;
 
-    --secondary: 24 30% 96%;
-    --secondary-foreground: 20 14% 18%;
+    --secondary: 217 40% 96%;
+    --secondary-foreground: 217 50% 18%;
 
-    --muted: 24 20% 96%;
-    --muted-foreground: 20 8% 42%;
+    --muted: 217 25% 96%;
+    --muted-foreground: 217 16% 40%;
 
-    --accent: 24 30% 94%;
-    --accent-foreground: 20 14% 18%;
+    --accent: 45 100% 94%;
+    --accent-foreground: 217 50% 18%;
 
-    --destructive: 0 72% 46%;
+    --destructive: 4 82% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 65% 34%;
+    --success: 152 62% 33%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 92% 45%;
-    --warning-foreground: 20 14% 12%;
+    --warning: 45 100% 45%;
+    --warning-foreground: 217 64% 12%;
 
-    --border: 24 12% 88%;
-    --input: 24 12% 88%;
-    --ring: 20 90% 48%;
+    --border: 217 20% 89%;
+    --input: 217 20% 86%;
+    --ring: 32 100% 45%;
 
-    --radius: 0.75rem;
+    /* Cores da identidade visual, tiradas da arte do logotipo:
+       navy do contorno, âmbar do símbolo e laranja do rastro de velocidade. */
+    --brand-deep: 217 64% 14%;
+    --brand-deeper: 218 70% 9%;
+    --brand-tint: 45 100% 62%;
+    --brand-amber: 45 100% 50%;
+    --brand-flame: 17 100% 50%;
+
+    --radius: 0.875rem;
   }
 
   .dark {
-    --background: 20 14% 8%;
-    --foreground: 24 20% 96%;
+    --background: 218 40% 8%;
+    --foreground: 217 30% 96%;
 
-    --card: 20 14% 11%;
-    --card-foreground: 24 20% 96%;
+    --card: 217 38% 12%;
+    --card-foreground: 217 30% 96%;
 
-    --popover: 20 14% 11%;
-    --popover-foreground: 24 20% 96%;
+    --popover: 217 38% 12%;
+    --popover-foreground: 217 30% 96%;
 
-    --primary: 20 90% 52%;
-    --primary-foreground: 20 14% 8%;
+    --primary: 38 100% 54%;
+    --primary-foreground: 217 64% 10%;
 
-    --secondary: 20 10% 18%;
-    --secondary-foreground: 24 20% 96%;
+    --secondary: 217 28% 18%;
+    --secondary-foreground: 217 30% 96%;
 
-    --muted: 20 10% 18%;
-    --muted-foreground: 24 8% 64%;
+    --muted: 217 28% 18%;
+    --muted-foreground: 217 14% 66%;
 
-    --accent: 20 10% 20%;
-    --accent-foreground: 24 20% 96%;
+    --accent: 217 28% 21%;
+    --accent-foreground: 217 30% 96%;
 
-    --destructive: 0 62% 50%;
+    --destructive: 4 72% 52%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 55% 42%;
+    --success: 152 52% 42%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 38 88% 52%;
-    --warning-foreground: 20 14% 8%;
+    --warning: 45 100% 55%;
+    --warning-foreground: 217 64% 10%;
 
-    --border: 20 10% 22%;
-    --input: 20 10% 22%;
-    --ring: 20 90% 52%;
+    --border: 217 24% 22%;
+    --input: 217 24% 24%;
+    --ring: 38 100% 54%;
+
+    --brand-deep: 218 55% 11%;
+    --brand-deeper: 218 60% 7%;
+    --brand-tint: 45 100% 66%;
+    --brand-amber: 45 100% 54%;
+    --brand-flame: 17 100% 56%;
   }
 }
 
@@ -128,6 +147,37 @@
 }
 
 @layer utilities {
+  /* As classes de fundo do hero precisam do tamanho junto: o Tailwind aplica
+     background-image e background-size em utilitários separados. */
+  .bg-dot-grid {
+    background-image: radial-gradient(
+      circle at 1px 1px,
+      rgba(255, 255, 255, 0.55) 1px,
+      transparent 0
+    );
+    background-size: 22px 22px;
+  }
+
+  /* Brilho âmbar do logotipo, usado atrás do conteúdo em superfícies navy. */
+  .bg-radial-glow {
+    background-image:
+      radial-gradient(ellipse 70% 55% at 15% 0%, rgba(255, 176, 0, 0.3), transparent 70%),
+      radial-gradient(ellipse 60% 50% at 90% 20%, rgba(255, 72, 0, 0.22), transparent 70%);
+  }
+
+  /* Rastro de velocidade da arte: barras horizontais que somem para a direita. */
+  .bg-speed-lines {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.07) 0,
+      rgba(255, 255, 255, 0.07) 2px,
+      transparent 2px,
+      transparent 14px
+    );
+    mask-image: linear-gradient(to right, #000, transparent 70%);
+    -webkit-mask-image: linear-gradient(to right, #000, transparent 70%);
+  }
+
   /* Área de rolagem sem barra visível, para carrossel de categorias. */
   .no-scrollbar::-webkit-scrollbar {
     display: none;

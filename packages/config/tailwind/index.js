@@ -57,6 +57,17 @@ module.exports = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        // Cores da identidade visual. `deep`/`deeper` são o navy do contorno
+        // do logotipo e cobrem as superfícies grandes; `amber` e `flame` vêm
+        // do símbolo e do rastro de velocidade; `tint` é o âmbar claro que
+        // fica legível sobre o navy.
+        brand: {
+          deep: 'hsl(var(--brand-deep))',
+          deeper: 'hsl(var(--brand-deeper))',
+          tint: 'hsl(var(--brand-tint))',
+          amber: 'hsl(var(--brand-amber))',
+          flame: 'hsl(var(--brand-flame))',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -74,14 +85,26 @@ module.exports = {
       },
       fontFamily: {
         sans: [
+          'var(--font-sans)',
           'system-ui',
           '-apple-system',
           'Segoe UI',
           'Roboto',
-          'Helvetica Neue',
-          'Arial',
           'sans-serif',
         ],
+      },
+      backgroundImage: {
+        // Trama de pontos e brilho radial do hero: puro CSS, zero requisição
+        // extra — o público está em 3G.
+        'dot-grid':
+          'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.55) 1px, transparent 0)',
+        'radial-glow':
+          'radial-gradient(ellipse 70% 55% at 15% 0%, rgba(255,176,0,0.3), transparent 70%)',
+        // Degradê âmbar→laranja do logotipo, para botões e detalhes.
+        'brand-gradient': 'linear-gradient(105deg, hsl(45 100% 52%), hsl(24 100% 50%))',
+      },
+      backgroundSize: {
+        'dot-grid': '22px 22px',
       },
       keyframes: {
         'accordion-down': {
@@ -96,11 +119,16 @@ module.exports = {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.45' },
         },
+        'fade-up': {
+          from: { opacity: '0', transform: 'translateY(12px)' },
+          to: { opacity: '1', transform: 'none' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'pulse-alert': 'pulse-alert 1s ease-in-out infinite',
+        'fade-up': 'fade-up 0.5s ease-out both',
       },
     },
   },

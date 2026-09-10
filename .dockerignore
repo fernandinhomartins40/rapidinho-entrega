@@ -16,3 +16,6 @@ test-results
 .env.local
 docker/data
 *.log
+
+# Originais da marca em alta: só o script de geração usa, a imagem não.
+assets/
