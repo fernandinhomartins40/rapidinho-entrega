@@ -28,7 +28,11 @@ compose() {
 }
 
 echo "==> Construindo imagens da release $RELEASE"
-compose build --pull
+# O `--profile ferramentas` é obrigatório aqui: sem ele o build ignora o
+# serviço `migrate`, e o `run` mais abaixo reaproveita a imagem do migrator
+# construída num deploy anterior. Era esse o caso até agora — as migrations
+# rodavam com o código da primeira release publicada, não com o desta.
+compose --profile ferramentas build --pull
 
 echo "==> Subindo banco, cache e storage"
 compose up -d postgres redis minio minio-init
