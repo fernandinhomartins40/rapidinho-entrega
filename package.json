@@ -20,7 +20,8 @@
     "db:push": "pnpm --filter @rapidinho/database push",
     "db:seed": "pnpm --filter @rapidinho/database seed",
     "db:studio": "pnpm --filter @rapidinho/database studio",
-    "marca:gerar": "node scripts/gerar-marca.mjs"
+    "marca:gerar": "node scripts/gerar-marca.mjs",
+    "db:seed:essencial": "pnpm --filter @rapidinho/database seed:essencial"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

@@ -17,12 +17,29 @@ loadEnv({ path: path.resolve(__dirname, '../../../../.env'), quiet: true });
 const prisma = new PrismaClient();
 
 /**
- * Seed de desenvolvimento.
+ * Seed da base.
  *
  * Idempotente: pode rodar quantas vezes quiser sem duplicar. Usa `upsert` em
  * tudo que tem chave natural, porque durante o desenvolvimento a base é
  * recriada o tempo todo e ninguém quer 40 lojas repetidas.
+ *
+ * Dois modos:
+ *
+ * - `completo` (padrão) — tudo, inclusive as 10 lojas e os 103 produtos de
+ *   exemplo. É o que se quer na máquina de quem desenvolve.
+ * - `essencial` (`--essencial` ou SEED_MODE=essencial) — só o que é
+ *   configuração de verdade: cidade, bairros, categorias, planos e pacotes de
+ *   impulsionamento. É o que roda em produção; lojas e produtos fictícios num
+ *   domínio público seriam propaganda enganosa para quem chega no site.
  */
+type ModoSeed = 'completo' | 'essencial';
+
+function modoDoSeed(): ModoSeed {
+  if (process.argv.includes('--essencial') || process.env.SEED_MODE === 'essencial') {
+    return 'essencial';
+  }
+  return 'completo';
+}
 
 /**
  * Normaliza pelo mesmo caminho do login por OTP.
@@ -166,20 +183,29 @@ async function seedPlans() {
   return plans;
 }
 
-async function seedPlatformUsers() {
-  const superAdmin = await prisma.user.upsert({
-    where: { phone: seedPhone('44 99999-0001') },
+/**
+ * Garante um super admin com o telefone informado.
+ *
+ * Só promove quem ainda não é: rebaixar alguém sem querer trancaria o acesso
+ * ao painel, e reexecutar o seed não pode ter esse efeito.
+ */
+async function seedSuperAdmin(phone: string, name = 'Administrador da Plataforma') {
+  return prisma.user.upsert({
+    where: { phone: seedPhone(phone) },
     update: { role: 'SUPER_ADMIN' },
     create: {
-      phone: seedPhone('44 99999-0001'),
+      phone: seedPhone(phone),
       phoneVerified: new Date(),
-      email: 'admin@rapidinhoentrega.com.br',
-      name: 'Administrador da Plataforma',
+      name,
       role: 'SUPER_ADMIN',
       acceptedTermsAt: new Date(),
       acceptedPrivacyAt: new Date(),
     },
   });
+}
+
+async function seedPlatformUsers() {
+  const superAdmin = await seedSuperAdmin('44 99999-0001');
 
   const customer = await prisma.user.upsert({
     where: { phone: seedPhone('44 99999-0002') },
@@ -563,7 +589,8 @@ async function seedCoupons(cityId: string) {
   });
 }
 
-async function main() {
+/** Configuração de verdade: roda igual em desenvolvimento e em produção. */
+async function seedEssencial() {
   console.warn('› Semeando cidade e bairros…');
   const city = await seedCity();
 
@@ -572,6 +599,34 @@ async function main() {
 
   console.warn('› Semeando planos e pacotes de impulsionamento…');
   const plans = await seedPlans();
+
+  return { city, categories, plans };
+}
+
+async function main() {
+  const modo = modoDoSeed();
+
+  const { city, categories, plans } = await seedEssencial();
+
+  if (modo === 'essencial') {
+    // Sem um super admin ninguém entra no painel, mas o telefone precisa ser
+    // real: o do seed de desenvolvimento daria acesso a quem souber o número.
+    const phone = process.env.SUPER_ADMIN_PHONE?.trim();
+
+    if (phone) {
+      const admin = await seedSuperAdmin(phone, process.env.SUPER_ADMIN_NAME?.trim() || undefined);
+      console.warn(`› Super admin garantido: ${admin.phone}`);
+    } else {
+      console.warn('› SUPER_ADMIN_PHONE não definido — nenhum administrador foi criado.');
+    }
+
+    console.warn(
+      `\n✔ Seed essencial concluído: ${city.name}/${city.state}, ` +
+        `${categories.size} categorias e ${plans.size} planos.`,
+    );
+    console.warn('  Lojas e produtos não são semeados neste modo.\n');
+    return;
+  }
 
   console.warn('› Semeando usuários da plataforma…');
   const { customer } = await seedPlatformUsers();

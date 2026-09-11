@@ -137,6 +137,14 @@ garantir_env "OTP_MAX_ATTEMPTS" "5"
 garantir_env "LOG_LEVEL" "info"
 garantir_env "VAPID_SUBJECT" "mailto:${SSL_EMAIL}"
 
+# Telefone do super admin. Sem ele o seed essencial não cria administrador
+# nenhum, e é assim de propósito: cair para um número fixo daria acesso ao
+# painel a quem soubesse o número. `garantir_env` só grava se ainda não houver
+# valor, então editar o .env na VPS à mão continua valendo.
+if [ -n "${SUPER_ADMIN_PHONE:-}" ]; then
+  garantir_env "SUPER_ADMIN_PHONE" "$SUPER_ADMIN_PHONE"
+fi
+
 chmod 600 "$ENV_FILE"
 
 echo "Ambiente pronto. DEPLOY_PORT=$(ler_env "DEPLOY_PORT")"

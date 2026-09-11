@@ -16,7 +16,8 @@
     "seed": "tsx prisma/seed/index.ts",
     "studio": "prisma studio",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "seed:essencial": "tsx prisma/seed/index.ts --essencial"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3"

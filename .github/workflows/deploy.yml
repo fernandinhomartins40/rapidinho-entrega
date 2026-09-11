@@ -118,6 +118,13 @@ jobs:
         run: |
           sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" 'bash -s' < .github/scripts/preparar-vps.sh
 
+      - name: Liberar espaço na VPS
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
+            "APP_ROOT='$APP_ROOT' bash -s" < .github/scripts/liberar-espaco.sh
+
       - name: Enviar o código para a VPS
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
@@ -136,6 +143,7 @@ jobs:
             --exclude='./**/.turbo' \
             --exclude=packages/database/generated \
             --exclude=coverage \
+            --exclude=assets \
             --exclude=.env \
             -czf - . | \
             sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "tar -xzf - -C '$RELEASE_DIR'"
@@ -147,6 +155,7 @@ jobs:
           RELEASE_DIR="$APP_ROOT/releases/${{ steps.release.outputs.version }}"
           sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
             "APP_ROOT='$APP_ROOT' \
+             SUPER_ADMIN_PHONE='${{ secrets.SUPER_ADMIN_PHONE }}' \
              CANONICAL_URL='$CANONICAL_URL' \
              PRIMARY_DOMAIN='$PRIMARY_DOMAIN' \
              ADMIN_DOMAIN='$ADMIN_DOMAIN' \

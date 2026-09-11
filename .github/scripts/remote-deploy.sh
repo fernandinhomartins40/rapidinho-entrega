@@ -57,6 +57,17 @@ compose --profile ferramentas run --rm migrate || {
   exit 1
 }
 
+# Cidade, bairros, categorias e planos são configuração, não dado de teste:
+# sem eles a home não tem nem cidade para oferecer. Roda sempre, porque é
+# idempotente, e nunca semeia lojas ou produtos fictícios.
+echo "==> Semeando dados essenciais"
+compose --profile ferramentas run --rm \
+  -e SEED_MODE=essencial \
+  migrate pnpm --filter @rapidinho/database seed:essencial || {
+  echo "Falha ao semear os dados essenciais — a versão anterior segue no ar." >&2
+  exit 1
+}
+
 echo "==> Subindo aplicação"
 compose up -d --remove-orphans
 
@@ -96,6 +107,9 @@ if [ -d "$APP_ROOT/releases" ]; then
 fi
 
 # Imagens órfãs das builds anteriores enchem o disco da VPS em poucas semanas.
+# A limpeza principal é o liberar-espaco.sh, que roda ANTES do build — esta
+# aqui só devolve o que a build recém-concluída deixou para trás.
 docker image prune -f >/dev/null 2>&1 || true
+docker builder prune -f --filter 'until=48h' >/dev/null 2>&1 || true
 
 echo "==> Deploy concluído"
