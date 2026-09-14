@@ -35,12 +35,34 @@ test.describe('pedido do cliente', () => {
     const abertas = page.getByRole('heading', { name: 'Abertas agora' });
     await expect(abertas).toBeVisible();
 
-    await page.locator('section:has(#abertas) a[href^="/palmital-pr/"]').first().click();
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+    // Percorre as lojas abertas até achar uma com produto vendido por unidade.
+    // A primeira nem sempre serve: o teste de aprovação publica uma loja sem
+    // cardápio, e uma vitrine real também terá lojas recém-aprovadas. Amarrar
+    // o fluxo de compra à ordem da vitrine seria falhar por motivo alheio ao
+    // que este teste verifica.
+    const lojas = page.locator('section:has(#abertas) a[href^="/palmital-pr/"]');
+    const total = await lojas.count();
+    let produto = null;
 
-    // Um item vendido por unidade: o de peso tem contador em gramas, e subir
-    // de 100 em 100 até o pedido mínimo levaria dezenas de cliques.
-    await page.locator('a[href*="/produto/"]').filter({ hasNotText: '/kg' }).first().click();
+    for (let i = 0; i < total; i += 1) {
+      await lojas.nth(i).click();
+      await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+
+      // Um item vendido por unidade: o de peso tem contador em gramas, e subir
+      // de 100 em 100 até o pedido mínimo levaria dezenas de cliques.
+      const candidato = page.locator('a[href*="/produto/"]').filter({ hasNotText: '/kg' }).first();
+
+      if ((await candidato.count()) > 0) {
+        produto = candidato;
+        break;
+      }
+
+      await page.goBack();
+      await expect(lojas.first()).toBeVisible();
+    }
+
+    expect(produto, 'nenhuma loja aberta tem produto vendido por unidade').not.toBeNull();
+    await produto!.click();
     await expect(page.getByRole('button', { name: /adicionar/i })).toBeVisible();
 
     // Quantidade alta o bastante para passar do maior pedido mínimo do seed
