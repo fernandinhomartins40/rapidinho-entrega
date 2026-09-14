@@ -33,12 +33,21 @@ O painel usa **subdomínio**, não caminho. Servir o painel em `/painel` daria
 
 ## Antes do primeiro deploy
 
-1. **Criar o secret no GitHub**
+1. **Criar os secrets no GitHub**
    `Settings → Secrets and variables → Actions → New repository secret`
-   - Nome: `VPS_PASSWORD`
-   - Valor: a senha de root da VPS
 
-   A senha nunca entra no repositório.
+   | Secret              | Obrigatório | Para quê                                             |
+   | ------------------- | ----------- | ---------------------------------------------------- |
+   | `VPS_PASSWORD`      | sim         | senha de root da VPS                                  |
+   | `SUPER_ADMIN_PHONE` | sim         | telefone do primeiro administrador                    |
+   | `SENTRY_DSN`        | não         | monitoramento de erro                                 |
+
+   Nenhum deles entra no repositório.
+
+   Sem `SUPER_ADMIN_PHONE` o seed não cria administrador nenhum — e é assim de
+   propósito: cair para um número fixo daria acesso ao painel a quem soubesse
+   o número. Sem `SENTRY_DSN` o erro vai só para o log estruturado, que já
+   basta numa operação de uma cidade.
 
 2. **Criar o registro DNS do painel**
 
