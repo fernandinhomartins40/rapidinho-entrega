@@ -37,3 +37,8 @@ docker/data
 
 # Build do servidor de realtime
 apps/realtime/dist/
+
+# Sessões gravadas pelo global setup do Playwright
+e2e/.auth/
+test-results/
+playwright-report/

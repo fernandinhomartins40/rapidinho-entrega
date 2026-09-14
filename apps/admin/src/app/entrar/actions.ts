@@ -10,6 +10,7 @@ import {
   resetRateLimit,
 } from '@rapidinho/services';
 import { parseServerEnv, RATE_LIMITS, requestOtpSchema, verifyOtpSchema } from '@rapidinho/shared';
+import { LOGIN_INITIAL_STATE, type LoginState } from './login-state';
 
 /**
  * Login do painel por telefone e código.
@@ -17,16 +18,6 @@ import { parseServerEnv, RATE_LIMITS, requestOtpSchema, verifyOtpSchema } from '
  * Mesma mecânica do app do cliente e a mesma proteção de força bruta: o painel
  * é o alvo mais valioso do sistema, não faz sentido protegê-lo menos.
  */
-
-export interface LoginState {
-  step: 'phone' | 'code';
-  phone?: string;
-  error?: string;
-  /// Em desenvolvimento o código volta aqui, para não depender do WhatsApp.
-  devCode?: string;
-}
-
-export const LOGIN_INITIAL_STATE: LoginState = { step: 'phone' };
 
 async function currentIp(): Promise<string> {
   return clientIpFromHeaders(await headers());

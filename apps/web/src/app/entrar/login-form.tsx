@@ -4,7 +4,8 @@ import { useActionState, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Alert, Button, Card, CardContent, Input, Label } from '@rapidinho/ui';
 import { maskPhoneBR } from '@rapidinho/shared';
-import { autenticar, LOGIN_INITIAL_STATE } from './actions';
+import { autenticar } from './actions';
+import { LOGIN_INITIAL_STATE } from './login-state';
 
 /**
  * Login em duas etapas: telefone e código.
@@ -78,7 +79,9 @@ export function LoginForm({ destino }: { destino: string }) {
 
           {state.devCode ? (
             <Alert variant="warning" title="Modo de desenvolvimento">
-              Código: <strong>{state.devCode}</strong>
+              {/* O teste de ponta a ponta lê o código daqui, que é o mesmo
+                  caminho de uma pessoa — não há atalho pelo banco. */}
+              Código: <strong data-testid="codigo-dev">{state.devCode}</strong>
             </Alert>
           ) : null}
 

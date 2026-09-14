@@ -40,7 +40,12 @@ export const config = {
     /*
      * Tudo, menos arquivos estáticos e imagens — o middleware em asset é
      * custo puro e o painel é usado em conexão ruim.
+     *
+     * `marca/` precisa estar aqui: sem isso o middleware responde 307 para o
+     * logotipo, o otimizador do next/image recebe HTML no lugar da imagem e a
+     * página inteira falha ao renderizar ("isn't a valid image ... received
+     * null"). O sintoma aparece longe da causa.
      */
-    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icons/).*)',
+    '/((?!_next/static|_next/image|favicon.ico|manifest.webmanifest|icons/|marca/|robots.txt|sw.js).*)',
   ],
 };

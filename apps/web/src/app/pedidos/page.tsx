@@ -37,7 +37,8 @@ export default async function PedidosPage() {
 
   if (pedidos.length === 0) {
     return (
-      <main className="mx-auto max-w-lg px-5 py-10">
+      <main className="mx-auto max-w-lg space-y-6 px-5 py-6">
+        <h1 className="text-2xl font-bold tracking-tight">Meus pedidos</h1>
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-10 text-center">
             <Receipt className="text-muted-foreground h-10 w-10" aria-hidden />

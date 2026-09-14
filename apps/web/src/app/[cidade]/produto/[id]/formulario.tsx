@@ -314,9 +314,15 @@ export function FormularioDoProduto({ produto, loja, grupos, cidadeSlug }: Props
 
       {erro ? <p className="text-destructive font-medium">{erro}</p> : null}
 
-      {/* Barra fixa: o preço e o botão acompanham a rolagem, porque em
-          cardápio longo o cliente perde a referência do total. */}
-      <div className="bg-card pb-safe fixed inset-x-0 bottom-0 z-30 border-t p-4">
+      {/*
+        Barra fixa: o preço e o botão acompanham a rolagem, porque em cardápio
+        longo o cliente perde a referência do total.
+
+        z-50 para ficar ACIMA da navegação inferior (z-40). Com z-30 a
+        navegação cobria o botão e o toque caía no link do carrinho em vez de
+        adicionar o item — o fluxo principal do app travava no celular.
+      */}
+      <div className="bg-card pb-safe fixed inset-x-0 bottom-0 z-50 border-t p-4">
         <div className="mx-auto flex max-w-lg items-center gap-3">
           {!produto.porPeso ? (
             <div className="flex shrink-0 items-center gap-2">

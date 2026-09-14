@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "//": "Cobre só o que está fora dos workspaces: config do Playwright e testes E2E. Cada app e pacote tem o seu próprio tsconfig.",
+  "extends": "@rapidinho/config/typescript/base.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["playwright.config.ts", "e2e/**/*.ts", "scripts/**/*.mjs"],
+  "exclude": ["node_modules", "**/node_modules", "apps", "packages"]
+}

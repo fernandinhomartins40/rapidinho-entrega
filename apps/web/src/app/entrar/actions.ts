@@ -10,6 +10,7 @@ import {
   resetRateLimit,
 } from '@rapidinho/services';
 import { parseServerEnv, RATE_LIMITS, requestOtpSchema, verifyOtpSchema } from '@rapidinho/shared';
+import { LOGIN_INITIAL_STATE, type LoginState } from './login-state';
 
 /**
  * Login do cliente por telefone e código.
@@ -22,16 +23,6 @@ import { parseServerEnv, RATE_LIMITS, requestOtpSchema, verifyOtpSchema } from '
  * porque travar só por IP não protege um número alvo, e o contrário deixa
  * passar quem varre vários números do mesmo lugar.
  */
-
-export interface LoginState {
-  step: 'phone' | 'code';
-  phone?: string;
-  error?: string;
-  /// Em desenvolvimento o código volta aqui, para não depender do WhatsApp.
-  devCode?: string;
-}
-
-export const LOGIN_INITIAL_STATE: LoginState = { step: 'phone' };
 
 async function currentIp(): Promise<string> {
   return clientIpFromHeaders(await headers());
