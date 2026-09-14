@@ -119,11 +119,16 @@ jobs:
 
       - name: Guardar o relatório quando falhar
         if: failure()
+        # A cota de artefatos da conta pode estar cheia — e quando está, este
+        # passo falha e vira um segundo erro no log, escondendo o teste que
+        # realmente quebrou. O relatório é conveniência; o erro do teste é o
+        # que importa.
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report
           path: playwright-report/
-          retention-days: 7
+          retention-days: 3
 
   deploy:
     name: Publicar na VPS

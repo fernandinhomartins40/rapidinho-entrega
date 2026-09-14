@@ -12,20 +12,32 @@ test.describe('pedido do cliente', () => {
 
   // Cada execução começa do zero: carrinho de uma rodada anterior traria itens
   // com preço e disponibilidade de outro momento.
+  //
+  // Esvaziar dispara Server Action, que revalida a página e tira o botão do
+  // DOM no meio do clique. O Playwright trata isso como erro ("element was
+  // detached"), mas aqui é exatamente o sucesso esperado — foi o que derrubou
+  // o teste no CI. Por isso o clique tolera o detach, e o que se confere é o
+  // efeito: recarregar e contar de novo.
   test.beforeEach(async ({ page }) => {
-    await page.goto('/carrinho');
+    const seletor = { name: /^esvaziar carrinho/i } as const;
 
-    const esvaziar = page.getByRole('button', { name: /^esvaziar carrinho/i });
+    // Uma volta por loja com carrinho aberto, com folga. O limite existe para
+    // o teste falhar dizendo o que houve, em vez de girar para sempre.
+    for (let volta = 0; volta < 6; volta += 1) {
+      await page.goto('/carrinho');
 
-    while (
+      const esvaziar = page.getByRole('button', seletor);
+      if ((await esvaziar.count()) === 0) break;
+
       await esvaziar
         .first()
-        .isVisible()
-        .catch(() => false)
-    ) {
-      await esvaziar.first().click();
-      await page.waitForTimeout(500);
+        .click({ timeout: 10_000 })
+        .catch(() => undefined);
+      await page.waitForLoadState('networkidle').catch(() => undefined);
     }
+
+    await page.goto('/carrinho');
+    await expect(page.getByRole('button', seletor)).toHaveCount(0);
   });
 
   test('monta o carrinho e finaliza o pedido', async ({ page }) => {
