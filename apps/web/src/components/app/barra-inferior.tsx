@@ -45,7 +45,10 @@ export function BarraInferior({
                 aria-current={ativo ? 'page' : undefined}
                 className={cn(
                   'min-h-touch relative flex flex-col items-center justify-center gap-0.5 py-2 text-xs font-medium transition-colors',
-                  ativo ? 'text-primary' : 'text-muted-foreground',
+                  // `primary-text`, e não `primary`: o laranja de
+                  // preenchimento como texto de 12px sobre branco dá 2,4:1 e
+                  // some ao sol — que é onde esta barra é mais usada.
+                  ativo ? 'text-primary-text' : 'text-muted-foreground',
                 )}
               >
                 <span className="relative">

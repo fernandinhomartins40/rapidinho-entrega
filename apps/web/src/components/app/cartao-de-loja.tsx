@@ -29,6 +29,11 @@ export interface LojaNaVitrine {
  * Loja fechada continua clicável: ver o cardápio fora do horário é o que traz
  * o cliente de volta no dia seguinte. O que muda é o aviso, para ninguém
  * montar um carrinho achando que vai receber agora.
+ *
+ * O fechado não escurece o cartão inteiro. Fazia isso antes, e a opacidade
+ * derrubava todo o texto para 3,2:1 — inclusive o próprio aviso de que a loja
+ * está fechada, que é justamente o que precisa ser lido. Agora só a foto, que
+ * não carrega informação, perde saturação.
  */
 export function CartaoDeLoja({ loja, cidadeSlug }: { loja: LojaNaVitrine; cidadeSlug: string }) {
   return (
@@ -36,7 +41,7 @@ export function CartaoDeLoja({ loja, cidadeSlug }: { loja: LojaNaVitrine; cidade
       href={`/${cidadeSlug}/${loja.slug}`}
       className={cn(
         'bg-card focus-visible:ring-ring min-h-touch flex items-center gap-3 rounded-2xl border p-3 transition-colors focus-visible:outline-none focus-visible:ring-2',
-        loja.aberta ? 'hover:border-primary' : 'opacity-70',
+        loja.aberta ? 'hover:border-primary' : 'bg-muted/40',
       )}
     >
       {loja.imagem.url ? (
@@ -45,7 +50,10 @@ export function CartaoDeLoja({ loja, cidadeSlug }: { loja: LojaNaVitrine; cidade
           alt=""
           width={64}
           height={64}
-          className="h-16 w-16 shrink-0 rounded-xl object-cover"
+          className={cn(
+            'h-16 w-16 shrink-0 rounded-xl object-cover',
+            loja.aberta ? undefined : 'opacity-60 grayscale',
+          )}
           {...(loja.imagem.blurDataUrl
             ? { placeholder: 'blur' as const, blurDataURL: loja.imagem.blurDataUrl }
             : {})}
@@ -90,9 +98,12 @@ export function CartaoDeLoja({ loja, cidadeSlug }: { loja: LojaNaVitrine; cidade
         </div>
 
         {!loja.aberta ? (
-          <p className="text-warning mt-1 text-sm font-medium">
+          // Etiqueta, e não texto amarelo: o amarelo da marca sobre fundo
+          // claro dá 1,6:1 — o aviso mais importante do cartão era o menos
+          // legível dele.
+          <Badge variant="warning" className="mt-1.5 text-[11px]">
             {loja.motivoFechada ?? 'Fechada agora'}
-          </p>
+          </Badge>
         ) : null}
       </div>
     </Link>

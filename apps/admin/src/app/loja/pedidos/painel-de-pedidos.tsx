@@ -301,7 +301,7 @@ function CartaoDePedido({
                 <p className="text-muted-foreground pl-4">+ {item.pizzaExtraName}</p>
               ) : null}
               {item.notes ? (
-                <p className="text-warning pl-4 font-medium">Obs.: {item.notes}</p>
+                <p className="text-warning-text pl-4 font-medium">Obs.: {item.notes}</p>
               ) : null}
             </li>
           ))}
@@ -313,7 +313,7 @@ function CartaoDePedido({
             {/* No interior o ponto de referência costuma valer mais que o
                 número da casa — por isso ganha destaque. */}
             {endereco.referencePoint ? (
-              <p className="text-warning font-medium">Referência: {endereco.referencePoint}</p>
+              <p className="text-warning-text font-medium">Referência: {endereco.referencePoint}</p>
             ) : null}
           </div>
         ) : null}
@@ -352,7 +352,7 @@ function CartaoDePedido({
         </div>
 
         {pedido.notes ? (
-          <p className="text-warning text-sm font-medium">Obs.: {pedido.notes}</p>
+          <p className="text-warning-text text-sm font-medium">Obs.: {pedido.notes}</p>
         ) : null}
         {pedido.cancelReason ? (
           <p className="text-destructive text-sm">Motivo: {pedido.cancelReason}</p>

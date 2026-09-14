@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import { MapPin, ShieldCheck, Star, Zap } from 'lucide-react';
-import { getPublicEnv } from '@rapidinho/shared';
+import { getPublicEnv, MEDIDAS_DA_MARCA } from '@rapidinho/shared';
 import { Logotipo } from '@/components/marca/logo';
 import { SeletorDeCidade, type CidadeDisponivel } from './seletor-de-cidade';
 
@@ -28,17 +28,24 @@ export function Hero({ cidades }: { cidades: CidadeDisponivel[] }) {
         <div className="bg-dot-grid absolute inset-0 opacity-[0.07]" aria-hidden />
 
         {/* Mascote da marca. Decorativo: some no celular, onde o espaço é do
-            texto e da ação. */}
+            texto e da ação.
+
+            Sem `priority` de propósito. Ele é invisível abaixo de `lg`, e a
+            prioridade fazia o navegador pré-carregar 44 KB que a maioria do
+            público — celular, no interior — baixava sem nunca ver, disputando
+            banda com o conteúdo que de fato aparece.
+
+            As medidas vêm do módulo gerado com as artes: digitá-las foi o que
+            fez o Next reservar um espaço que não correspondia à imagem. */}
         <div
           className="pointer-events-none absolute -right-8 top-28 hidden w-[25rem] lg:block xl:-right-4 xl:top-24 xl:w-[30rem]"
           aria-hidden
         >
           <Image
             src="/marca/mascote.webp"
-            width={480}
-            height={420}
+            {...MEDIDAS_DA_MARCA['mascote.webp']}
             alt=""
-            priority
+            sizes="(min-width: 1280px) 30rem, 25rem"
             className="h-auto w-full drop-shadow-[0_25px_50px_rgba(0,0,0,0.45)]"
           />
         </div>

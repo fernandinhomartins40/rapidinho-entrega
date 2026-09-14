@@ -24,6 +24,10 @@ module.exports = {
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
+          // `text-primary-text`: o laranja da marca escurecido o bastante para
+          // servir de TEXTO sobre fundo claro. O DEFAULT é cor de
+          // preenchimento — como texto sobre branco reprova na WCAG.
+          text: 'hsl(var(--primary-text))',
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
@@ -40,6 +44,9 @@ module.exports = {
         warning: {
           DEFAULT: 'hsl(var(--warning))',
           foreground: 'hsl(var(--warning-foreground))',
+          // `text-warning-text`: o âmbar escurecido para uso como texto. O
+          // DEFAULT é cor de preenchimento (etiqueta, faixa, ícone).
+          text: 'hsl(var(--warning-text))',
         },
         muted: {
           DEFAULT: 'hsl(var(--muted))',

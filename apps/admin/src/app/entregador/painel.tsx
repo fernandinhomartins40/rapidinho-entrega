@@ -216,7 +216,7 @@ export function PainelDoEntregador({
                             {/* A referência é o que resolve a entrega no
                                 interior, onde muita casa não tem número. */}
                             {endereco.referencePoint ? (
-                              <p className="text-warning font-medium">
+                              <p className="text-warning-text font-medium">
                                 Referência: {endereco.referencePoint}
                               </p>
                             ) : null}

@@ -22,7 +22,9 @@ const buttonVariants = cva(
         outline: 'border-2 border-input bg-background hover:bg-accent hover:text-accent-foreground',
         secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         ghost: 'hover:bg-accent hover:text-accent-foreground',
-        link: 'text-primary underline-offset-4 hover:underline',
+        // `primary-text`: aqui a cor é texto, não preenchimento — o laranja
+        // do botão sobre fundo claro dá 2,4:1.
+        link: 'text-primary-text underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-11 px-5 py-2',

@@ -168,13 +168,13 @@ export function ListaDoCarrinho({
         </div>
 
         {carrinho.temIndisponivel ? (
-          <p className="text-warning text-sm font-medium">
+          <p className="text-warning-text text-sm font-medium">
             Remova os itens indisponíveis para continuar.
           </p>
         ) : null}
 
         {abaixoDoMinimo ? (
-          <p className="text-warning text-sm font-medium">
+          <p className="text-warning-text text-sm font-medium">
             Pedido mínimo de {formatCents(carrinho.loja.minOrderCents)}. Faltam{' '}
             {formatCents(carrinho.loja.minOrderCents - carrinho.subtotalCents)}.
           </p>

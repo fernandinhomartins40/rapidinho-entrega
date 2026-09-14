@@ -154,7 +154,9 @@ export default async function EntregadoresPage({
                         {entregador.documents.length === 0 ? (
                           <span className="text-muted-foreground">Nenhum enviado</span>
                         ) : pendentes > 0 ? (
-                          <span className="text-warning font-medium">{pendentes} a revisar</span>
+                          <span className="text-warning-text font-medium">
+                            {pendentes} a revisar
+                          </span>
                         ) : (
                           <span className="text-muted-foreground">
                             {entregador.documents.length} conferidos

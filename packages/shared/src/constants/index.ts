@@ -112,3 +112,4 @@ export const RATE_LIMITS = {
   checkout: { points: 10, durationSeconds: 300 },
   upload: { points: 30, durationSeconds: 300 },
 } as const;
+export * from './marca';

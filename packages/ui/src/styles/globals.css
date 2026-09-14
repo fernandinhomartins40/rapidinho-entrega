@@ -28,6 +28,12 @@
     --primary: 32 100% 50%;
     --primary-foreground: 217 64% 12%;
 
+    /* O mesmo laranja, escurecido até passar como TEXTO sobre fundo claro.
+       O de cima é cor de preenchimento: como texto sobre branco ele dá 2,4:1
+       e reprova na WCAG — foi o que deixou o item ativo da barra de navegação
+       ilegível ao sol, que é onde o entregador olha a tela. Este dá 4,8:1. */
+    --primary-text: 28 100% 36%;
+
     --secondary: 217 40% 96%;
     --secondary-foreground: 217 50% 18%;
 
@@ -45,6 +51,11 @@
 
     --warning: 45 100% 45%;
     --warning-foreground: 217 64% 12%;
+    /* O mesmo âmbar, escurecido até servir de TEXTO sobre fundo claro: o de
+       cima dá 2,1:1 e era usado em "Obs.:" e "Referência:" no painel da
+       cozinha — o recado mais importante do pedido era o menos legível dele.
+       Este dá 4,9:1. */
+    --warning-text: 38 90% 32%;
 
     --border: 217 20% 89%;
     --input: 217 20% 86%;
@@ -73,6 +84,9 @@
 
     --primary: 38 100% 54%;
     --primary-foreground: 217 64% 10%;
+    /* No escuro o laranja da marca já passa folgado (8,9:1): não há por que
+       escurecê-lo e perder o brilho que identifica a marca. */
+    --primary-text: 38 100% 54%;
 
     --secondary: 217 28% 18%;
     --secondary-foreground: 217 30% 96%;
@@ -91,6 +105,9 @@
 
     --warning: 45 100% 55%;
     --warning-foreground: 217 64% 10%;
+    /* No escuro o âmbar já dá 10,9:1 sobre o cartão: escurecê-lo só tiraria
+       o destaque de um aviso. */
+    --warning-text: 45 100% 55%;
 
     --border: 217 24% 22%;
     --input: 217 24% 24%;

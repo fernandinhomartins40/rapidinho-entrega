@@ -16,12 +16,58 @@ const destinos = [join(raiz, 'apps/web/public/marca'), join(raiz, 'apps/admin/pu
 /** Azul-marinho da identidade (contorno das letras e do capacete). */
 const NAVY = '#0d1f3c';
 
+/**
+ * Medidas finais de cada arte.
+ *
+ * O `trim` recorta o transparente em volta, então a altura só se conhece
+ * depois de gerar — foi por isso que as medidas escritas à mão nos componentes
+ * divergiram do arquivo, e o Next passou a reservar um espaço de altura errada.
+ */
+const medidas = {};
+
 async function gravar(nome, buffer) {
   for (const destino of destinos) {
     await mkdir(destino, { recursive: true });
     await writeFile(join(destino, nome), buffer);
   }
-  console.log(`  ${nome} — ${(buffer.length / 1024).toFixed(1)} KB`);
+
+  const { width, height } = await sharp(buffer).metadata();
+  medidas[nome] = { width, height };
+
+  console.log(`  ${nome} — ${width}x${height}, ${(buffer.length / 1024).toFixed(1)} KB`);
+}
+
+/**
+ * Escreve as medidas como módulo do `shared`.
+ *
+ * Gerado, e não digitado: é a única forma de os componentes não voltarem a
+ * divergir do arquivo na próxima vez que a arte for trocada.
+ */
+async function gravarMedidas() {
+  const entradas = Object.entries(medidas)
+    .filter(([nome]) => nome.endsWith('.webp'))
+    .map(([nome, { width, height }]) => `  '${nome}': { width: ${width}, height: ${height} },`)
+    .join('\n');
+
+  const conteudo = `/**
+ * Medidas das artes da marca.
+ *
+ * ARQUIVO GERADO por \`pnpm marca:gerar\` — não edite à mão.
+ *
+ * O gerador recorta o transparente em volta de cada arte, então a altura final
+ * só se conhece depois de processar. Digitar essas medidas nos componentes é o
+ * que fazia o Next reservar um espaço que não correspondia à imagem.
+ */
+export const MEDIDAS_DA_MARCA = {
+${entradas}
+} as const satisfies Record<string, { width: number; height: number }>;
+
+export type ArteDaMarca = keyof typeof MEDIDAS_DA_MARCA;
+`;
+
+  const caminho = join(raiz, 'packages/shared/src/constants/marca.ts');
+  await writeFile(caminho, conteudo);
+  console.log(`\n  packages/shared/src/constants/marca.ts atualizado`);
 }
 
 /** Recorta o transparente em volta e devolve a arte no tamanho pedido. */
@@ -77,6 +123,8 @@ async function main() {
   await gravar('icone-maskable-512.png', await icone(512, { margem: 0.28, raio: 0.5 }));
   await gravar('apple-icon.png', await icone(180, { raio: 0 }));
   await gravar('favicon-32.png', await icone(32, { margem: 0.12, raio: 0.25 }));
+
+  await gravarMedidas();
 }
 
 await main();

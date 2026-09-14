@@ -176,7 +176,10 @@ export function AcompanhamentoDoPedido({ pedido, realtime }: Props) {
                       {concluida ? <Check className="h-4 w-4" /> : null}
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className={cn('font-medium', atual && 'text-primary')}>
+                      {/* `primary-text`: o laranja de preenchimento como
+                          texto sobre fundo claro reprova na WCAG, e esta é a
+                          linha que o cliente fica olhando enquanto espera. */}
+                      <p className={cn('font-medium', atual && 'text-primary-text')}>
                         {ORDER_STATUS_LABEL[etapa]}
                       </p>
                       {atual && pedido.estimatedReadyAt ? (
