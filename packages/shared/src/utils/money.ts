@@ -54,3 +54,14 @@ export function formatGrams(grams: number): string {
   }
   return `${grams} g`;
 }
+
+/**
+ * Centavos no formato que um <input> de texto aceita: "1250" → "12,50".
+ *
+ * Diferente de `formatCents`, sai SEM o "R$" e sem separador de milhar — o
+ * símbolo e o ponto fariam o `parseCurrencyToCents` do lado do servidor ter de
+ * desfazer a formatação que nós mesmos aplicamos.
+ */
+export function centsToInput(cents: number): string {
+  return (cents / 100).toFixed(2).replace('.', ',');
+}

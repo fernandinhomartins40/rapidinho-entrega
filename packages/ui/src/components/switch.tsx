@@ -21,4 +21,39 @@ const Switch = React.forwardRef<
 ));
 Switch.displayName = SwitchPrimitive.Root.displayName;
 
-export { Switch };
+/**
+ * Interruptor com rótulo clicável.
+ *
+ * O primitivo do Radix é só o controle. Este embrulho existe para que o texto
+ * inteiro seja área de toque — num celular, acertar um botão de 12px de altura
+ * com o polegar é o tipo de detalhe que faz o lojista desistir da tela.
+ */
+export interface SwitchFieldProps extends React.ComponentPropsWithoutRef<
+  typeof SwitchPrimitive.Root
+> {
+  label: string;
+  description?: string;
+}
+
+const SwitchField = React.forwardRef<
+  React.ElementRef<typeof SwitchPrimitive.Root>,
+  SwitchFieldProps
+>(({ label, description, className, id, ...props }, ref) => {
+  const generatedId = React.useId();
+  const switchId = id ?? generatedId;
+
+  return (
+    <div className={cn('flex items-start gap-3', className)}>
+      <Switch ref={ref} id={switchId} className="mt-0.5" {...props} />
+      <label htmlFor={switchId} className="min-h-touch flex-1 cursor-pointer select-none">
+        <span className="block font-medium leading-tight">{label}</span>
+        {description ? (
+          <span className="text-muted-foreground mt-0.5 block text-sm">{description}</span>
+        ) : null}
+      </label>
+    </div>
+  );
+});
+SwitchField.displayName = 'SwitchField';
+
+export { Switch, SwitchField };

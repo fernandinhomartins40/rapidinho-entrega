@@ -16,6 +16,9 @@ const nextConfig = {
     remotePatterns: [
       { protocol: 'http', hostname: 'localhost' },
       { protocol: 'http', hostname: 'minio' },
+      // O curinga `**.` NÃO casa com o domínio sem subdomínio, e é dele que
+      // as imagens são servidas (NEXT_PUBLIC_WEB_URL). Os dois precisam estar.
+      { protocol: 'https', hostname: 'rapidinhoentrega.com.br' },
       { protocol: 'https', hostname: '**.rapidinhoentrega.com.br' },
     ],
   },
