@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import Image from 'next/image';
 import { MapPin, ShieldCheck, Star, Zap } from 'lucide-react';
+import { getPublicEnv } from '@rapidinho/shared';
 import { Logotipo } from '@/components/marca/logo';
 import { SeletorDeCidade, type CidadeDisponivel } from './seletor-de-cidade';
 
@@ -47,12 +47,14 @@ export function Hero({ cidades }: { cidades: CidadeDisponivel[] }) {
           <div className="flex items-center justify-between gap-4">
             <Logotipo className="h-9 w-auto sm:h-11" priority />
 
-            <Link
-              href="/painel"
+            {/* O painel é outro app, em subdomínio próprio: um caminho
+                relativo levaria a uma rota que não existe aqui. */}
+            <a
+              href={getPublicEnv().NEXT_PUBLIC_ADMIN_URL}
               className="focus-visible:ring-brand-tint min-h-touch hidden items-center rounded-xl border border-white/25 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 sm:inline-flex"
             >
               Sou lojista
-            </Link>
+            </a>
           </div>
 
           <div className="mt-12 max-w-2xl sm:mt-16">

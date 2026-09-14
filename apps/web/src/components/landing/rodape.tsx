@@ -1,5 +1,8 @@
 import Link from 'next/link';
-import { APP_NAME } from '@rapidinho/shared';
+import { APP_NAME, getPublicEnv } from '@rapidinho/shared';
+
+/** O painel é outro app, em subdomínio próprio. */
+const LINK_DO_PAINEL = getPublicEnv().NEXT_PUBLIC_ADMIN_URL;
 import { Logotipo } from '@/components/marca/logo';
 
 const LINKS = [
@@ -8,7 +11,7 @@ const LINKS = [
     itens: [
       { rotulo: 'Cadastrar minha loja', href: '/cadastro-loja' },
       { rotulo: 'Ser entregador', href: '/entregador' },
-      { rotulo: 'Entrar no painel', href: '/painel' },
+      { rotulo: 'Entrar no painel', href: LINK_DO_PAINEL, externo: true },
     ],
   },
   {
@@ -47,12 +50,21 @@ export function Rodape() {
               <ul className="mt-3 space-y-2">
                 {grupo.itens.map((item) => (
                   <li key={item.href}>
-                    <Link
-                      href={item.href}
-                      className="text-muted-foreground hover:text-foreground text-sm transition-colors"
-                    >
-                      {item.rotulo}
-                    </Link>
+                    {'externo' in item && item.externo ? (
+                      <a
+                        href={item.href}
+                        className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+                      >
+                        {item.rotulo}
+                      </a>
+                    ) : (
+                      <Link
+                        href={item.href}
+                        className="text-muted-foreground hover:text-foreground text-sm transition-colors"
+                      >
+                        {item.rotulo}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
