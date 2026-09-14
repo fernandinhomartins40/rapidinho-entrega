@@ -30,11 +30,22 @@ export interface ItemDoCarrinho {
   imagem: { url: string | null; blurDataUrl: string | null };
   /// Indisponível desde que o item entrou no carrinho.
   indisponivel: boolean;
-  complementos: { id: string; nome: string; quantidade: number; precoCents: number }[];
+  /// `grupo` e `optionId` seguem para o snapshot do pedido: a comanda precisa
+  /// dizer de qual grupo veio cada escolha, mesmo que o grupo mude depois.
+  complementos: {
+    id: string;
+    optionId: string;
+    grupo: string;
+    nome: string;
+    quantidade: number;
+    precoCents: number;
+  }[];
   pizza: {
     tamanho: string;
-    sabores: string[];
+    /// Preço de cada sabor naquele tamanho, para auditar a regra aplicada.
+    sabores: { id: string; nome: string; precoCents: number }[];
     extra: string | null;
+    extraPrecoCents: number;
   } | null;
   unitTotalCents: number;
   totalCents: number;
@@ -216,6 +227,8 @@ export async function carregarCarrinho(
       indisponivel: indisponivel || complementos.some((c) => !c.disponivel),
       complementos: complementos.map((c) => ({
         id: c.id,
+        optionId: c.optionId,
+        grupo: c.groupName,
         nome: c.nome,
         quantidade: c.quantidade,
         precoCents: c.precoCents,
@@ -223,8 +236,15 @@ export async function carregarCarrinho(
       pizza: item.pizzaSize
         ? {
             tamanho: item.pizzaSize.name,
-            sabores: item.flavors.map((sabor) => sabor.flavor.name),
+            sabores: item.flavors.map((sabor) => ({
+              id: sabor.flavor.id,
+              nome: sabor.flavor.name,
+              precoCents:
+                sabor.flavor.prices.find((preco) => preco.sizeId === item.pizzaSize?.id)
+                  ?.priceCents ?? 0,
+            })),
             extra: item.pizzaExtra?.name ?? null,
+            extraPrecoCents: item.pizzaExtra?.priceCents ?? 0,
           }
         : null,
       unitTotalCents: preco.unitTotalCents,
