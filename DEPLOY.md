@@ -81,16 +81,36 @@ O workflow tem dois jobs. O segundo só roda se o primeiro passar:
 
 Passo a passo do deploy:
 
-| Etapa                              | O que faz                                                 |
-| ---------------------------------- | --------------------------------------------------------- |
-| Preparar o ambiente                | Instala Docker, Nginx, certbot e utilitários que faltarem |
-| Enviar o código                    | `tar` da árvore para `/opt/rapidinho/releases/<versão>`   |
-| Escolher a porta e montar o `.env` | Fixa `DEPLOY_PORT` e gera os segredos na primeira vez     |
-| Subir a aplicação                  | Build, migrations, `up -d` e espera responder             |
-| Nginx (HTTP)                       | Serve a aplicação e o desafio do Let's Encrypt            |
-| Emitir SSL                         | Certificado para os domínios que apontam para a VPS       |
-| Nginx (HTTPS)                      | Redireciona 80 → 443 e termina o TLS                      |
-| Conferir                           | Testa por dentro (loopback) e por fora (domínio)          |
+| Etapa                              | Onde roda  | O que faz                                                              |
+| ---------------------------------- | ---------- | ---------------------------------------------------------------------- |
+| Preparar o ambiente                | VPS        | Instala Docker, Nginx, certbot e utilitários que faltarem              |
+| **Construir as imagens**           | **runner** | `compose build` das cinco imagens, com as URLs públicas                |
+| **Enviar as imagens**              | runner→VPS | `docker save \| zstd \| ssh \| docker load`, sem arquivo intermediário |
+| Enviar o código                    | VPS        | `tar` da árvore para `/opt/rapidinho/releases/<versão>`                |
+| Escolher a porta e montar o `.env` | VPS        | Fixa `DEPLOY_PORT` e gera os segredos na primeira vez                  |
+| Subir a aplicação                  | VPS        | Confere as imagens, migrations, `up -d` e espera responder             |
+| Nginx (HTTP)                       | VPS        | Serve a aplicação e o desafio do Let's Encrypt                         |
+| Emitir SSL                         | VPS        | Certificado para os domínios que apontam para a VPS                    |
+| Nginx (HTTPS)                      | VPS        | Redireciona 80 → 443 e termina o TLS                                   |
+| Conferir                           | VPS        | Loopback, domínio público e os cabeçalhos de segurança                 |
+
+### Por que a VPS não constrói
+
+Ela não dá conta. O deploy #21 mediu a máquina antes de começar:
+
+```
+load average: 243.67, 245.10, 247.30
+Mem: 15988 total, 494 free | Swap: 2757 de 4095 em uso
+```
+
+Carga 243 já nos quinze minutos anteriores, portanto não causada pelo deploy.
+Nesse estado ela não termina um `next build` nem completa um handshake TLS com
+o Docker Hub — os deploys #20 e #21 morreram exatamente assim, um por tempo e
+outro por rede.
+
+A imagem passa a ser construída no runner do GitHub, que tem CPU e rede de
+sobra, e chega pronta. A VPS só descomprime, carrega e sobe. Se as imagens não
+chegarem, o deploy falha dizendo quais faltaram, em vez de tentar construir.
 
 ## Segurança do deploy
 

@@ -34,6 +34,7 @@ services:
         NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL}
         NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
         S3_PUBLIC_URL: ${S3_PUBLIC_URL}
+    image: rapidinho-migrate:${RELEASE_TAG:-dev}
     env_file: .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-rapidinho}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rapidinho}?schema=public

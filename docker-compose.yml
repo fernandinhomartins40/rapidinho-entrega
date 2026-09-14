@@ -40,6 +40,7 @@ services:
         NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL}
         NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
         S3_PUBLIC_URL: ${S3_PUBLIC_URL}
+    image: rapidinho-web:${RELEASE_TAG:-dev}
     container_name: rapidinho-web
     restart: unless-stopped
     env_file: .env
@@ -74,6 +75,7 @@ services:
         NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL}
         NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
         S3_PUBLIC_URL: ${S3_PUBLIC_URL}
+    image: rapidinho-admin:${RELEASE_TAG:-dev}
     container_name: rapidinho-admin
     restart: unless-stopped
     env_file: .env
@@ -105,6 +107,7 @@ services:
     build:
       context: .
       dockerfile: apps/realtime/Dockerfile
+    image: rapidinho-realtime:${RELEASE_TAG:-dev}
     container_name: rapidinho-realtime
     restart: unless-stopped
     env_file: .env
@@ -129,6 +132,7 @@ services:
     build:
       context: .
       dockerfile: apps/worker/Dockerfile
+    image: rapidinho-worker:${RELEASE_TAG:-dev}
     container_name: rapidinho-worker
     restart: unless-stopped
     env_file: .env

@@ -10,6 +10,10 @@ set -euo pipefail
 
 APP_ROOT="${APP_ROOT:?APP_ROOT não informado}"
 RELEASE="${RELEASE:?RELEASE não informada}"
+# Sem isto o compose cairia na tag `dev` e subiria outra imagem que não a desta
+# release — o pior tipo de deploy: o que diz que funcionou.
+RELEASE_TAG="${RELEASE_TAG:?RELEASE_TAG não informada}"
+export RELEASE_TAG
 
 RELEASE_DIR="$APP_ROOT/releases/$RELEASE"
 CURRENT_LINK="$APP_ROOT/current"
@@ -27,61 +31,32 @@ compose() {
   docker compose -f docker-compose.yml -f docker-compose.prod.yml "$@"
 }
 
-echo "==> Estado da VPS antes de construir"
-# O deploy #20 levou 1484 SEGUNDOS para transferir um Dockerfile de 1,82 kB e
-# então falhou com "TLS handshake timeout" contra o Docker Hub. Não foi falta
-# de memória nem paralelismo: a máquina inteira estava rastejando. Sem estes
-# números não há como distinguir disco cheio de host sobrecarregado de rede
-# ruim — e foi exatamente essa dúvida que custou três deploys.
+echo "==> Estado da VPS"
+# O deploy #21 mediu esta máquina e achou load average 243, 494 MB de RAM livre
+# e 2,7 GB de swap em uso — assim já nos 15 minutos anteriores, antes de o
+# deploy encostar nela. Foi por isso que o build saiu daqui. Os números
+# continuam no log porque explicam qualquer lentidão do que sobrou.
 echo "-- disco --";     df -h "$APP_ROOT" / 2>/dev/null | sed 's/^/   /' || true
 echo "-- memória --";   free -m 2>/dev/null | sed 's/^/   /' || true
 echo "-- carga --";     uptime 2>/dev/null | sed 's/^/   /' || true
-echo "-- docker --";    timeout 60 docker system df 2>/dev/null | sed 's/^/   /' || echo "   (docker system df não respondeu em 60s — daemon lento)"
 
-echo "==> Garantindo a imagem base"
-# `--pull` em cada build obrigava uma ida ao Docker Hub por serviço, e foi ela
-# que derrubou o deploy #20. Uma tentativa só, tolerante a falha: se o registro
-# não responder, seguimos com a imagem que já está na máquina. Publicar com uma
-# base de ontem é melhor que não publicar.
-if timeout 300 docker pull node:22-alpine; then
-  echo "    base atualizada"
-elif docker image inspect node:22-alpine >/dev/null 2>&1; then
-  echo "::warning::Docker Hub não respondeu; seguindo com a node:22-alpine já baixada." >&2
-else
-  echo "::error::Docker Hub não respondeu e não há node:22-alpine local — o build não tem como começar." >&2
+echo "==> Conferindo as imagens da release $RELEASE_TAG"
+# As imagens chegam prontas do runner, por `docker save | docker load`. Aqui
+# não se constrói nada: esta VPS não completa nem um handshake TLS com o Docker
+# Hub quando está carregada, quanto mais um `next build`.
+FALTANDO=""
+for servico in web admin realtime worker migrate; do
+  if docker image inspect "rapidinho-${servico}:${RELEASE_TAG}" >/dev/null 2>&1; then
+    echo "    rapidinho-${servico}:${RELEASE_TAG} ok"
+  else
+    FALTANDO="$FALTANDO rapidinho-${servico}:${RELEASE_TAG}"
+  fi
+done
+
+if [ -n "$FALTANDO" ]; then
+  echo "::error::Imagens ausentes na VPS:$FALTANDO — o envio a partir do runner falhou." >&2
   exit 1
 fi
-
-echo "==> Construindo imagens da release $RELEASE"
-
-# UM SERVIÇO DE CADA VEZ. Não porque o paralelismo fosse o problema — o log do
-# deploy #20 mostrou que não era —, mas porque em série cada serviço informa
-# quanto levou, e é esse número que diz onde o tempo vai.
-#
-# `--progress plain` é flag GLOBAL do compose, antes do `build`: depois dele o
-# compose avisa que está no lugar errado. Sem ela o BuildKit agrupa a saída e
-# só a emite no fim, que foi o que transformou o deploy #15 em 38 minutos de
-# silêncio.
-#
-# Sem `--pull` aqui: a base já foi garantida uma vez acima.
-#
-# O `migrate` entra por último e é obrigatório: sem `--profile ferramentas` o
-# build o ignora e o `run` mais abaixo reaproveita a imagem do migrator de um
-# deploy anterior — as migrations rodavam com o código da primeira release
-# publicada, não com o desta. Ele vem logo depois do `web` porque deriva do
-# mesmo estágio, e assim aproveita as camadas ainda quentes.
-for servico in realtime worker admin web migrate; do
-  echo "--> $servico"
-  inicio=$(date +%s)
-
-  if [ "$servico" = "migrate" ]; then
-    compose --progress plain --profile ferramentas build migrate
-  else
-    compose --progress plain build "$servico"
-  fi
-
-  echo "--> $servico pronto em $(( $(date +%s) - inicio ))s"
-done
 
 echo "==> Subindo banco, cache e storage"
 compose up -d postgres redis minio minio-init

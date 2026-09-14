@@ -178,6 +178,64 @@ jobs:
           sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
             "APP_ROOT='$APP_ROOT' bash -s" < .github/scripts/liberar-espaco.sh
 
+      - name: Construir as imagens no runner
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.version }}
+        run: |
+          # O BUILD SAI DA VPS.
+          #
+          # O deploy #21 mediu a máquina antes de construir: load average 243,
+          # 2,7 GB de swap em uso e 494 MB de RAM livre, já assim nos 15 min
+          # anteriores ao nosso build. Nesse estado ela não constrói nada, e
+          # nem completa um handshake TLS com o Docker Hub — foi assim que os
+          # deploys #20 e #21 morreram.
+          #
+          # Aqui o runner tem CPU de sobra e rede boa. A VPS passa a só receber
+          # imagem pronta: nada de `next build`, nada de ida ao registro.
+          export NEXT_PUBLIC_WEB_URL="$CANONICAL_URL"
+          export NEXT_PUBLIC_ADMIN_URL="https://$ADMIN_DOMAIN"
+          export NEXT_PUBLIC_SOCKET_URL="$CANONICAL_URL"
+          export S3_PUBLIC_URL="$CANONICAL_URL/uploads"
+          # Só para a interpolação do compose, que resolve o arquivo inteiro
+          # antes de construir qualquer coisa. Nada disto entra em imagem: são
+          # valores de runtime, e o runtime é a VPS, com o .env dela.
+          export POSTGRES_PASSWORD=interpolacao
+          export MINIO_ROOT_USER=interpolacao
+          export MINIO_ROOT_PASSWORD=interpolacao
+          export DEPLOY_PORT=3100
+
+          docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+            --profile ferramentas build --pull \
+            web admin realtime worker migrate
+
+          docker image ls --format '  {{.Repository}}:{{.Tag}}  {{.Size}}' \
+            | grep "$RELEASE_TAG" || true
+
+      - name: Enviar as imagens para a VPS
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+          RELEASE_TAG: ${{ steps.release.outputs.version }}
+        run: |
+          # `docker save` direto no `docker load` do outro lado, sem arquivo
+          # intermediário: a VPS está com 32 GB livres, mas escrever 1 GB para
+          # ler em seguida é I/O que ela não tem para gastar.
+          #
+          # zstd -3: comprime bem mais rápido que gzip e o gargalo aqui é a
+          # rede, não a CPU do runner.
+          sudo apt-get install -y zstd >/dev/null
+
+          docker save \
+            "rapidinho-web:$RELEASE_TAG" \
+            "rapidinho-admin:$RELEASE_TAG" \
+            "rapidinho-realtime:$RELEASE_TAG" \
+            "rapidinho-worker:$RELEASE_TAG" \
+            "rapidinho-migrate:$RELEASE_TAG" \
+            | zstd -3 -T0 \
+            | sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
+                "zstd -d | docker load"
+
+          echo "Imagens carregadas na VPS."
+
       - name: Enviar o código para a VPS
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
@@ -225,6 +283,7 @@ jobs:
           RELEASE_DIR="$APP_ROOT/releases/${{ steps.release.outputs.version }}"
           sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
             "APP_ROOT='$APP_ROOT' RELEASE='${{ steps.release.outputs.version }}' \
+             RELEASE_TAG='${{ steps.release.outputs.version }}' \
              bash '$RELEASE_DIR/.github/scripts/remote-deploy.sh'"
 
       - name: Configurar o Nginx do host (HTTP)
