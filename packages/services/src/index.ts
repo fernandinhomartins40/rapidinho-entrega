@@ -1,12 +1,16 @@
 import {
+  getPublicEnv,
   parseServerEnv,
   type OtpSender,
+  type PaymentGateway,
   type StorageProvider,
   type WhatsAppProvider,
 } from '@rapidinho/shared';
 import { createS3Storage } from './storage/s3';
 import { createEvolutionWhatsApp, createFakeWhatsApp } from './messaging/whatsapp';
 import { createConsoleOtpSender, createWhatsAppOtpSender } from './messaging/otp';
+import { createFakePaymentGateway } from './payments/fake';
+import { createMercadoPagoGateway } from './payments/mercadopago';
 
 /**
  * Fábricas dos serviços externos.
@@ -19,6 +23,7 @@ import { createConsoleOtpSender, createWhatsAppOtpSender } from './messaging/otp
 let storageInstance: StorageProvider | null = null;
 let whatsappInstance: WhatsAppProvider | null = null;
 let otpSenderInstance: OtpSender | null = null;
+let paymentGatewayInstance: PaymentGateway | null = null;
 
 export function getStorage(): StorageProvider {
   if (storageInstance) return storageInstance;
@@ -76,9 +81,32 @@ export function getOtpSender(): OtpSender {
  * importe de `@rapidinho/services/images` onde ele for realmente usado, para
  * que rotas sem upload não carreguem o binário nativo.
  */
+export function getPaymentGateway(): PaymentGateway {
+  if (paymentGatewayInstance) return paymentGatewayInstance;
+
+  const env = parseServerEnv();
+
+  if (env.PAYMENT_PROVIDER === 'mercadopago') {
+    paymentGatewayInstance = createMercadoPagoGateway({
+      accessToken: env.MERCADOPAGO_ACCESS_TOKEN!,
+      ...(env.MERCADOPAGO_WEBHOOK_SECRET ? { webhookSecret: env.MERCADOPAGO_WEBHOOK_SECRET } : {}),
+      notificationUrl: `${getPublicEnv().NEXT_PUBLIC_WEB_URL}/api/webhooks/pagamento`,
+    });
+  } else {
+    if (env.NODE_ENV === 'production') {
+      throw new Error('PAYMENT_PROVIDER=fake não pode ser usado em produção');
+    }
+    paymentGatewayInstance = createFakePaymentGateway();
+  }
+
+  return paymentGatewayInstance;
+}
+
 export * from './redis';
 export * from './rate-limit';
 export * from './realtime/publisher';
 export * from './storage/s3';
 export * from './messaging/whatsapp';
 export * from './messaging/otp';
+export * from './payments/fake';
+export * from './payments/mercadopago';

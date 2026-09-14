@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bike, Check, MessageCircle, Wifi, WifiOff } from 'lucide-react';
+import { Bike, Check, Copy, MessageCircle, Wifi, WifiOff } from 'lucide-react';
 import { Badge, Button, Card, CardContent, cn } from '@rapidinho/ui';
 import { useRealtime } from '@rapidinho/ui/hooks/use-realtime';
 import {
@@ -44,7 +44,14 @@ interface Props {
       whatsapp: string | null;
       city: { slug: string };
     };
-    payment: { method: string; status: string; changeForCents: number | null } | null;
+    payment: {
+      method: string;
+      status: string;
+      changeForCents: number | null;
+      pixQrCode: string | null;
+      pixQrCodeImage: string | null;
+      pixExpiresAt: string | null;
+    } | null;
     items: {
       id: string;
       productName: string;
@@ -190,6 +197,14 @@ export function AcompanhamentoDoPedido({ pedido, realtime }: Props) {
         </Card>
       )}
 
+      {pedido.status === 'PENDING_PAYMENT' && pedido.payment?.pixQrCode ? (
+        <PagamentoPix
+          qrCode={pedido.payment.pixQrCode}
+          qrCodeImage={pedido.payment.pixQrCodeImage}
+          expiraEm={pedido.payment.pixExpiresAt}
+        />
+      ) : null}
+
       {pedido.delivery?.courier ? (
         <Card>
           <CardContent className="flex items-center gap-3 pt-5">
@@ -320,5 +335,88 @@ export function AcompanhamentoDoPedido({ pedido, realtime }: Props) {
         </Button>
       </div>
     </main>
+  );
+}
+
+/**
+ * Pagamento por Pix.
+ *
+ * O copia-e-cola vem antes do QR de propósito: no celular, que é onde o
+ * cliente está, apontar a câmera para a própria tela é impossível — ele
+ * precisa copiar o código e colar no app do banco.
+ */
+function PagamentoPix({
+  qrCode,
+  qrCodeImage,
+  expiraEm,
+}: {
+  qrCode: string;
+  qrCodeImage: string | null;
+  expiraEm: string | null;
+}) {
+  const [copiado, setCopiado] = useState(false);
+
+  async function copiar() {
+    try {
+      await navigator.clipboard.writeText(qrCode);
+      setCopiado(true);
+      setTimeout(() => setCopiado(false), 3000);
+    } catch {
+      // Navegador sem permissão de área de transferência: o código continua
+      // visível e selecionável abaixo.
+      setCopiado(false);
+    }
+  }
+
+  return (
+    <Card className="border-primary">
+      <CardContent className="space-y-4 pt-5">
+        <div>
+          <p className="font-bold">Pague com Pix para a loja receber seu pedido</p>
+          {expiraEm ? (
+            <p className="text-muted-foreground text-sm">
+              O código vale até{' '}
+              {new Date(expiraEm).toLocaleTimeString('pt-BR', {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+              .
+            </p>
+          ) : null}
+        </div>
+
+        <Button size="lg" block onClick={copiar}>
+          <Copy className="h-5 w-5" aria-hidden />
+          {copiado ? 'Código copiado!' : 'Copiar código Pix'}
+        </Button>
+
+        <p className="text-muted-foreground text-sm">
+          Abra o app do seu banco, escolha Pix → Copia e cola e cole o código.
+        </p>
+
+        {qrCodeImage ? (
+          <details>
+            <summary className="min-h-touch flex cursor-pointer items-center font-medium">
+              Ou leia o QR Code em outro aparelho
+            </summary>
+            {/* `img` cru e não `next/image`: é um data URI gerado pelo
+                gateway, que o otimizador não tem o que otimizar. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={qrCodeImage} alt="QR Code do Pix" className="mt-3 w-52" />
+          </details>
+        ) : null}
+
+        <details>
+          <summary className="text-muted-foreground min-h-touch flex cursor-pointer items-center text-sm">
+            Ver o código
+          </summary>
+          <p className="bg-muted mt-2 break-all rounded-lg p-3 font-mono text-xs">{qrCode}</p>
+        </details>
+
+        <p className="text-muted-foreground text-sm">
+          Assim que o pagamento cair, esta tela muda sozinha.
+        </p>
+      </CardContent>
+    </Card>
   );
 }

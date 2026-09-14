@@ -3,8 +3,9 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@rapidinho/database';
-import { publishRealtime } from '@rapidinho/services';
+import { getPaymentGateway, publishRealtime } from '@rapidinho/services';
 import {
+  buildPixBrCode,
   checkoutSchema,
   isStoreOpen,
   normalizePhoneBR,
@@ -88,6 +89,10 @@ export async function finalizarPedido(
         acceptsCardOnDelivery: true,
         acceptsPickup: true,
         autoAcceptOrders: true,
+        name: true,
+        pixKey: true,
+        settlementMode: true,
+        city: { select: { name: true } },
         avgPrepTimeMinutes: true,
         isPausedUntil: true,
         pauseReason: true,
@@ -183,9 +188,18 @@ export async function finalizarPedido(
     const numero = await gerarNumeroDoPedido();
     const comissao = Number(loja.subscription?.plan.commissionRate ?? 0);
 
-    // O aceite automático pula a etapa de confirmação para lojas que sempre
-    // aceitam — o status inicial já entra como ACCEPTED.
-    const statusInicial = loja.autoAcceptOrders ? 'ACCEPTED' : 'RECEIVED';
+    // Pagamento online só vira pedido de verdade quando o dinheiro entra: até
+    // lá fica em PENDING_PAYMENT e nem aparece na tela do lojista. Pagamento
+    // na entrega entra direto, porque o acerto é com o entregador.
+    const pagamentoOnline =
+      dados.paymentMethod === 'PIX' || dados.paymentMethod === 'CREDIT_CARD_ONLINE';
+
+    const statusInicial = pagamentoOnline
+      ? 'PENDING_PAYMENT'
+      : // O aceite automático pula a confirmação para lojas que sempre aceitam.
+        loja.autoAcceptOrders
+        ? 'ACCEPTED'
+        : 'RECEIVED';
 
     const pedido = await prisma.$transaction(async (tx) => {
       const criado = await tx.order.create({
@@ -258,11 +272,14 @@ export async function finalizarPedido(
           payment: {
             create: {
               method: dados.paymentMethod,
-              // Pix e cartão online só ficam pagos depois do webhook do
-              // gateway; pagamento na entrega é acertado com o entregador.
+              // Sempre PENDING no início: Pix e cartão aguardam o webhook,
+              // dinheiro e maquininha são acertados na entrega.
               status: 'PENDING',
+              provider: pagamentoOnline ? undefined : 'OFFLINE',
               amountCents: resumo.totalCents,
               changeForCents: dados.changeForCents ?? null,
+              platformFeeCents: resumo.commissionCents,
+              settlementMode: loja.settlementMode,
             },
           },
         },
@@ -291,10 +308,30 @@ export async function finalizarPedido(
       return criado;
     });
 
-    await publishRealtime(REALTIME_CHANNELS.store(loja.id), REALTIME_EVENTS.orderCreated, {
-      orderId: pedido.id,
-      number: pedido.number,
-    });
+    if (dados.paymentMethod === 'PIX') {
+      await gerarCobrancaPix({
+        orderId: pedido.id,
+        numero: pedido.number,
+        totalCents: resumo.totalCents,
+        comissaoCents: resumo.commissionCents,
+        cliente: { nome: nomeDoCliente, telefone: telefoneDoCliente },
+        loja: {
+          nome: loja.name,
+          cidade: loja.city.name,
+          pixKey: loja.pixKey,
+          recebeDireto: loja.settlementMode === 'STORE_COLLECTS',
+        },
+      });
+    }
+
+    // Pedido aguardando pagamento ainda não é trabalho para a loja: o aviso
+    // sai quando o webhook confirmar.
+    if (statusInicial !== 'PENDING_PAYMENT') {
+      await publishRealtime(REALTIME_CHANNELS.store(loja.id), REALTIME_EVENTS.orderCreated, {
+        orderId: pedido.id,
+        number: pedido.number,
+      });
+    }
 
     revalidatePath('/carrinho');
     revalidatePath('/pedidos');
@@ -308,4 +345,69 @@ export async function finalizarPedido(
   if (destino) redirect(destino);
 
   return resultado;
+}
+
+/**
+ * Cria a cobrança Pix do pedido.
+ *
+ * Duas situações, e as duas existem no interior:
+ *
+ * - a loja recebe direto na própria chave (STORE_COLLECTS): geramos o BR Code
+ *   nós mesmos, sem intermediário e sem tarifa. A confirmação é manual, pelo
+ *   lojista — que é como ele já faz hoje no balcão;
+ * - a plataforma intermedia: o gateway cria a cobrança, devolve o QR e avisa
+ *   pelo webhook quando o dinheiro cai.
+ *
+ * Falhar aqui NÃO derruba o pedido: ele já está gravado. O cliente vê a tela
+ * de pagamento pedindo para tentar de novo, em vez de perder tudo o que montou.
+ */
+async function gerarCobrancaPix(entrada: {
+  orderId: string;
+  numero: string;
+  totalCents: number;
+  comissaoCents: number;
+  cliente: { nome: string; telefone: string };
+  loja: { nome: string; cidade: string; pixKey: string | null; recebeDireto: boolean };
+}): Promise<void> {
+  try {
+    if (entrada.loja.recebeDireto && entrada.loja.pixKey) {
+      await prisma.payment.update({
+        where: { orderId: entrada.orderId },
+        data: {
+          provider: 'OFFLINE',
+          pixQrCode: buildPixBrCode({
+            pixKey: entrada.loja.pixKey,
+            amountCents: entrada.totalCents,
+            merchantName: entrada.loja.nome,
+            merchantCity: entrada.loja.cidade,
+            txid: entrada.numero,
+            description: `Pedido ${entrada.numero}`,
+          }),
+          pixExpiresAt: new Date(Date.now() + 30 * 60_000),
+        },
+      });
+      return;
+    }
+
+    const cobranca = await getPaymentGateway().createPixCharge({
+      orderId: entrada.orderId,
+      amountCents: entrada.totalCents,
+      description: `Pedido ${entrada.numero} — ${entrada.loja.nome}`,
+      payer: { name: entrada.cliente.nome, phone: entrada.cliente.telefone },
+      expiresInSeconds: 30 * 60,
+      platformFeeCents: entrada.comissaoCents,
+    });
+
+    await prisma.payment.update({
+      where: { orderId: entrada.orderId },
+      data: {
+        externalId: cobranca.externalId,
+        pixQrCode: cobranca.qrCode,
+        pixQrCodeImage: cobranca.qrCodeImage ?? null,
+        pixExpiresAt: cobranca.expiresAt ?? null,
+      },
+    });
+  } catch (error) {
+    console.error('[checkout] falha ao gerar cobrança Pix', { orderId: entrada.orderId, error });
+  }
 }

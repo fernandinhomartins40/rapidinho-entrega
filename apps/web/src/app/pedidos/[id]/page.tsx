@@ -41,7 +41,16 @@ export default async function PedidoPage({ params }: { params: Promise<{ id: str
           city: { select: { slug: true } },
         },
       },
-      payment: { select: { method: true, status: true, changeForCents: true } },
+      payment: {
+        select: {
+          method: true,
+          status: true,
+          changeForCents: true,
+          pixQrCode: true,
+          pixQrCodeImage: true,
+          pixExpiresAt: true,
+        },
+      },
       items: {
         select: {
           id: true,
@@ -83,6 +92,12 @@ export default async function PedidoPage({ params }: { params: Promise<{ id: str
         ...pedido,
         createdAt: pedido.createdAt.toISOString(),
         estimatedReadyAt: pedido.estimatedReadyAt?.toISOString() ?? null,
+        payment: pedido.payment
+          ? {
+              ...pedido.payment,
+              pixExpiresAt: pedido.payment.pixExpiresAt?.toISOString() ?? null,
+            }
+          : null,
         statusHistory: pedido.statusHistory.map((linha) => ({
           ...linha,
           createdAt: linha.createdAt.toISOString(),
