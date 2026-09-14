@@ -36,11 +36,11 @@ O painel usa **subdomínio**, não caminho. Servir o painel em `/painel` daria
 1. **Criar os secrets no GitHub**
    `Settings → Secrets and variables → Actions → New repository secret`
 
-   | Secret              | Obrigatório | Para quê                                             |
-   | ------------------- | ----------- | ---------------------------------------------------- |
-   | `VPS_PASSWORD`      | sim         | senha de root da VPS                                  |
-   | `SUPER_ADMIN_PHONE` | sim         | telefone do primeiro administrador                    |
-   | `SENTRY_DSN`        | não         | monitoramento de erro                                 |
+   | Secret              | Obrigatório | Para quê                           |
+   | ------------------- | ----------- | ---------------------------------- |
+   | `VPS_PASSWORD`      | sim         | senha de root da VPS               |
+   | `SUPER_ADMIN_PHONE` | sim         | telefone do primeiro administrador |
+   | `SENTRY_DSN`        | não         | monitoramento de erro              |
 
    Nenhum deles entra no repositório.
 

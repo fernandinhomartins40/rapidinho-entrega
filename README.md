@@ -71,12 +71,12 @@ apps/
   web        PWA do cliente final            (porta interna 3000)
   admin      Painel do lojista, do super admin e do entregador (3001)
   realtime   WebSocket dos pedidos (Socket.io sobre Redis)     (3002)
-  worker     Filas BullMQ: imagens, notificações, cobranças
+  worker     Filas BullMQ: imagens, notificações, campanhas, cobranças
 packages/
   database   Prisma schema, migrations e seeds
   shared     Regras de domínio, schemas Zod, contratos de serviço
   services   Implementações: storage, imagens, pagamento, WhatsApp,
-             push, e-mail, filas, rate limit e log
+             push, e-mail, filas, rate limit, log e Sentry
   auth       Auth.js, sessão em banco, OTP e guardas multi-tenant
   ui         Design system e o <ImageUploader />
   config     eslint, tsconfig e tailwind compartilhados
@@ -167,3 +167,6 @@ código:
 
 `fake` e `console` existem para desenvolvimento sem credencial e sem custo —
 e são recusados em produção pela validação de ambiente.
+
+`SENTRY_DSN` é opcional: sem ele o erro vai para o log estruturado do Pino, e
+o SDK — que passa de 2 MB — nem chega a ser carregado.
