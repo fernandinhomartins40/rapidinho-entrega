@@ -76,7 +76,9 @@ export function getOtpSender(): OtpSender {
  * importe de `@rapidinho/services/images` onde ele for realmente usado, para
  * que rotas sem upload não carreguem o binário nativo.
  */
+export * from './redis';
 export * from './rate-limit';
+export * from './realtime/publisher';
 export * from './storage/s3';
 export * from './messaging/whatsapp';
 export * from './messaging/otp';

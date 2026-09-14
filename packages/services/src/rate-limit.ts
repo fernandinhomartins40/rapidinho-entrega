@@ -1,5 +1,4 @@
-import Redis from 'ioredis';
-import { parseServerEnv } from '@rapidinho/shared';
+import { getRedis } from './redis';
 
 /**
  * Rate limiting por janela fixa em Redis.
@@ -9,24 +8,6 @@ import { parseServerEnv } from '@rapidinho/shared';
  * O limite é por chave (telefone e IP são contados separadamente, porque
  * bloquear só por IP não protege um telefone alvo e vice-versa).
  */
-
-let redisClient: Redis | null = null;
-
-export function getRedis(): Redis {
-  if (redisClient) return redisClient;
-
-  const env = parseServerEnv();
-  redisClient = new Redis(env.REDIS_URL, {
-    maxRetriesPerRequest: 3,
-    lazyConnect: false,
-  });
-
-  redisClient.on('error', (error) => {
-    console.error('[redis] erro de conexão', error.message);
-  });
-
-  return redisClient;
-}
 
 export interface RateLimitResult {
   allowed: boolean;

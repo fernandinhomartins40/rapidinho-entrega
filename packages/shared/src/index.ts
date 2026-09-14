@@ -4,3 +4,4 @@ export * from './schemas';
 export * from './services';
 export * from './utils';
 export * from './env';
+export * from './realtime';
