@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { gerarNonce, montarCsp } from '@rapidinho/shared/security';
 
 /**
- * Primeira barreira de autorização do painel.
+ * Primeira barreira de autorização do painel, e os cabeçalhos de segurança.
  *
  * Aqui só olhamos a presença do cookie de sessão: o middleware roda no edge e
  * não tem acesso ao banco. A checagem de papel e de vínculo com a loja é feita
@@ -11,6 +12,32 @@ import { NextResponse, type NextRequest } from 'next/server';
  */
 
 const PUBLIC_PATHS = ['/entrar', '/cadastro', '/api/auth', '/api/health'];
+
+/**
+ * Aplica a CSP na resposta e na requisição.
+ *
+ * Nos dois porque o nonce muda a cada resposta: no cabeçalho de resposta ele
+ * vira a política que o navegador cobra, e no da requisição é onde o Next o
+ * procura para marcar os próprios scripts.
+ */
+function comCsp(request: NextRequest, criar: (cabecalhos: Headers) => NextResponse): NextResponse {
+  const nonce = gerarNonce();
+
+  const csp = montarCsp(nonce, {
+    imagens: process.env.S3_PUBLIC_URL,
+    socket: process.env.NEXT_PUBLIC_SOCKET_URL,
+    desenvolvimento: process.env.NODE_ENV === 'development',
+  });
+
+  const cabecalhos = new Headers(request.headers);
+  cabecalhos.set('x-nonce', nonce);
+  cabecalhos.set('Content-Security-Policy', csp);
+
+  const resposta = criar(cabecalhos);
+  resposta.headers.set('Content-Security-Policy', csp);
+
+  return resposta;
+}
 
 function hasSessionCookie(request: NextRequest): boolean {
   return (
@@ -22,17 +49,15 @@ function hasSessionCookie(request: NextRequest): boolean {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
-    return NextResponse.next();
-  }
-
-  if (!hasSessionCookie(request)) {
+  // O redirecionamento não renderiza página nenhuma, então não precisa de
+  // nonce — a CSP da tela de login virá na resposta que a entregar.
+  if (!PUBLIC_PATHS.some((path) => pathname.startsWith(path)) && !hasSessionCookie(request)) {
     const loginUrl = new URL('/entrar', request.url);
     loginUrl.searchParams.set('destino', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
-  return NextResponse.next();
+  return comCsp(request, (headers) => NextResponse.next({ request: { headers } }));
 }
 
 export const config = {

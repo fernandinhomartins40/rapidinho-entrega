@@ -28,7 +28,21 @@ COPY --from=deps /app/packages ./packages
 COPY --from=deps /app/apps ./apps
 COPY . .
 RUN pnpm --filter @rapidinho/database exec prisma generate
-ENV NEXT_TELEMETRY_DISABLED=1
+
+# As URLs públicas precisam existir no BUILD, não só no runtime: o middleware
+# roda no runtime edge, onde o Next substitui `process.env` pelo valor no
+# momento do build. Sem isto a CSP sairia sem a origem do socket e o tempo real
+# seria bloqueado pelo navegador — com a página carregando normalmente, o que
+# esconde a causa.
+ARG NEXT_PUBLIC_WEB_URL=http://localhost:3000
+ARG NEXT_PUBLIC_ADMIN_URL=http://localhost:3001
+ARG NEXT_PUBLIC_SOCKET_URL=http://localhost:3002
+ARG S3_PUBLIC_URL=http://localhost:9000/rapidinho
+ENV NEXT_TELEMETRY_DISABLED=1 \
+    NEXT_PUBLIC_WEB_URL=$NEXT_PUBLIC_WEB_URL \
+    NEXT_PUBLIC_ADMIN_URL=$NEXT_PUBLIC_ADMIN_URL \
+    NEXT_PUBLIC_SOCKET_URL=$NEXT_PUBLIC_SOCKET_URL \
+    S3_PUBLIC_URL=$S3_PUBLIC_URL
 RUN pnpm --filter @rapidinho/admin build
 
 # --- Migrações ---------------------------------------------------------------

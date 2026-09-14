@@ -13,7 +13,8 @@
     "./constants": "./src/constants/index.ts",
     "./utils": "./src/utils/index.ts",
     "./realtime": "./src/realtime/index.ts",
-    "./realtime/token": "./src/realtime/token.ts"
+    "./realtime/token": "./src/realtime/token.ts",
+    "./security": "./src/security/csp.ts"
   },
   "scripts": {
     "lint": "eslint .",

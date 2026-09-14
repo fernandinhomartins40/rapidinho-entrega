@@ -42,3 +42,7 @@ apps/realtime/dist/
 e2e/.auth/
 test-results/
 playwright-report/
+
+# Snapshot do Redis. Aparece na raiz quando se roda o redis-server local e
+# não tem nada que ver com o código — entrou por descuido no commit dos E2E.
+dump.rdb
