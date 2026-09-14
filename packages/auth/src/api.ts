@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
+// Subcaminho, e não o barril: o índice de `services` carrega BullMQ, Redis e
+// S3, que nada têm a ver com traduzir uma exceção em resposta HTTP.
+import { capturarErro } from '@rapidinho/services/observability';
 import { AuthorizationError } from './guards';
 
 /**
@@ -27,7 +30,9 @@ export function toErrorResponse(error: unknown): NextResponse {
     );
   }
 
-  console.error('[api] erro não tratado', error);
+  // `void` de propósito: a resposta de erro não espera o envio ao Sentry —
+  // quem está com 500 na tela não deve aguardar uma chamada de rede a mais.
+  void capturarErro(error, { origem: 'api' });
   return NextResponse.json({ error: 'Erro inesperado. Tente de novo.' }, { status: 500 });
 }
 

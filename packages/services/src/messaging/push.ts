@@ -1,5 +1,6 @@
 import webpush from 'web-push';
 import type { PushProvider, PushPayload, PushSubscriptionData } from '@rapidinho/shared';
+import { logger } from '../logger';
 
 /**
  * Web Push com VAPID.
@@ -43,7 +44,7 @@ export function createWebPushProvider(config: Config): PushProvider {
           return { ok: false, expired: true };
         }
 
-        console.error('[push] falha ao enviar', { status, error });
+        logger.error({ err: error, status }, '[push] falha ao enviar');
         return { ok: false };
       }
     },

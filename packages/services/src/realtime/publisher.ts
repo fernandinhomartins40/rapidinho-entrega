@@ -1,5 +1,6 @@
 import { REALTIME_BRIDGE_CHANNEL, type RealtimeMessage } from '@rapidinho/shared/realtime';
 import { getRedis } from '../redis';
+import { logger } from '../logger';
 
 /**
  * Publicação de eventos em tempo real.
@@ -24,7 +25,7 @@ export async function publishRealtime(
     // está no banco e a tela do lojista recarrega. Derrubar a Server Action
     // porque o Redis piscou seria trocar um aviso perdido por uma venda
     // perdida.
-    console.error('[realtime] falha ao publicar', { channel, event, error });
+    logger.error({ err: error, channel, event }, '[realtime] falha ao publicar');
   }
 }
 

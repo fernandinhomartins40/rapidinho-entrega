@@ -1,4 +1,5 @@
 import { APP_NAME, type OtpSender, type WhatsAppProvider } from '@rapidinho/shared';
+import { logger } from '../logger';
 
 /** Texto do código. Curto de propósito: aparece inteiro na prévia da notificação. */
 function otpMessage(code: string, minutes: number): string {
@@ -22,7 +23,7 @@ export function createConsoleOtpSender(): OtpSender {
   return {
     channel: 'console',
     async send({ phone, code, expiresInMinutes }) {
-      console.warn(`[otp] ${phone} → código ${code} (expira em ${expiresInMinutes} min)`);
+      logger.warn(`[otp] ${phone} → código ${code} (expira em ${expiresInMinutes} min)`);
     },
   };
 }

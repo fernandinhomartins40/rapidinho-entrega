@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
 import { AuthorizationError, requireAdmin, type CurrentUser } from '@rapidinho/auth';
 import { recordAudit } from '@rapidinho/database';
-import { clientIpFromHeaders } from '@rapidinho/services';
+import { capturarErro, clientIpFromHeaders } from '@rapidinho/services';
 import { ZodError } from 'zod';
 import type { ActionResult } from './action-state';
 
@@ -78,7 +78,7 @@ export async function runAdminAction(
     if (error instanceof Error && error.message === 'NEXT_REDIRECT') throw error;
     if (typeof error === 'object' && error !== null && 'digest' in error) throw error;
 
-    console.error('[admin-action] falha', error);
+    void capturarErro(error, { origem: 'admin-action' });
     return { ok: false, message: 'Não foi possível concluir. Tente de novo.' };
   }
 }

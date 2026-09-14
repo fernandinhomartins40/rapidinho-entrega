@@ -204,6 +204,7 @@ jobs:
           sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
             "APP_ROOT='$APP_ROOT' \
              SUPER_ADMIN_PHONE='${{ secrets.SUPER_ADMIN_PHONE }}' \
+             SENTRY_DSN='${{ secrets.SENTRY_DSN }}' \
              CANONICAL_URL='$CANONICAL_URL' \
              PRIMARY_DOMAIN='$PRIMARY_DOMAIN' \
              ADMIN_DOMAIN='$ADMIN_DOMAIN' \

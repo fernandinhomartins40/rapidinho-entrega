@@ -1,4 +1,5 @@
 import { prisma } from '@rapidinho/database';
+import { capturarErro } from '@rapidinho/services';
 
 /**
  * Gera as variantes de uma imagem em segundo plano.
@@ -40,7 +41,7 @@ export async function processarImagem(mediaId: string): Promise<void> {
       },
     });
   } catch (erro) {
-    console.error('[imagem] falha ao reprocessar', { mediaId, erro });
+    void capturarErro(erro, { origem: 'imagem', mediaId });
     throw erro;
   }
 }

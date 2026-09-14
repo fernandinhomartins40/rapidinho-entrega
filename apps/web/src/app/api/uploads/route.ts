@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@rapidinho/database';
 import { apiHandler, requireUser } from '@rapidinho/auth';
-import { getStorage } from '@rapidinho/services';
+import { capturarErro, getStorage } from '@rapidinho/services';
 import {
   InvalidImageError,
   isPrivateContext,
@@ -79,7 +79,7 @@ export const POST = apiHandler(async (request: Request) => {
       return NextResponse.json({ error: error.message }, { status: 422 });
     }
 
-    console.error('[uploads] falha ao processar imagem', error);
+    void capturarErro(error, { origem: 'uploads' });
     return NextResponse.json({ error: 'Não foi possível processar a imagem' }, { status: 500 });
   }
 });

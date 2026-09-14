@@ -1,4 +1,5 @@
 import type { WhatsAppMessage, WhatsAppProvider } from '@rapidinho/shared';
+import { logger } from '../logger';
 
 /**
  * WhatsApp via Evolution API (self-hosted).
@@ -41,7 +42,10 @@ export function createEvolutionWhatsApp(config: EvolutionConfig): WhatsAppProvid
       });
 
       if (!response.ok) {
-        console.error('[whatsapp] falha ao enviar', response.status, await response.text());
+        logger.error(
+          { status: response.status, corpo: await response.text() },
+          '[whatsapp] falha ao enviar',
+        );
         return null;
       }
 
@@ -57,7 +61,7 @@ export function createFakeWhatsApp(): WhatsAppProvider {
     name: 'fake',
     isConfigured: () => true,
     async sendText(message) {
-      console.warn(`[whatsapp:fake] para ${message.to}: ${message.text}`);
+      logger.info(`[whatsapp:fake] para ${message.to}: ${message.text}`);
       return { messageId: `fake-${Date.now()}` };
     },
   };

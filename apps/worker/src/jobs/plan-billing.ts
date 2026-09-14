@@ -1,5 +1,5 @@
 import { prisma } from '@rapidinho/database';
-import { notificarUsuario } from '@rapidinho/services';
+import { capturarErro, logger, notificarUsuario } from '@rapidinho/services';
 import { formatCents } from '@rapidinho/shared';
 
 /**
@@ -106,12 +106,9 @@ export async function cobrarMensalidades(): Promise<void> {
       }
     } catch (erro) {
       // Uma assinatura com problema não pode impedir a cobrança das outras.
-      console.error('[cobranca] falhou para uma assinatura', {
-        subscriptionId: assinatura.id,
-        erro,
-      });
+      void capturarErro(erro, { origem: 'cobranca', subscriptionId: assinatura.id });
     }
   }
 
-  console.warn(`[cobranca] ${assinaturas.length} assinatura(s) processada(s)`);
+  logger.info({ total: assinaturas.length }, '[cobranca] assinaturas processadas');
 }

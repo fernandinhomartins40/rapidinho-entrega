@@ -4,6 +4,7 @@ import { Server, type Socket } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { REALTIME_BRIDGE_CHANNEL, type RealtimeMessage } from '@rapidinho/shared/realtime';
 import { verifyChannelToken } from '@rapidinho/shared/realtime/token';
+import { logger } from './logger';
 
 /**
  * Servidor de tempo real.
@@ -106,7 +107,7 @@ bridgeClient.on('message', (_canalRedis: string, bruto: string) => {
     const mensagem = JSON.parse(bruto) as RealtimeMessage;
 
     if (typeof mensagem.channel !== 'string' || typeof mensagem.event !== 'string') {
-      console.error('[realtime] mensagem malformada descartada');
+      logger.warn('[realtime] mensagem malformada descartada');
       return;
     }
 
@@ -114,18 +115,18 @@ bridgeClient.on('message', (_canalRedis: string, bruto: string) => {
   } catch (error) {
     // Uma mensagem inválida não pode derrubar a ponte: o próximo pedido
     // precisa continuar chegando.
-    console.error('[realtime] falha ao processar mensagem', error);
+    logger.error({ err: error }, '[realtime] falha ao processar mensagem');
   }
 });
 
 for (const cliente of [pubClient, subClient, bridgeClient]) {
   cliente.on('error', (error: Error) => {
-    console.error('[realtime] erro no Redis', error.message);
+    logger.error({ err: error.message }, '[realtime] erro no Redis');
   });
 }
 
 httpServer.listen(PORT, () => {
-  console.warn(`[realtime] escutando na porta ${PORT}`);
+  logger.info({ porta: PORT }, '[realtime] escutando');
 });
 
 /**
@@ -134,7 +135,7 @@ httpServer.listen(PORT, () => {
  */
 for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
   process.on(sinal, () => {
-    console.warn(`[realtime] encerrando (${sinal})`);
+    logger.info({ sinal }, '[realtime] encerrando');
     io.close(() => {
       void Promise.all([pubClient.quit(), subClient.quit(), bridgeClient.quit()]).finally(() => {
         process.exit(0);

@@ -6,7 +6,7 @@ import {
   type StoreAccess,
 } from '@rapidinho/auth';
 import { recordAudit } from '@rapidinho/database';
-import { clientIpFromHeaders } from '@rapidinho/services';
+import { capturarErro, clientIpFromHeaders } from '@rapidinho/services';
 import { ZodError } from 'zod';
 import type { ActionResult } from './action-state';
 
@@ -90,7 +90,7 @@ function tratarErro(error: unknown): ActionResult {
   if (error instanceof Error && error.message === 'NEXT_REDIRECT') throw error;
   if (typeof error === 'object' && error !== null && 'digest' in error) throw error;
 
-  console.error('[store-action] falha', error);
+  void capturarErro(error, { origem: 'store-action' });
   return { ok: false, message: 'Não foi possível concluir. Tente de novo.' };
 }
 

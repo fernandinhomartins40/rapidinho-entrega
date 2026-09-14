@@ -12,6 +12,7 @@
  */
 export * from './providers';
 export * from './logger';
+export * from './observability';
 export * from './redis';
 export * from './queues';
 export * from './rate-limit';

@@ -2,7 +2,9 @@ import { Worker, type Job } from 'bullmq';
 import { prisma } from '@rapidinho/database';
 import {
   agendarRotinas,
+  capturarErro,
   getRedis,
+  logger,
   notificarUsuario,
   type JobDeNotificacao,
 } from '@rapidinho/services';
@@ -58,21 +60,22 @@ const trabalhadores = [
 
 for (const trabalhador of trabalhadores) {
   trabalhador.on('failed', (job, erro) => {
-    console.error(`[worker] ${trabalhador.name} falhou`, {
+    void capturarErro(erro, {
+      origem: 'worker',
+      fila: trabalhador.name,
       jobId: job?.id,
       tentativa: job?.attemptsMade,
-      erro: erro.message,
     });
   });
 
   trabalhador.on('completed', (job) => {
-    console.warn(`[worker] ${trabalhador.name} concluiu ${job.id}`);
+    logger.debug({ fila: trabalhador.name, jobId: job.id }, '[worker] job concluído');
   });
 }
 
 await agendarRotinas();
 
-console.warn(`[worker] ouvindo ${trabalhadores.length} filas`);
+logger.info({ filas: trabalhadores.length }, '[worker] ouvindo filas');
 
 /**
  * Encerramento limpo.
@@ -83,7 +86,7 @@ console.warn(`[worker] ouvindo ${trabalhadores.length} filas`);
  */
 for (const sinal of ['SIGTERM', 'SIGINT'] as const) {
   process.on(sinal, () => {
-    console.warn(`[worker] encerrando (${sinal})`);
+    logger.info({ sinal }, '[worker] encerrando');
 
     void Promise.all(trabalhadores.map((trabalhador) => trabalhador.close()))
       .then(() => prisma.$disconnect())

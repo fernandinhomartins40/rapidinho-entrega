@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { prisma } from '@rapidinho/database';
-import { publishRealtimeMany } from '@rapidinho/services';
+import { capturarErro, publishRealtimeMany } from '@rapidinho/services';
 import { AuthorizationError, requireCourier } from '@rapidinho/auth';
 import { REALTIME_CHANNELS, REALTIME_EVENTS } from '@rapidinho/shared';
 import type { ActionResult } from '@/lib/action-state';
@@ -30,7 +30,7 @@ async function comEntregador(
     if (error instanceof Error && error.message === 'NEXT_REDIRECT') throw error;
     if (typeof error === 'object' && error !== null && 'digest' in error) throw error;
 
-    console.error('[entregador] falha', error);
+    void capturarErro(error, { origem: 'entregador' });
     return { ok: false, message: 'Não foi possível concluir. Tente de novo.' };
   }
 }

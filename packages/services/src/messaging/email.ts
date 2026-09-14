@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
 import type { EmailMessage, EmailProvider } from '@rapidinho/shared';
+import { logger } from '../logger';
 
 /**
  * E-mail transacional pelo Resend.
@@ -27,7 +28,7 @@ export function createResendEmailProvider(apiKey: string, from: string): EmailPr
         });
 
         if (resultado.error) {
-          console.error('[email] Resend recusou', resultado.error);
+          logger.error({ err: resultado.error }, '[email] Resend recusou');
           return null;
         }
 
@@ -35,7 +36,7 @@ export function createResendEmailProvider(apiKey: string, from: string): EmailPr
       } catch (error) {
         // E-mail é o canal menos crítico: falhar aqui não pode derrubar o
         // fluxo que o disparou.
-        console.error('[email] falha ao enviar', error);
+        logger.error({ err: error }, '[email] falha ao enviar');
         return null;
       }
     },
@@ -47,7 +48,7 @@ export function createFakeEmailProvider(): EmailProvider {
     name: 'fake',
 
     async send(message: EmailMessage) {
-      console.warn('[email:fake]', message.subject, '→', message.to);
+      logger.info({ assunto: message.subject, para: message.to }, '[email:fake] não enviado');
       return { id: `fake_${Date.now()}` };
     },
   };

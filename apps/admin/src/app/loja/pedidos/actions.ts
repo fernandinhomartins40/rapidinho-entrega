@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@rapidinho/database';
-import { notificarUsuario, publishRealtimeMany } from '@rapidinho/services';
+import { logger, notificarUsuario, publishRealtimeMany } from '@rapidinho/services';
 import {
   canTransition,
   cancelOrderSchema,
@@ -301,6 +301,6 @@ async function abrirCorrida(orderId: string, storeId: string): Promise<void> {
     });
   } catch (error) {
     // Índice único recusou: outra chamada simultânea já criou a corrida.
-    console.warn('[pedidos] corrida já existia', { orderId, error });
+    logger.info({ err: error, orderId }, '[pedidos] corrida já existia');
   }
 }

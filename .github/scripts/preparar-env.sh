@@ -145,6 +145,13 @@ if [ -n "${SUPER_ADMIN_PHONE:-}" ]; then
   garantir_env "SUPER_ADMIN_PHONE" "$SUPER_ADMIN_PHONE"
 fi
 
+# Monitoramento de erro. Opcional de propósito: sem DSN o erro vai só para o
+# log estruturado, e ninguém precisa criar conta em serviço de terceiro para
+# subir o projeto.
+if [ -n "${SENTRY_DSN:-}" ]; then
+  gravar_env "SENTRY_DSN" "$SENTRY_DSN"
+fi
+
 chmod 600 "$ENV_FILE"
 
 echo "Ambiente pronto. DEPLOY_PORT=$(ler_env "DEPLOY_PORT")"

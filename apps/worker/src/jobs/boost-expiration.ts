@@ -1,4 +1,5 @@
 import { prisma } from '@rapidinho/database';
+import { logger } from '@rapidinho/services';
 
 /**
  * Encerra impulsionamentos vencidos.
@@ -22,6 +23,6 @@ export async function expirarImpulsionamentos(): Promise<void> {
   });
 
   if (count > 0 || ativados > 0) {
-    console.warn(`[boost] ${count} expirado(s), ${ativados} ativado(s)`);
+    logger.info({ expirados: count, ativados }, '[boost] impulsionamentos atualizados');
   }
 }

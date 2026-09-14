@@ -3,7 +3,7 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@rapidinho/database';
-import { getPaymentGateway, publishRealtime } from '@rapidinho/services';
+import { capturarErro, getPaymentGateway, publishRealtime } from '@rapidinho/services';
 import {
   buildPixBrCode,
   checkoutSchema,
@@ -408,6 +408,6 @@ async function gerarCobrancaPix(entrada: {
       },
     });
   } catch (error) {
-    console.error('[checkout] falha ao gerar cobrança Pix', { orderId: entrada.orderId, error });
+    void capturarErro(error, { origem: 'checkout-pix', orderId: entrada.orderId });
   }
 }

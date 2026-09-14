@@ -5,6 +5,7 @@ import type {
   PaymentGateway,
   PaymentStatusName,
 } from '@rapidinho/shared';
+import { logger } from '../logger';
 
 /**
  * Mercado Pago.
@@ -172,7 +173,7 @@ export function createMercadoPagoGateway(config: Config): PaymentGateway {
       // Sem segredo configurado, nada é aceito: aceitar webhook não assinado
       // deixaria qualquer um marcar pedidos como pagos.
       if (!config.webhookSecret) {
-        console.error('[mercadopago] webhook recebido sem MERCADOPAGO_WEBHOOK_SECRET configurado');
+        logger.error('[mercadopago] webhook recebido sem MERCADOPAGO_WEBHOOK_SECRET configurado');
         return null;
       }
 

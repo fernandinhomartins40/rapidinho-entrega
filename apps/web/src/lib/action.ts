@@ -1,4 +1,5 @@
 import { AuthorizationError, getCurrentUser, type CurrentUser } from '@rapidinho/auth';
+import { capturarErro } from '@rapidinho/services';
 import { ZodError } from 'zod';
 import type { ActionResult } from './action-state';
 
@@ -30,7 +31,7 @@ function tratarErro(error: unknown): ActionResult {
   if (error instanceof Error && error.message === 'NEXT_REDIRECT') throw error;
   if (typeof error === 'object' && error !== null && 'digest' in error) throw error;
 
-  console.error('[action] falha', error);
+  void capturarErro(error, { origem: 'web-action' });
   return { ok: false, message: 'Não foi possível concluir. Tente de novo.' };
 }
 

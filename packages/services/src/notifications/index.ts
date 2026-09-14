@@ -1,6 +1,7 @@
 import { prisma } from '@rapidinho/database';
 import type { PushPayload } from '@rapidinho/shared';
 import { getEmail, getPush, getWhatsApp } from '../providers';
+import { logger } from '../logger';
 
 /**
  * Envio de notificação ao usuário.
@@ -71,7 +72,10 @@ async function registrar(
       },
     });
   } catch (erro) {
-    console.error('[notificacao] falha ao registrar', erro);
+    logger.error(
+      { err: erro, userId: entrada.userId, channel },
+      '[notificacao] falha ao registrar',
+    );
   }
 }
 

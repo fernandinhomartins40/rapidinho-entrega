@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@rapidinho/database';
-import { getPaymentGateway, publishRealtimeMany } from '@rapidinho/services';
+import { getPaymentGateway, logger, publishRealtimeMany } from '@rapidinho/services';
 import { REALTIME_CHANNELS, REALTIME_EVENTS } from '@rapidinho/shared';
 
 export const runtime = 'nodejs';
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
   if (!pagamento) {
     // Pode ser um pagamento de outro ambiente apontando para cá. Não é erro
     // nosso, e reenviar não vai ajudar.
-    console.warn('[webhook] pagamento desconhecido', evento.externalId);
+    logger.warn({ externalId: evento.externalId }, '[webhook] pagamento desconhecido');
     return NextResponse.json({ ok: true, ignored: 'pagamento desconhecido' });
   }
 

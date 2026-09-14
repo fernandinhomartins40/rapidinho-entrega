@@ -1,5 +1,6 @@
 import Redis from 'ioredis';
 import { parseServerEnv } from '@rapidinho/shared';
+import { logger } from './logger';
 
 /**
  * Conexão com o Redis, compartilhada pelo processo.
@@ -20,7 +21,7 @@ export function getRedis(): Redis {
   });
 
   redisClient.on('error', (error) => {
-    console.error('[redis] erro de conexão', error.message);
+    logger.error({ err: error.message }, '[redis] erro de conexão');
   });
 
   return redisClient;
@@ -37,7 +38,7 @@ export function createRedisSubscriber(): Redis {
   const subscriber = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
 
   subscriber.on('error', (error) => {
-    console.error('[redis:sub] erro de conexão', error.message);
+    logger.error({ err: error.message }, '[redis:sub] erro de conexão');
   });
 
   return subscriber;
