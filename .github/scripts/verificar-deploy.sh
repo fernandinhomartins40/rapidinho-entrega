@@ -48,5 +48,37 @@ if [ "$FALHAS" -gt 0 ]; then
   echo "::warning::${FALHAS} domínio(s) não responderam. Confira DNS e certificado." >&2
 fi
 
+
+echo
+echo "── Cabeçalhos de segurança ──"
+# A CSP é montada no middleware com valores que o Next fixa no BUILD. Se a URL
+# do socket não chegar como build arg, a política sobe sem ela e o tempo real é
+# bloqueado pelo navegador — com a página carregando normalmente, que é o tipo
+# de falha que ninguém percebe até o lojista reclamar que o pedido não aparece.
+SOCKET_URL="$(awk -F= '$1=="NEXT_PUBLIC_SOCKET_URL"{sub(/^[^=]*=/,"");print;exit}' "$APP_ROOT/.env" | tr -d '\r')"
+# A CSP lista a ORIGEM, sem barra final: comparar com a URL como está no .env
+# daria falso negativo se alguém a escrever com "/" no fim.
+SOCKET_URL="${SOCKET_URL%/}"
+CSP="$(curl -fsS --max-time 10 -o /dev/null -D - "http://127.0.0.1:${DEPLOY_PORT}/" 2>/dev/null \
+  | tr -d '\r' | grep -i '^content-security-policy:' || true)"
+
+if [ -z "$CSP" ]; then
+  echo "::error::A resposta não trouxe Content-Security-Policy — o middleware não rodou." >&2
+  exit 1
+fi
+
+case "$CSP" in
+  *"nonce-"*) echo "  CSP com nonce → OK" ;;
+  *) echo "::error::A CSP saiu sem nonce; os scripts do Next seriam bloqueados." >&2; exit 1 ;;
+esac
+
+if [ -n "$SOCKET_URL" ] && ! printf '%s' "$CSP" | grep -qF "$SOCKET_URL"; then
+  echo "::error::A CSP não libera ${SOCKET_URL}: o tempo real seria bloqueado no navegador." >&2
+  echo "  Política recebida: $CSP" >&2
+  exit 1
+fi
+
+echo "  connect-src cobre ${SOCKET_URL:-(não configurado)} → OK"
+
 echo
 echo "Deploy verificado."
