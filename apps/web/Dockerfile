@@ -47,10 +47,21 @@ RUN pnpm --filter @rapidinho/web build
 
 # --- Migrações ---------------------------------------------------------------
 # A imagem final é o standalone do Next e não carrega o CLI do Prisma, que é
-# devDependency. Este estágio existe só para o deploy rodar `migrate deploy`
-# com exatamente a mesma versão do Prisma que a aplicação usa.
-FROM builder AS migrator
+# devDependency. Este estágio existe só para o deploy rodar `migrate deploy` e
+# o seed essencial com exatamente a mesma versão do Prisma que a aplicação usa.
+#
+# Vem de `deps`, e não de `builder`: o builder carrega `apps/web/.next` inteiro,
+# cache de webpack incluído, que não serve para rodar migration nenhuma. Como
+# esta imagem viaja por SSH até a VPS a cada deploy, cada camada inútil é tempo
+# de transferência numa máquina que já está sobrecarregada.
+FROM deps AS migrator
 WORKDIR /app
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages/database ./packages/database
+COPY packages/shared ./packages/shared
+COPY packages/config ./packages/config
+# O cliente do Prisma é gerado no build; gerar de novo aqui pediria rede.
+COPY --from=builder /app/packages/database/generated ./packages/database/generated
 CMD ["pnpm", "--filter", "@rapidinho/database", "exec", "prisma", "migrate", "deploy"]
 
 # --- Runtime ----------------------------------------------------------------

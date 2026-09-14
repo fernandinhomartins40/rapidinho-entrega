@@ -129,11 +129,11 @@ jobs:
     name: Publicar na VPS
     needs: verificar
     runs-on: ubuntu-latest
-    # O build acontece NA VPS, que é compartilhada e não tem a CPU de um
-    # runner. O deploy #15 morreu no teto de 45 min com o build ainda em
-    # andamento; 90 dá folga para uma release sem cache nenhum, que é o pior
-    # caso. Deploy seguinte reaproveita as camadas e leva uma fração disso.
-    timeout-minutes: 90
+    # O build agora é do runner e leva ~7 min. O que sobra de demorado é o
+    # `docker load` na VPS, que com load average 243 rasteja: no deploy #24 ele
+    # passou de 50 minutos. 150 cobre o primeiro envio, em que nenhuma camada
+    # existe do outro lado; nos seguintes só as alteradas são gravadas.
+    timeout-minutes: 150
 
     environment:
       name: production
@@ -216,25 +216,32 @@ jobs:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
           RELEASE_TAG: ${{ steps.release.outputs.version }}
         run: |
-          # `docker save` direto no `docker load` do outro lado, sem arquivo
-          # intermediário: a VPS está com 32 GB livres, mas escrever 1 GB para
-          # ler em seguida é I/O que ela não tem para gastar.
-          #
-          # zstd -3: comprime bem mais rápido que gzip e o gargalo aqui é a
-          # rede, não a CPU do runner.
+          # zstd -3: comprime muito mais rápido que gzip, e o gargalo aqui é a
+          # VPS do outro lado, não a CPU do runner.
           sudo apt-get install -y zstd >/dev/null
 
+          # Comprime para arquivo ANTES de enviar, em vez de canalizar direto.
+          # O disco do runner é rápido e sobra, e assim o tamanho do que vamos
+          # empurrar aparece no log — sem isso, uma transferência lenta é
+          # indistinguível de uma travada, que foi o que custou os deploys
+          # anteriores.
           docker save \
             "rapidinho-web:$RELEASE_TAG" \
             "rapidinho-admin:$RELEASE_TAG" \
             "rapidinho-realtime:$RELEASE_TAG" \
             "rapidinho-worker:$RELEASE_TAG" \
             "rapidinho-migrate:$RELEASE_TAG" \
-            | zstd -3 -T0 \
-            | sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
-                "zstd -d | docker load"
+            | zstd -3 -T0 -o /tmp/imagens.tar.zst
 
-          echo "Imagens carregadas na VPS."
+          echo "Payload: $(du -h /tmp/imagens.tar.zst | cut -f1)"
+
+          # A VPS descomprime e carrega. Só as camadas que ela ainda não tem
+          # são gravadas — do segundo deploy em diante a maior parte já está
+          # lá, e isto passa a ser rápido.
+          inicio=$(date +%s)
+          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
+            "zstd -d | docker load" < /tmp/imagens.tar.zst
+          echo "Imagens carregadas em $(( $(date +%s) - inicio ))s."
 
       - name: Enviar o código para a VPS
         env:
