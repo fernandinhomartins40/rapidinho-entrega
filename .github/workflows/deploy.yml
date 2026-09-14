@@ -43,6 +43,13 @@ jobs:
           --health-cmd "pg_isready -U rapidinho -d rapidinho_test"
           --health-interval 10s --health-timeout 5s --health-retries 5
 
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s --health-timeout 5s --health-retries 5
+
     env:
       DATABASE_URL: postgresql://rapidinho:rapidinho@localhost:5432/rapidinho_test?schema=public
       REDIS_URL: redis://localhost:6379
@@ -53,10 +60,13 @@ jobs:
       S3_ACCESS_KEY: minioadmin
       S3_SECRET_KEY: minioadmin
       S3_PUBLIC_URL: http://localhost/uploads
-      NEXT_PUBLIC_WEB_URL: http://localhost
-      NEXT_PUBLIC_ADMIN_URL: http://localhost/painel
-      NEXT_PUBLIC_SOCKET_URL: http://localhost
+      NEXT_PUBLIC_WEB_URL: http://localhost:3000
+      NEXT_PUBLIC_ADMIN_URL: http://localhost:3001
+      NEXT_PUBLIC_SOCKET_URL: http://localhost:3002
       NEXT_TELEMETRY_DISABLED: '1'
+      # Os apps de desenvolvimento sobem nas portas internas do monorepo.
+      E2E_BASE_URL: http://localhost:3000
+      E2E_ADMIN_URL: http://localhost:3001
 
     steps:
       - uses: actions/checkout@v4
@@ -76,6 +86,41 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm db:seed
+
+      # Os E2E sobem os dois apps e exercitam o fluxo de pedido de ponta a
+      # ponta. Rodam depois do seed porque dependem dos dados de Palmital.
+      - name: Instalar o Chromium do Playwright
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Subir os apps para os testes de ponta a ponta
+        run: |
+          pnpm --filter @rapidinho/web dev > /tmp/web.log 2>&1 &
+          pnpm --filter @rapidinho/admin dev > /tmp/admin.log 2>&1 &
+
+          # Espera os dois responderem antes de soltar o Playwright; um sleep
+          # fixo ora desperdiça tempo, ora falha em runner lento.
+          for tentativa in $(seq 1 60); do
+            if curl -sf -o /dev/null http://localhost:3000/ \
+              && curl -sf -o /dev/null http://localhost:3001/entrar; then
+              echo "Apps no ar na tentativa $tentativa"
+              exit 0
+            fi
+            sleep 3
+          done
+
+          echo "::error::Os apps não subiram em 3 minutos"
+          tail -50 /tmp/web.log /tmp/admin.log
+          exit 1
+
+      - run: pnpm test:e2e
+
+      - name: Guardar o relatório quando falhar
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
 
   deploy:
     name: Publicar na VPS

@@ -16,8 +16,9 @@ cp .env.example .env
 docker compose up -d
 ```
 
-Isso sobe seis serviços: `nginx`, `web`, `admin`, `postgres`, `redis` e
-`minio` — com **uma única porta externa** (80). O Nginx roteia internamente.
+Isso sobe oito serviços — `nginx`, `web`, `admin`, `realtime`, `worker`,
+`postgres`, `redis` e `minio` — com **uma única porta externa** (80). O Nginx
+roteia tudo internamente, inclusive o WebSocket em `/socket.io`.
 
 Depois de subir, aplique as migrations e a carga inicial:
 
@@ -26,11 +27,11 @@ docker compose exec web pnpm --filter @rapidinho/database exec prisma migrate de
 docker compose exec web pnpm db:seed
 ```
 
-| Endereço              | O que é                                  |
-| --------------------- | ---------------------------------------- |
-| http://localhost      | App do cliente (PWA)                     |
-| http://localhost:3001 | Painel do lojista e do super admin       |
-| http://localhost:9001 | Console do MinIO (só em desenvolvimento) |
+| Endereço              | O que é                                     |
+| --------------------- | ------------------------------------------- |
+| http://localhost      | App do cliente (PWA)                        |
+| http://localhost:3001 | Painel do lojista, super admin e entregador |
+| http://localhost:9001 | Console do MinIO (só em desenvolvimento)    |
 
 O painel usa subdomínio próprio (`painel.rapidinhoentrega.com.br`) em produção
 e a porta 3001 em desenvolvimento — servir em `/painel` daria 404, porque o
@@ -67,17 +68,22 @@ teste. Usuários da carga inicial:
 
 ```
 apps/
-  web        PWA do cliente final          (porta interna 3000)
-  admin      Painel do lojista + super admin (porta interna 3001)
+  web        PWA do cliente final            (porta interna 3000)
+  admin      Painel do lojista, do super admin e do entregador (3001)
+  realtime   WebSocket dos pedidos (Socket.io sobre Redis)     (3002)
+  worker     Filas BullMQ: imagens, notificações, cobranças
 packages/
   database   Prisma schema, migrations e seeds
   shared     Regras de domínio, schemas Zod, contratos de serviço
-  services   Implementações: storage, imagens, WhatsApp, rate limit
+  services   Implementações: storage, imagens, pagamento, WhatsApp,
+             push, e-mail, filas, rate limit e log
   auth       Auth.js, sessão em banco, OTP e guardas multi-tenant
   ui         Design system e o <ImageUploader />
   config     eslint, tsconfig e tailwind compartilhados
 docker/
   nginx      Reverse proxy (porta única, WebSocket, gzip)
+e2e/         Testes de ponta a ponta (Playwright)
+scripts/     Backup do Postgres e geração dos arquivos da marca
 ```
 
 A lógica de negócio vive em `packages/shared`, sem dependência de banco ou de
@@ -86,16 +92,53 @@ sem duplicar nada.
 
 ## Comandos
 
-| Comando           | O que faz                                  |
-| ----------------- | ------------------------------------------ |
-| `pnpm dev`        | Sobe os dois apps em modo desenvolvimento  |
-| `pnpm build`      | Build de produção                          |
-| `pnpm lint`       | ESLint em todo o monorepo                  |
-| `pnpm typecheck`  | Checagem de tipos (strict, sem `any`)      |
-| `pnpm test`       | Testes de unidade (Vitest)                 |
-| `pnpm db:migrate` | Cria e aplica migration em desenvolvimento |
-| `pnpm db:seed`    | Carga inicial (idempotente)                |
-| `pnpm db:studio`  | Prisma Studio                              |
+| Comando            | O que faz                                         |
+| ------------------ | ------------------------------------------------- |
+| `pnpm dev`         | Sobe os dois apps em modo desenvolvimento         |
+| `pnpm build`       | Build de produção                                 |
+| `pnpm lint`        | ESLint em todo o monorepo                         |
+| `pnpm typecheck`   | Checagem de tipos (strict, sem `any`)             |
+| `pnpm test`        | Testes de unidade (Vitest)                        |
+| `pnpm test:e2e`    | Fluxos críticos de ponta a ponta                  |
+| `pnpm db:migrate`  | Cria e aplica migration em desenvolvimento        |
+| `pnpm db:seed`     | Carga inicial (idempotente)                       |
+| `pnpm db:studio`   | Prisma Studio                                     |
+| `pnpm marca:gerar` | Regera os arquivos da marca a partir de `assets/` |
+
+## Testes
+
+```bash
+pnpm test        # unidade: regras de domínio, parser de planilha, Pix, imagens
+pnpm test:e2e    # ponta a ponta: pedido completo, cadastro de produto, papéis
+```
+
+Os testes de ponta a ponta rodam num viewport de celular, que é onde cliente e
+lojista realmente usam o sistema. Eles precisam dos dois apps no ar e do banco
+semeado:
+
+```bash
+pnpm dev &
+pnpm db:seed
+pnpm test:e2e
+```
+
+Se a máquina já tem um Chromium, aponte para ele e evite outro download:
+
+```bash
+E2E_CHROMIUM_PATH=/caminho/para/chrome pnpm test:e2e
+```
+
+## Backup
+
+O deploy agenda um backup diário do Postgres às 03:15, com retenção de 14
+dias, em `/opt/rapidinho/backups`. Para restaurar:
+
+```bash
+bash scripts/restaurar-postgres.sh /opt/rapidinho/backups/rapidinho-AAAAMMDD-HHMMSS.sql.gz
+```
+
+O script pede confirmação explícita e guarda o estado atual antes de
+sobrescrever.
 
 ## Deploy
 
