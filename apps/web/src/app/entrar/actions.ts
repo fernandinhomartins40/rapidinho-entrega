@@ -12,10 +12,15 @@ import {
 import { parseServerEnv, RATE_LIMITS, requestOtpSchema, verifyOtpSchema } from '@rapidinho/shared';
 
 /**
- * Login do painel por telefone e código.
+ * Login do cliente por telefone e código.
  *
- * Mesma mecânica do app do cliente e a mesma proteção de força bruta: o painel
- * é o alvo mais valioso do sistema, não faz sentido protegê-lo menos.
+ * Sem e-mail e sem senha: no interior, exigir cadastro completo antes da
+ * primeira compra é a maior causa de desistência. O usuário é criado no
+ * primeiro código confirmado; nome e termos vêm depois, no checkout.
+ *
+ * Mesma proteção de força bruta do painel — o limite é por telefone E por IP,
+ * porque travar só por IP não protege um número alvo, e o contrário deixa
+ * passar quem varre vários números do mesmo lugar.
  */
 
 export interface LoginState {
@@ -109,12 +114,8 @@ async function verificarCodigo(previous: LoginState, formData: FormData): Promis
   await createDatabaseSession(result.userId);
   await resetRateLimit(limitKey);
 
-  // O destino chega do formulário, mas quem decide o que o usuário pode ver é
-  // a rota "/" do painel, conforme o papel — nunca este parâmetro.
-  //
-  // `//evil.com` começa com "/" e o navegador trata como URL absoluta de
-  // mesmo protocolo: sem a segunda checagem isto seria um redirecionamento
-  // aberto para quem montasse o link de login.
+  // Só caminho interno: um destino absoluto viraria redirecionamento aberto,
+  // de graça, para quem montar o link.
   const destino = String(formData.get('destino') ?? '/');
   redirect(destino.startsWith('/') && !destino.startsWith('//') ? destino : '/');
 }
