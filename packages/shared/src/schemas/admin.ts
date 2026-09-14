@@ -114,23 +114,11 @@ export const impersonateSchema = z.object({
 });
 
 /** Notificação segmentada por cidade, categoria ou inatividade. */
-export const notificationCampaignSchema = z.object({
-  title: z.string().min(2).max(80),
-  body: z.string().min(2).max(300),
-  linkUrl: z.string().max(500).optional(),
-  channel: z.enum(['PUSH', 'WHATSAPP', 'EMAIL', 'SMS']).default('PUSH'),
-  segment: z.object({
-    cityIds: z.array(cuidSchema).default([]),
-    categoryIds: z.array(cuidSchema).default([]),
-    roles: z.array(z.string()).default([]),
-    inactiveDays: z.number().int().min(1).max(3650).nullable().optional(),
-  }),
-  scheduledFor: z.coerce.date().nullable().optional(),
-});
+// A campanha de notificação vive em `domain/notification-segment`: o esquema
+// do segmento e as regras de quem recebe andam juntos.
 
 export type CityInput = z.infer<typeof citySchema>;
 export type PlanInput = z.infer<typeof planSchema>;
 export type CouponAdminInput = z.infer<typeof couponSchema>;
 export type BoostPackageInput = z.infer<typeof boostPackageSchema>;
 export type BannerInput = z.infer<typeof bannerSchema>;
-export type NotificationCampaignInput = z.infer<typeof notificationCampaignSchema>;

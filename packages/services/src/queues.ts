@@ -60,12 +60,29 @@ export interface JobDeExpiracaoDePedido {
   orderId: string;
 }
 
+export interface JobDeCampanha {
+  campaignId: string;
+}
+
 export async function enfileirarNotificacao(dados: JobDeNotificacao): Promise<void> {
   await getQueue(QUEUES.notifications).add('enviar', dados, PADRAO);
 }
 
 export async function enfileirarProcessamentoDeImagem(dados: JobDeImagem): Promise<void> {
   await getQueue(QUEUES.imageProcessing).add('processar', dados, PADRAO);
+}
+
+/**
+ * Coloca uma campanha na fila de despacho.
+ *
+ * O `jobId` fixo é o que impede um clique duplo no botão de enviar virar duas
+ * campanhas: o BullMQ recusa um job com id que já existe.
+ */
+export async function enfileirarCampanha(dados: JobDeCampanha): Promise<void> {
+  await getQueue(QUEUES.campaigns).add('despachar', dados, {
+    ...PADRAO,
+    jobId: `campanha:${dados.campaignId}`,
+  });
 }
 
 /**

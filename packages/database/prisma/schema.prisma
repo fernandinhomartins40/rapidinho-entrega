@@ -1672,7 +1672,7 @@ model NotificationCampaign {
 
   channel NotificationChannel @default(PUSH)
 
-  /// Segmentação: { "cityIds": [...], "categoryIds": [...], "inactiveDays": 30 }
+  /// Segmentação: { "publico": "CUSTOMERS", "cityIds": [...], "inativoHaDias": 30, "apenasComPedido": false }
   segment Json @default("{}")
 
   scheduledFor DateTime?

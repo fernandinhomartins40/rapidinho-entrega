@@ -99,6 +99,7 @@ export const QUEUES = {
   boostExpiration: 'boost-expiration',
   reports: 'reports',
   orderTimeout: 'order-timeout',
+  campaigns: 'campaigns',
 } as const;
 
 export const DEFAULT_CITY_SLUG = 'palmital-pr';

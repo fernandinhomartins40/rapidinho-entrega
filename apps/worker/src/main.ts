@@ -3,6 +3,7 @@ import { prisma } from '@rapidinho/database';
 import {
   agendarRotinas,
   capturarErro,
+  dispararCampanha,
   getRedis,
   logger,
   notificarUsuario,
@@ -56,6 +57,14 @@ const trabalhadores = [
     connection: conexao,
     concurrency: 1,
   }),
+
+  // Uma campanha por vez: ela só enfileira notificações, e disparar duas em
+  // paralelo encheria a fila de envio mais rápido do que ela esvazia.
+  new Worker(
+    QUEUES.campaigns,
+    async (job: Job<{ campaignId: string }>) => dispararCampanha(job.data.campaignId),
+    { connection: conexao, concurrency: 1 },
+  ),
 ];
 
 for (const trabalhador of trabalhadores) {

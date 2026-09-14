@@ -1,5 +1,4 @@
 import pino from 'pino';
-import { parseServerEnv } from '@rapidinho/shared';
 
 /**
  * Log estruturado.
@@ -9,12 +8,18 @@ import { parseServerEnv } from '@rapidinho/shared';
  * O `redact` é a parte que importa: telefone é o identificador de login aqui,
  * e um telefone num log de erro é dado pessoal exposto — que a LGPD trata como
  * incidente, não como detalhe de operação.
+ *
+ * As duas variáveis são lidas direto, sem passar pela validação do ambiente:
+ * validar o ambiente inteiro para escolher um nível de log tornaria este
+ * módulo — e tudo que o importa — impossível de carregar num teste. Um nível
+ * inválido cai no padrão do pino; um logger que não sobe derruba o processo.
  */
 
-const env = parseServerEnv();
+const NIVEIS = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'] as const;
+const nivel = process.env.LOG_LEVEL ?? '';
 
 export const logger = pino({
-  level: env.LOG_LEVEL,
+  level: (NIVEIS as readonly string[]).includes(nivel) ? nivel : 'info',
   redact: {
     paths: [
       'phone',
@@ -36,7 +41,7 @@ export const logger = pino({
     ],
     censor: '[oculto]',
   },
-  ...(env.NODE_ENV === 'development'
+  ...(process.env.NODE_ENV === 'development'
     ? {
         transport: {
           target: 'pino-pretty',
