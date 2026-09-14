@@ -10,6 +10,8 @@ export interface PutObjectInput {
 
 export interface StorageProvider {
   put(input: PutObjectInput): Promise<{ key: string; url: string }>;
+  /// Lê o objeto de volta. Usado para reprocessar imagens já guardadas.
+  get(key: string): Promise<Buffer | null>;
   delete(key: string): Promise<void>;
   getPublicUrl(key: string): string;
   /// URL assinada para documentos privados (RG, contrato social).

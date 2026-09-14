@@ -146,3 +146,35 @@ export async function processAndStoreImage(
     checksum,
   };
 }
+
+/**
+ * Regera as variantes de uma imagem já guardada.
+ *
+ * O upload processa de forma síncrona — o lojista precisa ver a foto na hora.
+ * Isto existe para o que ficou pela metade: upload interrompido, deploy no
+ * meio do processamento, ou mudança nos tamanhos que geramos.
+ *
+ * O contexto é deduzido do prefixo da chave, e não recebido por parâmetro:
+ * quem chama é um job que só tem o id do registro, e a chave já carrega essa
+ * informação.
+ */
+export async function reprocessStoredImage(
+  originalKey: string,
+  storage: StorageProvider,
+): Promise<ProcessedUpload> {
+  const original = await storage.get(originalKey);
+
+  if (!original) {
+    throw new InvalidImageError('Imagem original não encontrada no storage');
+  }
+
+  const contexto = (Object.keys(CONTEXT_PREFIX) as UploadContext[]).find((chave) =>
+    originalKey.startsWith(`${CONTEXT_PREFIX[chave]}/`),
+  );
+
+  if (!contexto) {
+    throw new InvalidImageError(`Não reconheço o contexto da chave "${originalKey}"`);
+  }
+
+  return processAndStoreImage(original, contexto, storage);
+}

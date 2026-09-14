@@ -53,6 +53,27 @@ export function createS3Storage(config: S3StorageConfig): StorageProvider {
       return { key: input.key, url: getPublicUrl(input.key) };
     },
 
+    async get(key: string) {
+      try {
+        const resposta = await client.send(
+          new GetObjectCommand({ Bucket: config.bucket, Key: key }),
+        );
+
+        if (!resposta.Body) return null;
+
+        // `transformToByteArray` existe no SDK v3 e evita montar o stream na
+        // mão, que é onde se esquece de tratar o erro de leitura parcial.
+        const bytes = await resposta.Body.transformToByteArray();
+        return Buffer.from(bytes);
+      } catch (error) {
+        // Objeto ausente é resposta válida para quem chama (a imagem pode ter
+        // sido apagada), não uma exceção a propagar.
+        const nome = (error as { name?: string }).name;
+        if (nome === 'NoSuchKey' || nome === 'NotFound') return null;
+        throw error;
+      }
+    },
+
     async delete(key: string) {
       await client.send(new DeleteObjectCommand({ Bucket: config.bucket, Key: key }));
     },

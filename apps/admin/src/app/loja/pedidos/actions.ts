@@ -2,10 +2,11 @@
 
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@rapidinho/database';
-import { publishRealtimeMany } from '@rapidinho/services';
+import { notificarUsuario, publishRealtimeMany } from '@rapidinho/services';
 import {
   canTransition,
   cancelOrderSchema,
+  ORDER_STATUS_CUSTOMER_MESSAGE,
   ORDER_STATUS_LABEL,
   REALTIME_CHANNELS,
   REALTIME_EVENTS,
@@ -138,6 +139,23 @@ export async function mudarStatusDoPedido(entrada: unknown): Promise<ActionResul
       estimatedPrepMinutes: dados.prepMinutes ?? null,
     });
 
+    if (pedido.userId) {
+      await notificarUsuario({
+        userId: pedido.userId,
+        title: `Pedido #${pedido.number}`,
+        body: ORDER_STATUS_CUSTOMER_MESSAGE[dados.status],
+        url: `/pedidos/${pedido.id}`,
+        // Push E WhatsApp juntos, não um como reserva do outro: quem não
+        // instalou o PWA — a maioria, no começo — não recebe push, e esperar
+        // o push falhar atrasaria o aviso justamente em quem mais precisa.
+        canais: ['PUSH', 'WHATSAPP'],
+        entity: { type: 'Order', id: pedido.id },
+        // Mesma tag: a mudança nova substitui a anterior em vez de empilhar
+        // quatro notificações do mesmo pedido na tela.
+        tag: `pedido-${pedido.id}`,
+      });
+    }
+
     revalidatePath('/loja/pedidos');
     revalidatePath('/loja');
 
@@ -169,6 +187,7 @@ export async function cancelarPedido(entrada: unknown): Promise<ActionResult> {
         number: true,
         status: true,
         storeId: true,
+        userId: true,
         delivery: { select: { courierId: true } },
       },
     });
@@ -217,6 +236,18 @@ export async function cancelarPedido(entrada: unknown): Promise<ActionResult> {
       status: destino,
       reason: dados.reason,
     });
+
+    if (pedido.userId) {
+      await notificarUsuario({
+        userId: pedido.userId,
+        title: `Pedido #${pedido.number} ${destino === 'REJECTED' ? 'recusado' : 'cancelado'}`,
+        body: dados.reason,
+        url: `/pedidos/${pedido.id}`,
+        canais: ['PUSH', 'WHATSAPP'],
+        entity: { type: 'Order', id: pedido.id },
+        tag: `pedido-${pedido.id}`,
+      });
+    }
 
     revalidatePath('/loja/pedidos');
     revalidatePath('/loja');

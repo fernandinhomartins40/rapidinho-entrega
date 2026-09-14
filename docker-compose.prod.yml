@@ -52,6 +52,12 @@ services:
     restart: always
     mem_limit: 256m
 
+  # O sharp reserva memória proporcional ao tamanho da imagem; o teto precisa
+  # de folga para a foto de celular sem compressão.
+  worker:
+    restart: always
+    mem_limit: 768m
+
   postgres:
     restart: always
     mem_limit: 1g

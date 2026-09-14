@@ -113,6 +113,29 @@ services:
       start_period: 15s
     networks: [rapidinho]
 
+  # Filas: imagens, notificações, cobrança de planos e expirações.
+  # Não publica porta — não atende requisição, só consome fila.
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    container_name: rapidinho-worker
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rapidinho}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rapidinho}?schema=public
+      REDIS_URL: redis://redis:6379
+      S3_ENDPOINT: http://minio:9000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks: [rapidinho]
+
   postgres:
     image: postgres:16-alpine
     container_name: rapidinho-postgres

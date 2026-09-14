@@ -12,6 +12,9 @@ function fakeStorage() {
       objects.set(key, { body: Buffer.from(body), contentType });
       return { key, url: `http://storage.local/${key}` };
     },
+    async get(key) {
+      return objects.get(key)?.body ?? null;
+    },
     async delete(key) {
       objects.delete(key);
     },
