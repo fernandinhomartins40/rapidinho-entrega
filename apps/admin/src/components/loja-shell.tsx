@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Megaphone,
   Package,
   Pizza,
   Receipt,
@@ -42,6 +43,7 @@ const NAV = [
   { href: '/loja/entregadores', label: 'Entregadores', icon: Bike },
   { href: '/loja/cupons', label: 'Cupons', icon: BadgePercent },
   { href: '/loja/financeiro', label: 'Financeiro', icon: Wallet },
+  { href: '/loja/impulsionar', label: 'Plano e destaque', icon: Megaphone },
   { href: '/loja/configuracoes', label: 'Configurações', icon: Settings },
 ] as const;
 

@@ -11,6 +11,7 @@
  * upload não carreguem o binário nativo.
  */
 export * from './providers';
+export * from './logger';
 export * from './redis';
 export * from './queues';
 export * from './rate-limit';

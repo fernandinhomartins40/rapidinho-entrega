@@ -59,3 +59,17 @@ nginx -v
 certbot --version >/dev/null
 
 echo "Ambiente da VPS pronto."
+
+# ── Backup diário do Postgres ────────────────────────────────────────────────
+# Cron do host, e não container próprio: o container precisaria do socket do
+# Docker para chamar pg_dump, o que é acesso de root disfarçado.
+echo "==> Agendando o backup diário"
+
+CRON_BACKUP="15 3 * * * APP_ROOT=$APP_ROOT bash $APP_ROOT/current/scripts/backup-postgres.sh >> $APP_ROOT/backups/backup.log 2>&1"
+
+mkdir -p "$APP_ROOT/backups"
+
+# Substitui a linha anterior em vez de acumular uma por deploy.
+( crontab -l 2>/dev/null | grep -v 'backup-postgres.sh' ; echo "$CRON_BACKUP" ) | crontab -
+
+echo "    Backup agendado para 03:15 (retenção de 14 dias)"
