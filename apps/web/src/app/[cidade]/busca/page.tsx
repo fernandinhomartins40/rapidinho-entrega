@@ -13,12 +13,26 @@ export const metadata = { title: 'Buscar' };
 /**
  * Busca em lojas e produtos.
  *
- * Usa `contains` com `mode: insensitive`, apoiado nos índices de trigrama que
- * a migration de busca criou. O índice de texto completo com dicionário
- * português existe no banco e entra quando o volume justificar — hoje, com uma
- * cidade, o trigrama responde melhor a erro de digitação, que é o caso comum
- * de quem digita no celular.
+ * O casamento é feito em SQL cru, e não com `contains` do Prisma, por dois
+ * motivos que só aparecem no `EXPLAIN`:
+ *
+ * 1. Acento. Os índices são sobre `immutable_unaccent(lower(name))`, e
+ *    `contains` gera `name ILIKE '%termo%'` — expressão diferente, índice
+ *    ignorado e, pior, "acai" deixa de achar "Açaí". Quem digita no celular
+ *    pula o acento; a busca precisa não se importar.
+ *
+ * 2. Plano. Medido no banco de desenvolvimento: `ILIKE` sobre a coluna dá
+ *    Seq Scan; a expressão do índice dá Bitmap Index Scan. Com 113 produtos a
+ *    diferença não aparece — com a plataforma cheia, aparece na conta da VPS.
+ *
+ * O SQL devolve só os ids; os dados continuam vindo pelo Prisma, que mantém os
+ * filtros de cidade e status na camada de query.
  */
+
+/** Termo pronto para `LIKE`, com os curingas do usuário neutralizados. */
+function paraLike(termo: string): string {
+  return `%${termo.replace(/[\\%_]/g, (caractere) => `\\${caractere}`)}%`;
+}
 async function buscar(citySlug: string, termo: string) {
   const cidade = await prisma.city.findFirst({
     where: { slug: citySlug, isActive: true },
@@ -32,18 +46,50 @@ async function buscar(citySlug: string, termo: string) {
   }
 
   const agora = new Date();
+  const alvo = paraLike(termo);
+
+  // Ids primeiro, pelo índice. `$queryRaw` com template interpola como
+  // parâmetro preparado — o termo do usuário nunca vira SQL.
+  const [idsDeLoja, idsDeProduto] = await Promise.all([
+    prisma.$queryRaw<{ id: string }[]>`
+      SELECT s."id"
+      FROM "stores" s
+      LEFT JOIN "store_categories" c ON c."id" = s."categoryId"
+      WHERE s."cityId" = ${cidade.id}
+        AND s."status" = 'ACTIVE'
+        AND s."deletedAt" IS NULL
+        AND (
+          immutable_unaccent(lower(s."name")) LIKE immutable_unaccent(lower(${alvo}))
+          OR immutable_unaccent(lower(coalesce(s."description", ''))) LIKE immutable_unaccent(lower(${alvo}))
+          OR immutable_unaccent(lower(coalesce(c."name", ''))) LIKE immutable_unaccent(lower(${alvo}))
+        )
+      LIMIT 20
+    `,
+    prisma.$queryRaw<{ id: string }[]>`
+      SELECT p."id"
+      FROM "products" p
+      JOIN "stores" s ON s."id" = p."storeId"
+      WHERE s."cityId" = ${cidade.id}
+        AND s."status" = 'ACTIVE'
+        AND s."deletedAt" IS NULL
+        AND p."deletedAt" IS NULL
+        AND p."isAvailable" = true
+        AND immutable_unaccent(lower(p."name")) LIKE immutable_unaccent(lower(${alvo}))
+      ORDER BY p."soldCount" DESC
+      LIMIT 30
+    `,
+  ]);
 
   const [lojas, produtos] = await Promise.all([
     prisma.store.findMany({
       where: {
+        id: { in: idsDeLoja.map((linha) => linha.id) },
+        // Os mesmos filtros do SQL acima, de novo: a regra do projeto é que
+        // toda query multi-tenant filtre na camada de query, e uma lista de
+        // ids vinda de outra consulta não dispensa isso.
         cityId: cidade.id,
         status: 'ACTIVE',
         deletedAt: null,
-        OR: [
-          { name: { contains: termo, mode: 'insensitive' } },
-          { description: { contains: termo, mode: 'insensitive' } },
-          { category: { name: { contains: termo, mode: 'insensitive' } } },
-        ],
       },
       take: 20,
       select: {
@@ -71,9 +117,9 @@ async function buscar(citySlug: string, termo: string) {
     }),
     prisma.product.findMany({
       where: {
+        id: { in: idsDeProduto.map((linha) => linha.id) },
         deletedAt: null,
         isAvailable: true,
-        name: { contains: termo, mode: 'insensitive' },
         store: { cityId: cidade.id, status: 'ACTIVE', deletedAt: null },
       },
       take: 30,
