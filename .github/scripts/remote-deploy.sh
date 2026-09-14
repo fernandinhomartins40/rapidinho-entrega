@@ -28,11 +28,35 @@ compose() {
 }
 
 echo "==> Construindo imagens da release $RELEASE"
-# O `--profile ferramentas` é obrigatório aqui: sem ele o build ignora o
-# serviço `migrate`, e o `run` mais abaixo reaproveita a imagem do migrator
-# construída num deploy anterior. Era esse o caso até agora — as migrations
-# rodavam com o código da primeira release publicada, não com o desta.
-compose --profile ferramentas build --pull
+
+# UM SERVIÇO DE CADA VEZ, e não `compose build` de uma vez só.
+#
+# O compose constrói em paralelo por padrão. Aqui isso significa quatro builds
+# do Next disputando a memória de uma VPS compartilhada: o deploy #15 ficou 38
+# minutos sem emitir uma linha e morreu no teto de tempo do job. Em série cada
+# build tem a máquina inteira — é mais rápido no total, e quando algo trava dá
+# para ver onde.
+#
+# `--progress=plain` porque sem TTY o progresso do BuildKit sai agrupado e
+# aparece só no fim. Era por isso que aqueles 38 minutos foram um silêncio: não
+# havia como saber se estava construindo ou travado.
+#
+# O `migrate` entra por último e é obrigatório: sem `--profile ferramentas` o
+# build o ignora e o `run` mais abaixo reaproveita a imagem do migrator de um
+# deploy anterior — as migrations rodavam com o código da primeira release
+# publicada, não com o desta.
+for servico in realtime worker admin web migrate; do
+  echo "--> $servico"
+  inicio=$(date +%s)
+
+  if [ "$servico" = "migrate" ]; then
+    compose --profile ferramentas build --progress=plain --pull migrate
+  else
+    compose build --progress=plain --pull "$servico"
+  fi
+
+  echo "--> $servico pronto em $(( $(date +%s) - inicio ))s"
+done
 
 echo "==> Subindo banco, cache e storage"
 compose up -d postgres redis minio minio-init

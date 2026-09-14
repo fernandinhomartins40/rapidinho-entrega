@@ -129,7 +129,11 @@ jobs:
     name: Publicar na VPS
     needs: verificar
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    # O build acontece NA VPS, que é compartilhada e não tem a CPU de um
+    # runner. O deploy #15 morreu no teto de 45 min com o build ainda em
+    # andamento; 90 dá folga para uma release sem cache nenhum, que é o pior
+    # caso. Deploy seguinte reaproveita as camadas e leva uma fração disso.
+    timeout-minutes: 90
 
     environment:
       name: production
