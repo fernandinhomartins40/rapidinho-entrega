@@ -19,6 +19,8 @@ set -euo pipefail
 APP_ROOT="${APP_ROOT:?APP_ROOT não informado}"
 # Espaço mínimo para o build do Docker caber com folga.
 MINIMO_GB="${MINIMO_GB:-6}"
+# Acima disto a limpeza é pulada por inteiro.
+FOLGA_CONFORTAVEL_GB="${FOLGA_CONFORTAVEL_GB:-15}"
 MANTER_RELEASES="${MANTER_RELEASES:-3}"
 
 livre_gb() {
@@ -31,6 +33,15 @@ relatar() {
 
 echo "==> Liberando espaço na VPS"
 relatar "Antes"
+
+# Com folga de sobra não há o que limpar. O `docker builder prune` chega a
+# levar minutos num cache grande, e foi assim que um deploy morreu: o SSH
+# fechou por inatividade ("broken pipe") enquanto ele varria o cache — sem
+# necessidade nenhuma, porque havia 25 GB livres.
+if [ "$(livre_gb)" -ge "$FOLGA_CONFORTAVEL_GB" ]; then
+  echo "    Espaço de sobra; nada a limpar."
+  exit 0
+fi
 
 # 1. Releases antigas nossas. Roda antes do build, e não depois, porque é
 #    justamente quando falta espaço que elas precisam sair.
@@ -56,17 +67,17 @@ fi
 
 # 2. Imagens órfãs. Sem `-a`: containers parados dos outros sites da VPS
 #    dependem das imagens deles, que `prune -a` levaria junto.
-docker image prune -f >/dev/null 2>&1 || true
+timeout 120 docker image prune -f >/dev/null 2>&1 || true
 relatar "Após imagens órfãs"
 
 # 3. Cache de build. Começa pelo antigo; só apaga o cache recente se ainda
 #    faltar espaço, porque perdê-lo deixa o próximo build bem mais lento.
-docker builder prune -f --filter 'until=48h' >/dev/null 2>&1 || true
+timeout 300 docker builder prune -f --filter 'until=48h' >/dev/null 2>&1 || true
 relatar "Após cache antigo"
 
 if [ "$(livre_gb)" -lt "$MINIMO_GB" ]; then
   echo "    Ainda apertado — limpando todo o cache de build"
-  docker builder prune -af >/dev/null 2>&1 || true
+  timeout 600 docker builder prune -af >/dev/null 2>&1 || true
   relatar "Após cache completo"
 fi
 

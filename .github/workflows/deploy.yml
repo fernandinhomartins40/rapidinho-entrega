@@ -23,7 +23,10 @@ env:
   # gravada no .env da VPS e reaproveitada nos deploys seguintes.
   PORT_RANGE_START: '3100'
   PORT_RANGE_END: '3199'
-  SSH_OPTS: -o StrictHostKeyChecking=no -o PreferredAuthentications=password -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1 -o ConnectTimeout=20
+  # ServerAliveInterval é obrigatório aqui: o build na VPS passa minutos sem
+  # escrever nada no canal, e sem keepalive o SSH fecha com "broken pipe" no
+  # meio do deploy — que foi exatamente como o deploy #8 morreu.
+  SSH_OPTS: -o StrictHostKeyChecking=no -o PreferredAuthentications=password -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1 -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=20
 
 jobs:
   verificar:
