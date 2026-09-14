@@ -17,6 +17,10 @@ export default async function PainelIndexPage() {
     redirect('/admin');
   }
 
+  if (user.role === 'COURIER') {
+    redirect('/entregador');
+  }
+
   const stores = await listAccessibleStores(user.id);
 
   if (stores.length === 0) {

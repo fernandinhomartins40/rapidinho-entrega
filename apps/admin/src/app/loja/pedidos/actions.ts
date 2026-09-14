@@ -76,6 +76,7 @@ export async function mudarStatusDoPedido(entrada: unknown): Promise<ActionResul
         status: true,
         storeId: true,
         userId: true,
+        type: true,
         delivery: { select: { courierId: true } },
       },
     });
@@ -123,6 +124,12 @@ export async function mudarStatusDoPedido(entrada: unknown): Promise<ActionResul
         },
       }),
     ]);
+
+    // A corrida entra na fila quando o pedido fica pronto, não antes: corrida
+    // aberta cedo demais faz o entregador chegar e esperar na loja.
+    if (dados.status === 'READY') {
+      await abrirCorrida(pedido.id, access.storeId);
+    }
 
     await publishRealtimeMany(canaisDoPedido(pedido), REALTIME_EVENTS.orderStatusChanged, {
       orderId: pedido.id,
@@ -233,4 +240,36 @@ export async function cancelarPedido(entrada: unknown): Promise<ActionResult> {
 /** Aceite com tempo de preparo, que é o caminho normal do botão grande. */
 export async function aceitarPedido(orderId: string, prepMinutes: number): Promise<ActionResult> {
   return mudarStatusDoPedido({ orderId, status: 'ACCEPTED', prepMinutes });
+}
+
+/**
+ * Coloca a entrega na fila dos entregadores.
+ *
+ * O que o entregador ganha sai da taxa de entrega do pedido, e não de uma
+ * tabela à parte: é o valor que o cliente já pagou por aquela distância, e
+ * qualquer outra conta criaria diferença entre o que entra e o que sai.
+ *
+ * Pedido para retirada não gera corrida, e a operação é idempotente — chamar
+ * duas vezes não cria duas entregas, porque `orderId` é único.
+ */
+async function abrirCorrida(orderId: string, storeId: string): Promise<void> {
+  const pedido = await prisma.order.findFirst({
+    where: { id: orderId, storeId, type: 'DELIVERY' },
+    select: { id: true, deliveryFeeCents: true, delivery: { select: { id: true } } },
+  });
+
+  if (!pedido || pedido.delivery) return;
+
+  try {
+    await prisma.delivery.create({
+      data: {
+        orderId: pedido.id,
+        status: 'PENDING',
+        earningCents: pedido.deliveryFeeCents,
+      },
+    });
+  } catch (error) {
+    // Índice único recusou: outra chamada simultânea já criou a corrida.
+    console.warn('[pedidos] corrida já existia', { orderId, error });
+  }
 }
