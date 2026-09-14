@@ -164,7 +164,8 @@ jobs:
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
         run: |
-          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" 'bash -s' < .github/scripts/preparar-vps.sh
+          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
+            "APP_ROOT='$APP_ROOT' bash -s" < .github/scripts/preparar-vps.sh
 
       - name: Liberar espaço na VPS
         env:

@@ -8,6 +8,12 @@
 
 set -euo pipefail
 
+# O script chega por `bash -s`, sem ambiente nenhum a menos que o workflow
+# repasse. Com `set -u` uma variável ausente derruba o deploy inteiro — foi o
+# que aconteceu no deploy #11, no agendamento do backup, depois de quatro
+# minutos instalando pacotes.
+APP_ROOT="${APP_ROOT:-/opt/rapidinho}"
+
 if ! command -v apt-get >/dev/null 2>&1; then
   echo "Distribuição sem apt-get não é suportada por este deploy." >&2
   exit 1
