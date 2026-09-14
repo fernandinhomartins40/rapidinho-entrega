@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import { APP_NAME } from '@rapidinho/shared';
 import './globals.css';
+import { RegistroDoServiceWorker } from '@/components/app/registro-do-sw';
+import { ConviteDeInstalacao } from '@/components/app/convite-de-instalacao';
 
 /**
  * Fonte auto-hospedada.
@@ -65,7 +67,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className={inter.variable}>
-      <body className="bg-background min-h-dvh font-sans antialiased">{children}</body>
+      <body className="bg-background min-h-dvh font-sans antialiased">
+        {children}
+        <RegistroDoServiceWorker />
+        <ConviteDeInstalacao />
+      </body>
     </html>
   );
 }

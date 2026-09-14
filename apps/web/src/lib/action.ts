@@ -1,5 +1,6 @@
 import { AuthorizationError, getCurrentUser, type CurrentUser } from '@rapidinho/auth';
 import { ZodError } from 'zod';
+import type { ActionResult } from './action-state';
 
 /**
  * Base das Server Actions do app do cliente.
@@ -9,13 +10,7 @@ import { ZodError } from 'zod';
  * que a ação saiba se há alguém logado.
  */
 
-export interface ActionResult {
-  ok: boolean;
-  message?: string;
-  fieldErrors?: Record<string, string>;
-}
-
-export const ACTION_IDLE: ActionResult = { ok: false };
+export type { ActionResult } from './action-state';
 
 function tratarErro(error: unknown): ActionResult {
   if (error instanceof ZodError) {
