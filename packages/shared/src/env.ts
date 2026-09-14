@@ -107,3 +107,25 @@ export function parsePublicEnv(source: Record<string, string | undefined>): Publ
 
   return parsed.data;
 }
+
+let publicEnvCache: PublicEnv | null = null;
+
+/**
+ * Variáveis públicas já validadas.
+ *
+ * Cada nome aparece escrito por extenso de propósito: o Next substitui
+ * `process.env.NEXT_PUBLIC_X` no build por análise estática do texto, então
+ * montar a chave dinamicamente (`process.env[nome]`) devolveria undefined no
+ * navegador.
+ */
+export function getPublicEnv(): PublicEnv {
+  publicEnvCache ??= parsePublicEnv({
+    NEXT_PUBLIC_WEB_URL: process.env.NEXT_PUBLIC_WEB_URL,
+    NEXT_PUBLIC_ADMIN_URL: process.env.NEXT_PUBLIC_ADMIN_URL,
+    NEXT_PUBLIC_SOCKET_URL: process.env.NEXT_PUBLIC_SOCKET_URL,
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+  });
+
+  return publicEnvCache;
+}

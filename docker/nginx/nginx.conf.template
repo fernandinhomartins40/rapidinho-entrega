@@ -49,6 +49,13 @@ http {
     keepalive 32;
   }
 
+  # Servidor de sockets: processo separado porque o Next em standalone não
+  # expõe o servidor HTTP para anexar um WebSocket.
+  upstream realtime_upstream {
+    server realtime:3002;
+    keepalive 32;
+  }
+
   upstream minio_upstream {
     server minio:9000;
     keepalive 16;
@@ -106,7 +113,7 @@ http {
     }
 
     location /socket.io/ {
-      proxy_pass http://web_upstream;
+      proxy_pass http://realtime_upstream;
       proxy_read_timeout 3600s;
       proxy_send_timeout 3600s;
     }
@@ -133,7 +140,7 @@ http {
 
     # A tela de pedidos do lojista depende de WebSocket: polling não atende.
     location /socket.io/ {
-      proxy_pass http://admin_upstream;
+      proxy_pass http://realtime_upstream;
       proxy_read_timeout 3600s;
       proxy_send_timeout 3600s;
     }
@@ -172,7 +179,7 @@ http {
     }
 
     location /socket.io/ {
-      proxy_pass http://web_upstream;
+      proxy_pass http://realtime_upstream;
       proxy_read_timeout 3600s;
       proxy_send_timeout 3600s;
     }

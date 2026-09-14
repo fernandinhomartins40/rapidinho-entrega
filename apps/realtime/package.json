@@ -1,0 +1,26 @@
+{
+  "name": "@rapidinho/realtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@rapidinho/shared": "workspace:*",
+    "@socket.io/redis-adapter": "^8.3.0",
+    "ioredis": "^5.4.2",
+    "socket.io": "^4.8.1"
+  },
+  "devDependencies": {
+    "@rapidinho/config": "workspace:*",
+    "@types/node": "^22.10.2",
+    "eslint": "^9.17.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

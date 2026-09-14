@@ -14,6 +14,7 @@
 # Dentro do compose, o nginx roteia para as duas portas internas:
 #   web:3000    → app do cliente (rapidinhoentrega.com.br)
 #   admin:3001  → painel (painel.rapidinhoentrega.com.br)
+#   realtime:3002 → WebSocket dos pedidos (/socket.io)
 
 services:
   # Roda as migrations e sai. Não sobe com o `up`: o deploy chama sob demanda,
@@ -44,6 +45,12 @@ services:
   admin:
     restart: always
     mem_limit: 768m
+
+  # Muitas conexões abertas, pouquíssimo processamento por evento: o consumo é
+  # de socket, não de heap.
+  realtime:
+    restart: always
+    mem_limit: 256m
 
   postgres:
     restart: always

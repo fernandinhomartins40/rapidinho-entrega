@@ -34,3 +34,6 @@ pnpm-debug.log*
 
 # dados locais de containers
 docker/data
+
+# Build do servidor de realtime
+apps/realtime/dist/

@@ -8,7 +8,8 @@
     ".": "./src/index.ts",
     "./styles.css": "./src/styles/globals.css",
     "./lib/utils": "./src/lib/utils.ts",
-    "./*": "./src/components/*.tsx"
+    "./*": "./src/components/*.tsx",
+    "./hooks/use-realtime": "./src/hooks/use-realtime.ts"
   },
   "scripts": {
     "lint": "eslint .",
@@ -29,6 +30,7 @@
     "clsx": "^2.1.1",
     "lucide-react": "^0.469.0",
     "react-easy-crop": "^5.2.0",
+    "socket.io-client": "^4.8.3",
     "tailwind-merge": "^2.6.0"
   },
   "peerDependencies": {

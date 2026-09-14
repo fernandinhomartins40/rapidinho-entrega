@@ -19,6 +19,8 @@ services:
         condition: service_healthy
       admin:
         condition: service_healthy
+      realtime:
+        condition: service_healthy
       minio:
         condition: service_healthy
     healthcheck:
@@ -85,6 +87,30 @@ services:
       timeout: 5s
       retries: 5
       start_period: 40s
+    networks: [rapidinho]
+
+  # Tempo real dos pedidos. Não publica porta no host: o Nginx encaminha
+  # /socket.io para cá, mantendo a promessa de uma única porta externa.
+  realtime:
+    build:
+      context: .
+      dockerfile: apps/realtime/Dockerfile
+    container_name: rapidinho-realtime
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      REALTIME_PORT: 3002
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'node', '-e', "require('http').get('http://127.0.0.1:3002/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
     networks: [rapidinho]
 
   postgres:
