@@ -362,29 +362,29 @@ Todos corrigidos e **verificados executando os processos**, não por leitura.
 
 ## Regra de empacotamento: o que fica de fora, e por quê
 
-| Externo | Motivo |
-|---|---|
-| `sharp` | Binário nativo por plataforma |
-| `bullmq` | Carrega scripts Lua do disco em runtime |
-| `ioredis` | Compartilhada com o bullmq |
-| `@prisma/client` | Resolve os engines por caminho |
-| `@sentry/node` | Entra por import dinâmico, é opcional |
-| `@rapidinho/database/generated/client` | Localiza engines com `__dirname` |
+| Externo                                | Motivo                                  |
+| -------------------------------------- | --------------------------------------- |
+| `sharp`                                | Binário nativo por plataforma           |
+| `bullmq`                               | Carrega scripts Lua do disco em runtime |
+| `ioredis`                              | Compartilhada com o bullmq              |
+| `@prisma/client`                       | Resolve os engines por caminho          |
+| `@sentry/node`                         | Entra por import dinâmico, é opcional   |
+| `@rapidinho/database/generated/client` | Localiza engines com `__dirname`        |
 
 Tudo o mais é empacotado. Quem acrescentar a esta lista: justifique **por que não pode** ser
 empacotado.
 
 ## Resultado medido
 
-| Métrica | Antes | Depois | Método |
-|---|---|---|---|
-| Contexto de build | 50,7 MB | **5,5 MB** (−89%) | Mesma varredura do `.dockerignore` |
-| `realtime` (dist + deps) | 174 MB + `packages/` | **17 MB** (−90%) | `pnpm deploy --prod` + `du -sm` |
-| `worker` (dist + deps) | 452 MB + `packages/` | **337 MB** (−25%) | idem |
-| Containers com limite de CPU | 0 de 9 | **9 de 9** | `docker-compose.yml` |
-| Containers com `pids_limit` | 0 de 9 | **9 de 9** | idem |
-| Containers com política de log | 0 de 9 | **9 de 9** | idem |
-| Serviços que iniciam | **7 de 9** | **9 de 9** | Execução real dos binários |
+| Métrica                        | Antes                | Depois            | Método                             |
+| ------------------------------ | -------------------- | ----------------- | ---------------------------------- |
+| Contexto de build              | 50,7 MB              | **5,5 MB** (−89%) | Mesma varredura do `.dockerignore` |
+| `realtime` (dist + deps)       | 174 MB + `packages/` | **17 MB** (−90%)  | `pnpm deploy --prod` + `du -sm`    |
+| `worker` (dist + deps)         | 452 MB + `packages/` | **337 MB** (−25%) | idem                               |
+| Containers com limite de CPU   | 0 de 9               | **9 de 9**        | `docker-compose.yml`               |
+| Containers com `pids_limit`    | 0 de 9               | **9 de 9**        | idem                               |
+| Containers com política de log | 0 de 9               | **9 de 9**        | idem                               |
+| Serviços que iniciam           | **7 de 9**           | **9 de 9**        | Execução real dos binários         |
 
 ⚠️ **Não medido:** tamanho final das imagens Docker. Não há daemon Docker nesta sessão. Os números
 acima são das árvores que **entram** na imagem, medidos com `du`, não da imagem construída.

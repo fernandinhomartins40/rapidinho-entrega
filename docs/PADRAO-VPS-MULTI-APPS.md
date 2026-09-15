@@ -3,8 +3,8 @@
 > Derivado da auditoria do Rapidinho Entrega (2026-09-15), não de teoria genérica. Cada regra
 > aponta o problema real que a originou e o seu **status de validação**.
 >
-> A pergunta que orienta tudo: *esta solução continua funcionando com 10, 20 ou 30 aplicações no
-> mesmo host?* O que funciona isolado e quebra em escala não serve.
+> A pergunta que orienta tudo: _esta solução continua funcionando com 10, 20 ou 30 aplicações no
+> mesmo host?_ O que funciona isolado e quebra em escala não serve.
 
 ## As cinco regras que mais importam
 
@@ -15,14 +15,14 @@ derruba as outras. No Rapidinho, **0 de 9 containers** tinham limite de CPU ou P
 
 ```yaml
 mem_limit: 512m
-cpus: ${MINHA_APP_CPUS:-0.5}   # sobrescrevível: calibrar não deve exigir deploy
+cpus: ${MINHA_APP_CPUS:-0.5} # sobrescrevível: calibrar não deve exigir deploy
 pids_limit: 256
 ```
 
 `cpus` é **teto, não reserva** — container ocioso não segura nada. A soma dos tetos pode passar do
 número de vCPU sem problema.
 
-*Status: aplicado, ainda não validado sob carga real.*
+_Status: aplicado, ainda não validado sob carga real._
 
 ### 2. Todo container tem política de log
 
@@ -35,7 +35,7 @@ x-log: &log
   options: { max-size: '10m', max-file: '3' }
 ```
 
-*Status: aplicado. Teto de 30 MB por container — antes o teto era o disco inteiro.*
+_Status: aplicado. Teto de 30 MB por container — antes o teto era o disco inteiro._
 
 ### 3. Limite de banco sem ajuste interno é pior que limite nenhum
 
@@ -45,7 +45,7 @@ morto por falta de memória exatamente sob carga. O banco acredita que tem a má
 Dimensione os dois lados juntos: `shared_buffers` em 25% do teto, `max_connections` conversando com
 o pool de cada aplicação (`connection_limit` na URL do Prisma).
 
-*Status: aplicado. Pior caso calculado em ~520 MB dentro de 1 GB — **não medido sob carga**.*
+_Status: aplicado. Pior caso calculado em ~520 MB dentro de 1 GB — **não medido sob carga**._
 
 ### 4. Build fora da máquina de produção, imagem versionada por hash
 
@@ -57,14 +57,14 @@ de virar regra: a VPS não completava o build.
 - Nome de imagem **fixo**: sem ele o compose nomeia pelo diretório do projeto, que muda a cada
   release, e a imagem enviada não é a que ele procura
 
-*Status: aplicado e validado — build de 6 min 38 s no runner contra "nunca terminou" na VPS.*
+_Status: aplicado e validado — build de 6 min 38 s no runner contra "nunca terminou" na VPS._
 
 ### 5. Limpeza sempre com escopo restrito
 
 Em host compartilhado, `docker system prune -a` apaga imagem de **outras aplicações**. Filtre por
 idade, remova só o que não tem referência, e entenda o que cada comando apaga antes de rodar.
 
-*Status: já era assim; confirmado correto na auditoria.*
+_Status: já era assim; confirmado correto na auditoria._
 
 ---
 
@@ -80,12 +80,12 @@ Empacotar no build resolve os dois lados: o serviço passa a subir, e `packages/
 
 Deixe externo apenas o que tem motivo:
 
-| Motivo | Exemplos |
-|---|---|
-| Binário nativo | `sharp` |
-| Lê arquivo do disco em runtime | `bullmq` (scripts Lua) |
+| Motivo                          | Exemplos                 |
+| ------------------------------- | ------------------------ |
+| Binário nativo                  | `sharp`                  |
+| Lê arquivo do disco em runtime  | `bullmq` (scripts Lua)   |
 | Resolve caminho com `__dirname` | cliente gerado do Prisma |
-| Entra por import dinâmico | `@sentry/node` |
+| Entra por import dinâmico       | `@sentry/node`           |
 
 Se precisar manter algo externo, exponha-o como **subcaminho do pacote** em vez de copiá-lo para
 o lado — copiar duplica (aconteceu: 43 MB).
@@ -107,7 +107,7 @@ gerados** e **caches incrementais**.
 do container**. No Rapidinho a imagem de migration roda `prisma` e `tsx`, ambos devDependencies:
 podar quebraria migration e seed, ou seja, o deploy inteiro.
 
-Antes de podar, pergunte: *o que este container executa além do processo principal?*
+Antes de podar, pergunte: _o que este container executa além do processo principal?_
 
 ---
 
@@ -115,13 +115,13 @@ Antes de podar, pergunte: *o que este container executa além do processo princi
 
 Pergunte: **isto tem ciclo de vida próprio?**
 
-| Sim, separe | Não, não separe |
-|---|---|
-| Precisa de servidor HTTP que o framework não expõe (WebSocket) | "Fica mais bonito no diagrama" |
-| Trabalho pesado que roubaria CPU de quem espera a tela | Reduzir contagem de containers |
-| Escala em ritmo diferente do resto | Separar camadas do mesmo processo |
+| Sim, separe                                                    | Não, não separe                   |
+| -------------------------------------------------------------- | --------------------------------- |
+| Precisa de servidor HTTP que o framework não expõe (WebSocket) | "Fica mais bonito no diagrama"    |
+| Trabalho pesado que roubaria CPU de quem espera a tela         | Reduzir contagem de containers    |
+| Escala em ritmo diferente do resto                             | Separar camadas do mesmo processo |
 
-*Número de containers não é métrica de qualidade.* No Rapidinho, juntar `realtime` e `worker` nos
+_Número de containers não é métrica de qualidade._ No Rapidinho, juntar `realtime` e `worker` nos
 apps Next reduziria de 9 para 7 e **pioraria** a aplicação.
 
 ---
@@ -207,14 +207,14 @@ Remoção pela metade deixa a aplicação **pior**: o custo da configuração mo
 
 ## Não faça
 
-| Não faça | Por quê |
-|---|---|
-| Juntar serviços para reduzir a contagem | Cada um tem ciclo de vida próprio; junta e piora |
-| Podar devDeps sem verificar o que o container executa | Quebra migration e seed |
-| Limitar memória do banco sem ajustar a configuração dele | Morte por falta de memória **sob carga** |
-| Trocar a imagem base por uma menor sem conferir dependência de sistema | `sharp` precisa de libvips; Prisma, de OpenSSL |
-| `docker system prune -a` em host compartilhado | Apaga imagem de outras aplicações |
-| Tag `latest` | Muda em silêncio, impossibilita rollback |
-| Concluir "não tem uso" sem provar onde procurou | Já removeu funcionalidade ativa em produção |
-| Atribuir load alto à aplicação sem medir steal time | Pode ser hospedagem; otimizar não resolve |
-| Auditar só configuração | Dois serviços quebrados passaram por essa peneira |
+| Não faça                                                               | Por quê                                           |
+| ---------------------------------------------------------------------- | ------------------------------------------------- |
+| Juntar serviços para reduzir a contagem                                | Cada um tem ciclo de vida próprio; junta e piora  |
+| Podar devDeps sem verificar o que o container executa                  | Quebra migration e seed                           |
+| Limitar memória do banco sem ajustar a configuração dele               | Morte por falta de memória **sob carga**          |
+| Trocar a imagem base por uma menor sem conferir dependência de sistema | `sharp` precisa de libvips; Prisma, de OpenSSL    |
+| `docker system prune -a` em host compartilhado                         | Apaga imagem de outras aplicações                 |
+| Tag `latest`                                                           | Muda em silêncio, impossibilita rollback          |
+| Concluir "não tem uso" sem provar onde procurou                        | Já removeu funcionalidade ativa em produção       |
+| Atribuir load alto à aplicação sem medir steal time                    | Pode ser hospedagem; otimizar não resolve         |
+| Auditar só configuração                                                | Dois serviços quebrados passaram por essa peneira |

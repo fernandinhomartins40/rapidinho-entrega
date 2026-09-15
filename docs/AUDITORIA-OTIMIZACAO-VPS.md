@@ -280,11 +280,11 @@ Não tinha desperdício, mas **dois dos nove containers não iniciavam**. Descob
 executar os binários durante a implementação — a auditoria só leu configuração, e leitura não
 pega isso.
 
-| Serviço | Erro | Origem |
-|---|---|---|
-| `realtime` | `ERR_MODULE_NOT_FOUND: './logger'` | **Introduzido por mim** em `1e6ce89` |
-| `realtime` e `worker` | `ERR_MODULE_NOT_FOUND` em `@rapidinho/shared` | Pré-existente |
-| `worker` | `BullMQ: maxRetriesPerRequest must be null` | Pré-existente |
+| Serviço               | Erro                                          | Origem                               |
+| --------------------- | --------------------------------------------- | ------------------------------------ |
+| `realtime`            | `ERR_MODULE_NOT_FOUND: './logger'`            | **Introduzido por mim** em `1e6ce89` |
+| `realtime` e `worker` | `ERR_MODULE_NOT_FOUND` em `@rapidinho/shared` | Pré-existente                        |
+| `worker`              | `BullMQ: maxRetriesPerRequest must be null`   | Pré-existente                        |
 
 Causa comum dos dois primeiros: `apps/realtime`, `apps/worker` e `packages/shared` são ESM
 (`"type": "module"`), e o carregador ESM do Node **exige extensão** em import relativo. O código
@@ -317,3 +317,34 @@ A árvore "de produção" do worker ainda traz **o CLI do `prisma` (34 MB) e o `
 (**MEDIDO**), porque o `@prisma/client` os declara como peers opcionais e o pnpm os instala. São
 57 MB que nada executam em runtime. Não resolvi: exige mexer em resolução de peer do pnpm, com
 risco de quebrar o build. **Fica registrado como decisão pendente.**
+
+---
+
+## 12. Por que o deploy não roda (respondido pela API do GitHub)
+
+A auditoria registrava isto como inferência. Agora é **MEDIDO**, pela anotação do próprio job
+(`GET /repos/{repo}/check-runs/{job}/annotations`):
+
+> _The job was not started because recent account payments have failed or your spending limit
+> needs to be increased. Please check the 'Billing & plans' section in your settings_
+
+Os jobs terminam em ~7 s, com `total_ms: 0` e **nenhum runner atribuído** — nada a ver com o
+código, o workflow ou a VPS. Enquanto o faturamento não for regularizado, **nenhum deploy roda**,
+e nenhuma das otimizações deste documento chega à produção.
+
+### Steal time continua NÃO MEDIDO
+
+Tentei medir por SSH direto e não foi possível: **a porta 22 está bloqueada na saída** do ambiente
+onde esta sessão roda (só 443 passa, através do proxy). Tunelar SSH pelo proxy é escapar da
+contenção do ambiente, e não foi feito.
+
+`scripts/diagnosticar-vps.py` responde a essa pergunta em um comando, executado de uma máquina com
+acesso à VPS:
+
+```bash
+pip install paramiko
+VPS_PASSWORD='...' python3 scripts/diagnosticar-vps.py
+```
+
+Ele é somente-leitura. Se a coluna `st` do `vmstat` vier alta, o load 243 é da hospedagem e
+nenhuma otimização no código resolve — e é essa a conversa a ter com o provedor.
