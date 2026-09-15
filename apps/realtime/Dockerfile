@@ -21,11 +21,15 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/packages ./packages
 COPY --from=deps /app/apps ./apps
-COPY package.json pnpm-workspace.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/config ./packages/config
 COPY packages/shared ./packages/shared
 COPY apps/realtime ./apps/realtime
 RUN pnpm --filter @rapidinho/realtime build
+
+# Árvore só de produção. `pnpm deploy` resolve as dependências declaradas e
+# deixa de fora typescript, eslint e tsx, que nada executam em runtime.
+RUN pnpm --filter @rapidinho/realtime deploy --prod --legacy /pronto
 
 FROM base AS runner
 ENV NODE_ENV=production REALTIME_PORT=3002
@@ -33,11 +37,10 @@ ENV NODE_ENV=production REALTIME_PORT=3002
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 realtime
 
-# Só o que o processo executa: build + dependências de produção.
+# O build empacota o código do workspace num arquivo só, então `packages/` não
+# vai mais para a imagem: não há mais nada lá para resolver em runtime.
 COPY --from=builder --chown=realtime:nodejs /app/apps/realtime/dist ./dist
-COPY --from=builder --chown=realtime:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=realtime:nodejs /app/apps/realtime/node_modules ./apps/realtime/node_modules
-COPY --from=builder --chown=realtime:nodejs /app/packages ./packages
+COPY --from=builder --chown=realtime:nodejs /pronto/node_modules ./node_modules
 
 USER realtime
 EXPOSE 3002

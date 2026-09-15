@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",
-    "build": "tsc",
+    "build": "node ../../scripts/empacotar-servico.mjs src/main.ts dist/main.js sharp bullmq ioredis @prisma/client @sentry/node && node ../../scripts/empacotar-servico.mjs src/saude.ts dist/saude.js sharp bullmq ioredis @prisma/client @sentry/node",
     "start": "node dist/main.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
@@ -21,6 +21,7 @@
   "devDependencies": {
     "@rapidinho/config": "workspace:*",
     "@types/node": "^22.10.2",
+    "esbuild": "^0.25.0",
     "eslint": "^9.17.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2"

@@ -39,6 +39,27 @@ echo "==> Estado da VPS"
 echo "-- disco --";     df -h "$APP_ROOT" / 2>/dev/null | sed 's/^/   /' || true
 echo "-- memória --";   free -m 2>/dev/null | sed 's/^/   /' || true
 echo "-- carga --";     uptime 2>/dev/null | sed 's/^/   /' || true
+echo "-- vCPU --";      echo "   $(nproc 2>/dev/null || echo '?') núcleo(s)"
+
+# STEAL TIME — a pergunta que decide se vale otimizar mais (plano §7).
+#
+# A coluna `st` do vmstat é o tempo em que esta VM estava pronta para rodar e o
+# hipervisor deu a CPU para outro cliente. Se ela for alta, o load não vem
+# desta aplicação e nenhuma otimização aqui dentro resolve — é hospedagem.
+# Medir isso evita atribuir à aplicação um problema do provedor.
+echo "-- steal time (coluna st: CPU que o provedor não entregou) --"
+if command -v vmstat >/dev/null 2>&1; then
+  vmstat 1 3 2>/dev/null | tail -2 | sed 's/^/   /' || true
+else
+  # Sem vmstat, o /proc/stat serve: o 8º campo da linha `cpu` é o steal
+  # acumulado em jiffies desde o boot.
+  awk '/^cpu /{printf "   steal acumulado: %d jiffies de %d total (%.1f%%)\n", $9, $2+$3+$4+$5+$6+$7+$8+$9, ($9*100)/($2+$3+$4+$5+$6+$7+$8+$9)}' /proc/stat 2>/dev/null || true
+fi
+
+# Consumo real por container: é o número que calibra os limites de CPU do
+# plano §3, hoje ESTIMADOS por falta de medição.
+echo "-- consumo por container --"
+timeout 30 docker stats --no-stream --format '   {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.PIDs}}' 2>/dev/null || echo "   (docker stats não respondeu em 30s)"
 
 echo "==> Conferindo as imagens da release $RELEASE_TAG"
 # As imagens chegam prontas do runner, por `docker save | docker load`. Aqui

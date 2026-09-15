@@ -4,7 +4,10 @@ import { Server, type Socket } from 'socket.io';
 import { createAdapter } from '@socket.io/redis-adapter';
 import { REALTIME_BRIDGE_CHANNEL, type RealtimeMessage } from '@rapidinho/shared/realtime';
 import { verifyChannelToken } from '@rapidinho/shared/realtime/token';
-import { logger } from './logger';
+// Extensão `.js` obrigatória: a saída é ESM (module: ESNext) e o carregador
+// de módulos do Node exige extensão em import relativo. Sem ela o processo
+// nem sobe — ERR_MODULE_NOT_FOUND antes da primeira linha executar.
+import { logger } from './logger.js';
 
 /**
  * Servidor de tempo real.

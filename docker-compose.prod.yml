@@ -37,7 +37,7 @@ services:
     image: rapidinho-migrate:${RELEASE_TAG:-dev}
     env_file: .env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-rapidinho}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rapidinho}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rapidinho}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rapidinho}?schema=public&connection_limit=5
     depends_on:
       postgres:
         condition: service_healthy

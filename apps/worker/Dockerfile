@@ -30,16 +30,20 @@ COPY apps/worker ./apps/worker
 RUN pnpm --filter @rapidinho/database exec prisma generate
 RUN pnpm --filter @rapidinho/worker build
 
+# Árvore só de produção: sem typescript, eslint nem tsx.
+RUN pnpm --filter @rapidinho/worker deploy --prod --legacy /pronto
+
 FROM base AS runner
 ENV NODE_ENV=production
 
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 worker
 
+# `dist/` já traz o cliente do Prisma em `dist/prisma-client/`, copiado pelo
+# empacotador: ele não pode ser empacotado porque localiza os engines com
+# `__dirname`.
 COPY --from=builder --chown=worker:nodejs /app/apps/worker/dist ./dist
-COPY --from=builder --chown=worker:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=worker:nodejs /app/apps/worker/node_modules ./apps/worker/node_modules
-COPY --from=builder --chown=worker:nodejs /app/packages ./packages
+COPY --from=builder --chown=worker:nodejs /pronto/node_modules ./node_modules
 
 USER worker
 

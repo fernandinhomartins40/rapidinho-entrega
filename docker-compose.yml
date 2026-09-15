@@ -1,10 +1,29 @@
 name: rapidinho
 
+# Política de log de TODOS os containers (plano §1).
+#
+# O driver `json-file` padrão do Docker não rotaciona: cresce até encher o
+# disco. A VPS já está com 84% de uso e é compartilhada — encher o disco aqui
+# derruba as outras aplicações do host, não só esta.
+#
+# 10 MB × 3 arquivos = teto de 30 MB por container. O que interessa de verdade
+# vai para o Pino em JSON e, quando houver DSN, para o Sentry.
+x-log: &log
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
+
 services:
   nginx:
     build:
       context: ./docker/nginx
     container_name: rapidinho-nginx
+    # Só roteia e comprime.
+    mem_limit: ${RAPIDINHO_MEM_NGINX:-128m}
+    cpus: ${RAPIDINHO_CPUS_NGINX:-0.5}
+    pids_limit: 128
+    logging: *log
     restart: unless-stopped
     ports:
       # Em desenvolvimento publica em todas as interfaces na porta 80.
@@ -42,13 +61,17 @@ services:
         S3_PUBLIC_URL: ${S3_PUBLIC_URL}
     image: rapidinho-web:${RELEASE_TAG:-dev}
     container_name: rapidinho-web
+    # Atende o cliente final: é quem não pode engasgar.
+    cpus: ${RAPIDINHO_CPUS_WEB:-1.0}
+    pids_limit: 256
+    logging: *log
     restart: unless-stopped
     env_file: .env
     environment:
       NODE_ENV: production
       PORT: 3000
       HOSTNAME: 0.0.0.0
-      DATABASE_URL: postgresql://${POSTGRES_USER:-rapidinho}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rapidinho}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rapidinho}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rapidinho}?schema=public&connection_limit=8
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
     depends_on:
@@ -77,13 +100,17 @@ services:
         S3_PUBLIC_URL: ${S3_PUBLIC_URL}
     image: rapidinho-admin:${RELEASE_TAG:-dev}
     container_name: rapidinho-admin
+    # Menos tráfego que o web.
+    cpus: ${RAPIDINHO_CPUS_ADMIN:-0.75}
+    pids_limit: 256
+    logging: *log
     restart: unless-stopped
     env_file: .env
     environment:
       NODE_ENV: production
       PORT: 3001
       HOSTNAME: 0.0.0.0
-      DATABASE_URL: postgresql://${POSTGRES_USER:-rapidinho}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rapidinho}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rapidinho}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rapidinho}?schema=public&connection_limit=8
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
     depends_on:
@@ -109,6 +136,10 @@ services:
       dockerfile: apps/realtime/Dockerfile
     image: rapidinho-realtime:${RELEASE_TAG:-dev}
     container_name: rapidinho-realtime
+    # Repassa mensagens; I/O bound, quase sem CPU.
+    cpus: ${RAPIDINHO_CPUS_REALTIME:-0.25}
+    pids_limit: 128
+    logging: *log
     restart: unless-stopped
     env_file: .env
     environment:
@@ -134,11 +165,15 @@ services:
       dockerfile: apps/worker/Dockerfile
     image: rapidinho-worker:${RELEASE_TAG:-dev}
     container_name: rapidinho-worker
+    # Trabalho de fundo DEVE ceder para quem espera a tela.
+    cpus: ${RAPIDINHO_CPUS_WORKER:-0.5}
+    pids_limit: 256
+    logging: *log
     restart: unless-stopped
     env_file: .env
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-rapidinho}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rapidinho}?schema=public
+      DATABASE_URL: postgresql://${POSTGRES_USER:-rapidinho}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rapidinho}?schema=public&connection_limit=8
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
     depends_on:
@@ -148,11 +183,50 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+    healthcheck:
+      # Confere o batimento no Redis, não o PID: processo vivo com laço de
+      # eventos travado mantém as filas paradas sem ninguém perceber.
+      test: ['CMD', 'node', 'dist/saude.js']
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      # Generoso de propósito: reiniciar worker saudável é pior que demorar a
+      # perceber um travado.
+      start_period: 90s
     networks: [rapidinho]
 
   postgres:
     image: postgres:16-alpine
     container_name: rapidinho-postgres
+    # Dimensionado para caber no mem_limit de 1 GB (plano §5).
+    #
+    # Sem isto o Postgres acredita que tem a máquina inteira: assume
+    # max_connections=100 e planeja como se houvesse RAM de sobra. Limite
+    # externo sem ajuste interno faz o processo ser morto por falta de memória
+    # exatamente sob carga — pior do que não limitar.
+    #
+    # Pior caso: 256 (buffers) + 50×4 (work_mem) + 64 (manutenção) ≈ 520 MB,
+    # mais ~5 MB por backend. Cabe em 1 GB com folga.
+    #
+    # max_connections=50 conversa com o connection_limit de cada app, definido
+    # na DATABASE_URL logo acima: web 8 + admin 8 + worker 8 = 24 conexões,
+    # mais o migrate (5) de vez em quando. Folga de mais de 100%.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=512MB
+      - -c
+      - work_mem=4MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - max_connections=50
+    # Um processo por conexão: PIDs com folga sobre max_connections=50.
+    cpus: ${RAPIDINHO_CPUS_POSTGRES:-1.0}
+    pids_limit: 512
+    logging: *log
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-rapidinho}
@@ -175,6 +249,10 @@ services:
   redis:
     image: redis:7-alpine
     container_name: rapidinho-redis
+    # Operações O(1) em memória.
+    cpus: ${RAPIDINHO_CPUS_REDIS:-0.25}
+    pids_limit: 128
+    logging: *log
     restart: unless-stopped
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
@@ -187,8 +265,14 @@ services:
     networks: [rapidinho]
 
   minio:
-    image: minio/minio:latest
+    # Versão fixa, não `latest`: com tag móvel um `docker pull` troca a versão
+    # em silêncio e não há rollback possível.
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
     container_name: rapidinho-minio
+    # I/O, não CPU.
+    cpus: ${RAPIDINHO_CPUS_MINIO:-0.5}
+    pids_limit: 128
+    logging: *log
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -206,7 +290,9 @@ services:
 
   # Cria o bucket e libera leitura pública das imagens. Roda uma vez e sai.
   minio-init:
-    image: minio/mc:latest
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    pids_limit: 64
+    logging: *log
     container_name: rapidinho-minio-init
     depends_on:
       minio:

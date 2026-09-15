@@ -4,7 +4,7 @@ import {
   agendarRotinas,
   capturarErro,
   dispararCampanha,
-  getRedis,
+  getRedisBloqueante,
   logger,
   notificarUsuario,
   type JobDeNotificacao,
@@ -23,7 +23,10 @@ import { processarImagem } from './jobs/image-processing';
  * demorar sem prejudicar ninguém.
  */
 
-const conexao = getRedis();
+// Conexão bloqueante: o BullMQ recusa `maxRetriesPerRequest` diferente de
+// `null` e lança já na construção do Worker. A conexão comum, com 3
+// retentativas, continua servindo a quem apenas publica na fila.
+const conexao = getRedisBloqueante();
 
 /** Concorrência por fila, conforme o custo de cada trabalho. */
 const trabalhadores = [
@@ -83,6 +86,29 @@ for (const trabalhador of trabalhadores) {
 }
 
 await agendarRotinas();
+
+/**
+ * Batimento no Redis, para o healthcheck do container.
+ *
+ * O worker não atende HTTP, então não havia como o Docker saber se ele estava
+ * vivo — e essa cegueira é exatamente o que escondeu que o processo nunca
+ * subia. A chave expira em 90 s e é renovada a cada 30 s: se o laço de eventos
+ * travar, ela some sozinha e o healthcheck reprova.
+ */
+const CHAVE_BATIMENTO = 'rapidinho:worker:vivo';
+
+async function baterPonto(): Promise<void> {
+  try {
+    await conexao.set(CHAVE_BATIMENTO, String(Date.now()), 'EX', 90);
+  } catch (erro) {
+    logger.warn({ err: erro }, '[worker] não consegui registrar o batimento');
+  }
+}
+
+await baterPonto();
+const batimento = setInterval(() => void baterPonto(), 30_000);
+// `unref` para o batimento não segurar o processo no encerramento.
+batimento.unref();
 
 logger.info({ filas: trabalhadores.length }, '[worker] ouvindo filas');
 

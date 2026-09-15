@@ -19,3 +19,22 @@ docker/data
 
 # Originais da marca em alta: só o script de geração usa, a imagem não.
 assets/
+
+# Cliente do Prisma gerado na máquina de quem desenvolve.
+#
+# São 43 MB — 84% do contexto de build — e o Dockerfile roda `prisma generate`
+# de qualquer forma, então esse conteúdo é descartado assim que chega.
+#
+# Pior: gerado em máquina glibc, ele traz libquery_engine-debian (16,7 MB), que
+# é inútil numa imagem Alpine. Como `prisma generate` escreve no mesmo
+# diretório sem remover arquivos estranhos, o engine errado sobreviveria dentro
+# da imagem.
+packages/database/generated
+
+# Cache incremental do TypeScript.
+#
+# Se ele entra no contexto, o `tsc` acredita que já emitiu e NÃO gera `dist/` —
+# comprovado em teste: com o arquivo presente e `dist/` apagado, a saída fica
+# vazia. O CI nunca viu isso porque faz checkout limpo e o arquivo é
+# gitignorado; um build local produziria imagem sem o código.
+*.tsbuildinfo
