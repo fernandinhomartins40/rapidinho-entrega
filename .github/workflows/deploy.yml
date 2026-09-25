@@ -78,6 +78,8 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm db:seed
+      - name: Lojas abertas 24h (o e2e não pode depender da hora do runner)
+        run: pnpm db:seed:e2e
       - name: Instalar o Chromium do Playwright
         run: pnpm exec playwright install --with-deps chromium
       - name: Subir os apps para os testes de ponta a ponta
