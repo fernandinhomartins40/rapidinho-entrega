@@ -19,7 +19,11 @@ export interface CidadeDisponivel {
  */
 export function ChamadaFinal({ cidades }: { cidades: CidadeDisponivel[] }) {
   return (
-    <section id="baixar" aria-labelledby="titulo-baixar" className="scroll-mt-4 bg-[#101112] text-white">
+    <section
+      id="baixar"
+      aria-labelledby="titulo-baixar"
+      className="scroll-mt-4 bg-[#101112] text-white"
+    >
       <div className="mx-auto w-full max-w-[1200px] px-5 pb-10 pt-12 sm:px-8 sm:pt-14">
         <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div>

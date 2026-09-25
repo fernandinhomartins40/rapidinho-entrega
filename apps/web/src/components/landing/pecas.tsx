@@ -31,10 +31,22 @@ export function Etiqueta({
 function IconeGooglePlay({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden>
-      <path fill="#FBBC04" d="M22.018 13.298l-3.919 2.218-3.515-3.493 3.543-3.521 3.891 2.202a1.49 1.49 0 0 1 0 2.594z" />
-      <path fill="#4285F4" d="M1.337.924a1.486 1.486 0 0 0-.112.568v21.017c0 .217.045.419.124.6l11.155-11.087L1.337.924z" />
-      <path fill="#34A853" d="M13.544 10.989l3.258-3.238L3.45.195a1.466 1.466 0 0 0-.946-.179l11.04 10.973z" />
-      <path fill="#EA4335" d="M13.544 13.056l-11 10.933c.298.036.612-.016.906-.183l13.324-7.54-3.23-3.21z" />
+      <path
+        fill="#FBBC04"
+        d="M22.018 13.298l-3.919 2.218-3.515-3.493 3.543-3.521 3.891 2.202a1.49 1.49 0 0 1 0 2.594z"
+      />
+      <path
+        fill="#4285F4"
+        d="M1.337.924a1.486 1.486 0 0 0-.112.568v21.017c0 .217.045.419.124.6l11.155-11.087L1.337.924z"
+      />
+      <path
+        fill="#34A853"
+        d="M13.544 10.989l3.258-3.238L3.45.195a1.466 1.466 0 0 0-.946-.179l11.04 10.973z"
+      />
+      <path
+        fill="#EA4335"
+        d="M13.544 13.056l-11 10.933c.298.036.612-.016.906-.183l13.324-7.54-3.23-3.21z"
+      />
     </svg>
   );
 }
@@ -87,12 +99,7 @@ export function SelosDasLojas({ className }: { className?: string }) {
 export function Pincelada({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 200 24" fill="none" className={className} aria-hidden>
-      <path
-        d="M4 18C52 9 118 5 196 6"
-        stroke="#F04B28"
-        strokeWidth="6"
-        strokeLinecap="round"
-      />
+      <path d="M4 18C52 9 118 5 196 6" stroke="#F04B28" strokeWidth="6" strokeLinecap="round" />
     </svg>
   );
 }

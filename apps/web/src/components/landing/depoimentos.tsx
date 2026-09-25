@@ -43,7 +43,12 @@ export function Depoimentos({ foto }: { foto: React.ReactNode }) {
 
           <div className="order-1 flex items-center gap-4 self-center md:order-2 md:pb-8">
             {varios ? (
-              <button type="button" onClick={() => ir(-1)} aria-label="Depoimento anterior" className={seta}>
+              <button
+                type="button"
+                onClick={() => ir(-1)}
+                aria-label="Depoimento anterior"
+                className={seta}
+              >
                 <ChevronLeft className="h-6 w-6" strokeWidth={2.6} aria-hidden />
               </button>
             ) : null}
@@ -106,7 +111,12 @@ export function Depoimentos({ foto }: { foto: React.ReactNode }) {
             </div>
 
             {varios ? (
-              <button type="button" onClick={() => ir(1)} aria-label="Próximo depoimento" className={seta}>
+              <button
+                type="button"
+                onClick={() => ir(1)}
+                aria-label="Próximo depoimento"
+                className={seta}
+              >
                 <ChevronRight className="h-6 w-6" strokeWidth={2.6} aria-hidden />
               </button>
             ) : null}

@@ -16,7 +16,7 @@
 | 4   | 🔴 CRÍTICA | `mem_limit` no nginx                        | Médio            | Mínimo |
 | 5   | 🟠 ALTA    | Tuning do Postgres dentro do limite de 1 GB | Alto             | Médio  |
 | 6   | 🟠 ALTA    | `connection_limit` explícito no Prisma      | Alto             | Baixo  |
-| 7   | �           | Medi��es na VPS (fora do escopo)          | Ignorado         | �      |
+| 7   | �          | Medi��es na VPS (fora do escopo)            | Ignorado         | �      |
 | 8   | 🟡 MÉDIA   | `realtime` com dependências só de produção  | −158 MB          | Baixo  |
 | 9   | 🟡 MÉDIA   | `worker` com dependências só de produção    | −118 MB          | Baixo  |
 | 10  | 🟡 MÉDIA   | Ignorar `generated/` no contexto de build   | −42,8 MB         | Mínimo |
@@ -104,12 +104,12 @@ o worker recebe a menor fatia.
 
 **Risco.** Médio, e é o item mais arriscado do plano. Teto baixo demais causa lentidão sob pico.
 Mitigação: os valores são **sobrescrevíveis por variável de ambiente**, para ajustar na VPS sem
-novo deploy. Os limites permanecem como tetos configurados; n�o ser�o calibrados por medi��es na VPS.
+novo deploy. Os limites permanecem como tetos configurados; n�o ser�o calibrados por medi��es na VPS.
 
 **Dependencia.** Nenhuma; a etapa de medicao na VPS foi exclu;da do escopo.
 
 **Testar.** `docker compose config`; suíte E2E contra os containers.
-**Medir.** Fora do escopo por decis�o: n�o coletar m�tricas na VPS.
+**Medir.** Fora do escopo por decis�o: n�o coletar m�tricas na VPS.
 **Reverter.** `RAPIDINHO_CPUS_<serviço>` no `.env`, sem redeploy.
 
 ---
@@ -174,7 +174,7 @@ mais de 100 % de folga.
 
 ---
 
-## 7. Medi��es da VPS � fora do escopo
+## 7. Medi��es da VPS � fora do escopo
 
 Por decisao do responsavel, esta etapa foi ignorada. O deploy nao coleta nproc, steal time, I/O, docker stats ou amostras de capacidade na VPS. Os limites configurados sao tetos operacionais estimados, nao consumo medido.
 
@@ -313,7 +313,7 @@ vive no runner e no ambiente de desenvolvimento, **não na VPS**. Não custa nad
 ### ❌ Tentar consertar o load 243 pelo código
 
 **MEDIDO:** o load já estava em 247 na média de 15 minutos antes de o deploy encostar na máquina.
-Não é esta aplicação. O as medi��es na VPS foram exclu�das para descobrir se é o provedor. Otimizar mais o
+Não é esta aplicação. O as medi��es na VPS foram exclu�das para descobrir se é o provedor. Otimizar mais o
 código não muda esse número, e dizer o contrário seria atribuir à aplicação um problema de
 hospedagem — o que a §2.6 pede explicitamente para não fazer.
 
@@ -373,4 +373,4 @@ acima são das árvores que **entram** na imagem, medidos com `du`, não da imag
 
 1. **57 MB de CLI do `prisma` e `typescript`** na árvore de produção do worker, por peers opcionais
    do `@prisma/client`. Exige mexer em resolução de peer do pnpm; não feito.
-2. **Limites de CPU permanecem estimados.** A coleta de m�tricas na VPS foi exclu�da do escopo a pedido.
+2. **Limites de CPU permanecem estimados.** A coleta de m�tricas na VPS foi exclu�da do escopo a pedido.

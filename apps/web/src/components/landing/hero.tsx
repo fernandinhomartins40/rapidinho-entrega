@@ -57,9 +57,7 @@ export function Hero() {
             {NUMEROS.map((numero, indice) => (
               <div
                 key={numero.rotulo}
-                className={
-                  indice === 0 ? 'pr-3 sm:pr-7' : 'border-l border-white/20 px-3 sm:px-7'
-                }
+                className={indice === 0 ? 'pr-3 sm:pr-7' : 'border-l border-white/20 px-3 sm:px-7'}
               >
                 <dt className="sr-only">{numero.rotulo}</dt>
                 <dd className="whitespace-nowrap text-xl font-extrabold text-[#FFCB24] sm:text-[1.7rem]">

@@ -72,7 +72,11 @@ export function Cabecalho({ logo }: { logo: React.ReactNode }) {
           aria-label={aberto ? 'Fechar menu' : 'Abrir menu'}
           className="min-h-touch min-w-touch inline-flex items-center justify-center rounded-xl border border-white/25 text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCB24] lg:hidden"
         >
-          {aberto ? <X className="h-6 w-6" aria-hidden /> : <Menu className="h-6 w-6" aria-hidden />}
+          {aberto ? (
+            <X className="h-6 w-6" aria-hidden />
+          ) : (
+            <Menu className="h-6 w-6" aria-hidden />
+          )}
         </button>
       </div>
 

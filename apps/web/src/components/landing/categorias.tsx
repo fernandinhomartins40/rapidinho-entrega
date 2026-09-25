@@ -8,13 +8,21 @@ import { MEDIDAS_DA_LANDING, type ImagemDaLanding } from './medidas';
  * leva para a cidade inteira.
  */
 const CATEGORIAS = [
-  { nome: 'Restaurantes', imagem: 'categorias/restaurantes.webp', slugs: ['restaurante', 'hamburgueria', 'lanchonete'] },
+  {
+    nome: 'Restaurantes',
+    imagem: 'categorias/restaurantes.webp',
+    slugs: ['restaurante', 'hamburgueria', 'lanchonete'],
+  },
   { nome: 'Mercado', imagem: 'categorias/mercado.webp', slugs: ['supermercado', 'mercearia'] },
   { nome: 'Farmácia', imagem: 'categorias/farmacia.webp', slugs: ['farmacia'] },
   { nome: 'Bebidas', imagem: 'categorias/bebidas.webp', slugs: ['bebidas', 'adega', 'agua-e-gas'] },
   { nome: 'Pet Shop', imagem: 'categorias/pet-shop.webp', slugs: ['petshop', 'pet-shop'] },
   { nome: 'Outros', imagem: 'categorias/outros.webp', slugs: [] },
-] as const satisfies ReadonlyArray<{ nome: string; imagem: ImagemDaLanding; slugs: readonly string[] }>;
+] as const satisfies ReadonlyArray<{
+  nome: string;
+  imagem: ImagemDaLanding;
+  slugs: readonly string[];
+}>;
 
 export function Categorias({
   slugsDisponiveis,
@@ -58,7 +66,9 @@ export function Categorias({
                     className="max-h-14 w-auto"
                   />
                 </span>
-                <span className="mt-3 block text-sm font-bold text-[#101112]">{categoria.nome}</span>
+                <span className="mt-3 block text-sm font-bold text-[#101112]">
+                  {categoria.nome}
+                </span>
               </>
             );
             const estilo =

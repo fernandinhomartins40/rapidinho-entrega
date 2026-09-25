@@ -104,10 +104,14 @@ jobs:
           path: playwright-report/
           retention-days: 3
 
+  # Cada imagem é um job independente, que roda em paralelo com a
+  # verificação: uma falha de lint ou de formatação não atrasa nem derruba os
+  # builds, e um build quebrado aparece isolado com o nome da imagem. Quem
+  # segura a publicação é o `deploy`, que exige todos verdes.
   build-web:
     name: Build web
-    needs: verificar
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
@@ -141,8 +145,8 @@ jobs:
 
   build-admin:
     name: Build admin
-    needs: verificar
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
@@ -176,8 +180,8 @@ jobs:
 
   build-realtime:
     name: Build realtime
-    needs: verificar
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
@@ -206,8 +210,8 @@ jobs:
 
   build-worker:
     name: Build worker
-    needs: verificar
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
@@ -236,8 +240,8 @@ jobs:
 
   build-migrate:
     name: Build migrate
-    needs: verificar
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
@@ -267,8 +271,8 @@ jobs:
 
   build-nginx:
     name: Build nginx
-    needs: verificar
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
@@ -297,7 +301,8 @@ jobs:
 
   deploy:
     name: Publicar na VPS
-    needs: [build-web, build-admin, build-realtime, build-worker, build-migrate, build-nginx]
+    needs:
+      [verificar, build-web, build-admin, build-realtime, build-worker, build-migrate, build-nginx]
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment:

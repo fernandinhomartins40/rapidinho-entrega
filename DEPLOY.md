@@ -6,13 +6,13 @@ A aplicação é executada na VPS `72.60.10.108`. O GitHub Actions compila as im
 
 1. Crie os secrets do repositório:
 
-   | Secret | Obrigatório | Uso |
-   | --- | --- | --- |
-   | `VPS_PASSWORD` | Sim | Acesso SSH à VPS |
-   | `GHCR_USERNAME` | Sim | Usuário do GitHub dono do token de leitura |
-   | `GHCR_READ_TOKEN` | Sim | Personal access token com `read:packages` para baixar pacotes privados |
-   | `SUPER_ADMIN_PHONE` | Sim | Telefone do primeiro administrador |
-   | `SENTRY_DSN` | Não | Monitoramento de erros |
+   | Secret              | Obrigatório | Uso                                                                    |
+   | ------------------- | ----------- | ---------------------------------------------------------------------- |
+   | `VPS_PASSWORD`      | Sim         | Acesso SSH à VPS                                                       |
+   | `GHCR_USERNAME`     | Sim         | Usuário do GitHub dono do token de leitura                             |
+   | `GHCR_READ_TOKEN`   | Sim         | Personal access token com `read:packages` para baixar pacotes privados |
+   | `SUPER_ADMIN_PHONE` | Sim         | Telefone do primeiro administrador                                     |
+   | `SENTRY_DSN`        | Não         | Monitoramento de erros                                                 |
 
    O token GHCR deve pertencer à conta indicada por `GHCR_USERNAME` e ter acesso aos pacotes publicados. Não o grave no repositório ou no `.env` da VPS. O workflow envia-o por stdin a `docker login`, e o script remoto executa `docker logout` ao terminar.
 
