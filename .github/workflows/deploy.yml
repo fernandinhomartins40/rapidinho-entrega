@@ -327,7 +327,16 @@ jobs:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
         run: |
           test -n "${SSHPASS:-}" || { echo "::error::Secret VPS_PASSWORD ausente." >&2; exit 1; }
-          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "echo ok"
+          # Até 3 tentativas: um timeout isolado entre o runner e a VPS (sem
+          # nenhum registro no sshd, ou seja, antes de chegar a ela) derrubava
+          # o deploy inteiro depois de 15 minutos de build.
+          for tentativa in 1 2 3; do
+            if sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "echo ok"; then exit 0; fi
+            echo "::warning::SSH falhou na tentativa $tentativa; nova tentativa em 15s."
+            sleep 15
+          done
+          echo "::error::A VPS não respondeu ao SSH em 3 tentativas." >&2
+          exit 1
       - name: Preparar o ambiente da VPS
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
