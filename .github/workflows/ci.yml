@@ -1,8 +1,9 @@
 name: CI
 
+# Só em pull request. Na `main` quem roda é o `deploy.yml`, que já verifica
+# formatação, lint, tipos, testes e e2e antes de publicar — disparar os dois no
+# mesmo push duplicava o trabalho e punha dois workflows disputando o cache.
 on:
-  push:
-    branches: [main]
   pull_request:
 
 concurrency:
