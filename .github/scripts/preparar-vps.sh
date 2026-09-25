@@ -44,11 +44,7 @@ garantir_pacotes() {
 }
 
 # gettext-base traz o envsubst, usado para gerar a config do nginx.
-# zstd descomprime as imagens que chegam prontas do runner — a VPS não constrói
-# mais nada por conta própria.
-# procps traz o vmstat, usado para medir steal time — sem ele não dá para
-# saber se o load alto vem da aplicação ou da hospedagem.
-garantir_pacotes ca-certificates certbot curl gettext-base nginx openssl tar iproute2 zstd procps
+garantir_pacotes ca-certificates certbot curl gettext-base nginx openssl tar iproute2
 
 if ! command -v docker >/dev/null 2>&1; then
   atualizar_apt_uma_vez

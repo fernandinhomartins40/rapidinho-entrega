@@ -16,7 +16,7 @@
 | 4   | 🔴 CRÍTICA | `mem_limit` no nginx                        | Médio            | Mínimo |
 | 5   | 🟠 ALTA    | Tuning do Postgres dentro do limite de 1 GB | Alto             | Médio  |
 | 6   | 🟠 ALTA    | `connection_limit` explícito no Prisma      | Alto             | Baixo  |
-| 7   | 🟠 ALTA    | Medir steal time, vCPU e I/O no deploy      | Diagnóstico      | Nenhum |
+| 7   | �           | Medi��es na VPS (fora do escopo)          | Ignorado         | �      |
 | 8   | 🟡 MÉDIA   | `realtime` com dependências só de produção  | −158 MB          | Baixo  |
 | 9   | 🟡 MÉDIA   | `worker` com dependências só de produção    | −118 MB          | Baixo  |
 | 10  | 🟡 MÉDIA   | Ignorar `generated/` no contexto de build   | −42,8 MB         | Mínimo |
@@ -70,8 +70,7 @@ sucesso nº 6.
 **Risco.** Mínimo se dimensionado com folga. O valor do Postgres **depende do item 5**
 (`max_connections`): precisa ser maior que ele.
 
-**Dependência.** Item 5 define `max_connections = 50`; 512 PIDs dá folga de 10×.
-
+**Dependencia.** Nenhuma; a etapa de medicao na VPS foi exclu;da do escopo.
 **Testar.** Subir e conferir `docker compose ps`; o Postgres precisa aceitar conexões.
 **Medir.** `cat /sys/fs/cgroup/pids.current` no container.
 **Reverter.** Remover a chave.
@@ -105,13 +104,12 @@ o worker recebe a menor fatia.
 
 **Risco.** Médio, e é o item mais arriscado do plano. Teto baixo demais causa lentidão sob pico.
 Mitigação: os valores são **sobrescrevíveis por variável de ambiente**, para ajustar na VPS sem
-novo deploy, e o item 7 passa a medir o consumo real para calibrar depois.
+novo deploy. Os limites permanecem como tetos configurados; n�o ser�o calibrados por medi��es na VPS.
 
-**Dependência.** O item 7 deveria vir antes em rigor. Vem junto porque a proteção é crítica e a
-ausência dela é pior que um teto imperfeito e ajustável.
+**Dependencia.** Nenhuma; a etapa de medicao na VPS foi exclu;da do escopo.
 
 **Testar.** `docker compose config`; suíte E2E contra os containers.
-**Medir.** `docker stats --no-stream` na VPS sob uso real.
+**Medir.** Fora do escopo por decis�o: n�o coletar m�tricas na VPS.
 **Reverter.** `RAPIDINHO_CPUS_<serviço>` no `.env`, sem redeploy.
 
 ---
@@ -149,8 +147,7 @@ Soma no pior caso: 256 + 200 + 64 ≈ 520 MB, mais ~5 MB por backend. Cabe em 1 
 **Risco.** Médio. `max_connections` baixo demais recusa conexão. Mitigação: o item 6 limita o pool
 de cada app para caber com folga.
 
-**Dependência.** Deve ir junto com o item 6. Sozinho, arrisca recusar conexão.
-
+**Dependencia.** Nenhuma; a etapa de medicao na VPS foi exclu;da do escopo.
 **Testar.** Subir o Postgres e rodar a suíte; `SHOW shared_buffers;`.
 **Medir.** `SELECT count(*) FROM pg_stat_activity;` sob uso.
 **Reverter.** Remover o `command:` — volta ao padrão.
@@ -170,33 +167,16 @@ Orçamento: web 8 + admin 8 + worker 8 = 24, mais o `migrate` esporádico. Cabe 
 mais de 100 % de folga.
 
 **Risco.** Baixo. Pool pequeno demais enfileira queries em vez de falhar.
-**Dependência.** Item 5.
-
+**Dependencia.** Nenhuma; a etapa de medicao na VPS foi exclu;da do escopo.
 **Testar.** Suíte E2E, que exercita os três apps contra o banco.
 **Medir.** `SELECT count(*) FROM pg_stat_activity GROUP BY application_name;`
 **Reverter.** Remover o parâmetro da URL.
 
 ---
 
-## 7. 🟠 Medir steal time, vCPU e I/O no deploy
+## 7. Medi��es da VPS � fora do escopo
 
-**Problema.** A VPS está com **load average 243** (**MEDIDO**) e **não se sabe de quem é a carga**.
-A §2.6 do prompt é explícita: se o provedor não entrega a CPU contratada, o load não vem da
-aplicação e nenhuma otimização resolve.
-
-**Solução.** Estender o diagnóstico que já roda no deploy com:
-
-- `nproc` — quantos vCPU a máquina tem (hoje **NÃO MEDIDO**)
-- `vmstat` coluna `st` — **steal time**
-- `iostat`/`/proc/pressure/io` quando houver
-- `docker stats --no-stream` — consumo real por container, que calibra o item 3
-
-**Impacto.** Nenhum consumo a menos; responde a pergunta que decide se vale otimizar mais.
-
-**Risco.** Nenhum. Só leitura, com `|| true` para nunca derrubar o deploy.
-
-**Testar.** `bash -n`; observar a saída no próximo deploy.
-**Reverter.** Remover o bloco.
+Por decisao do responsavel, esta etapa foi ignorada. O deploy nao coleta nproc, steal time, I/O, docker stats ou amostras de capacidade na VPS. Os limites configurados sao tetos operacionais estimados, nao consumo medido.
 
 ---
 
@@ -333,7 +313,7 @@ vive no runner e no ambiente de desenvolvimento, **não na VPS**. Não custa nad
 ### ❌ Tentar consertar o load 243 pelo código
 
 **MEDIDO:** o load já estava em 247 na média de 15 minutos antes de o deploy encostar na máquina.
-Não é esta aplicação. O item 7 mede steal time para descobrir se é o provedor. Otimizar mais o
+Não é esta aplicação. O as medi��es na VPS foram exclu�das para descobrir se é o provedor. Otimizar mais o
 código não muda esse número, e dizer o contrário seria atribuir à aplicação um problema de
 hospedagem — o que a §2.6 pede explicitamente para não fazer.
 
@@ -393,6 +373,4 @@ acima são das árvores que **entram** na imagem, medidos com `du`, não da imag
 
 1. **57 MB de CLI do `prisma` e `typescript`** na árvore de produção do worker, por peers opcionais
    do `@prisma/client`. Exige mexer em resolução de peer do pnpm; não feito.
-2. **Limites de CPU são ESTIMADOS**, não medidos. O item 7 passa a medir `docker stats` a cada
-   deploy — calibrar com o número real.
-3. **Steal time ainda desconhecido.** A medição foi adicionada; falta um deploy rodar para ler.
+2. **Limites de CPU permanecem estimados.** A coleta de m�tricas na VPS foi exclu�da do escopo a pedido.

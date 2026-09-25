@@ -19,13 +19,8 @@ env:
   ADMIN_DOMAIN: painel.rapidinhoentrega.com.br
   CANONICAL_URL: https://rapidinhoentrega.com.br
   SSL_EMAIL: admin@rapidinhoentrega.com.br
-  # Faixa onde o deploy procura porta livre no primeiro run. A escolha é
-  # gravada no .env da VPS e reaproveitada nos deploys seguintes.
   PORT_RANGE_START: '3100'
   PORT_RANGE_END: '3199'
-  # ServerAliveInterval é obrigatório aqui: o build na VPS passa minutos sem
-  # escrever nada no canal, e sem keepalive o SSH fecha com "broken pipe" no
-  # meio do deploy — que foi exatamente como o deploy #8 morreu.
   SSH_OPTS: -o StrictHostKeyChecking=no -o PreferredAuthentications=password -o PubkeyAuthentication=no -o NumberOfPasswordPrompts=1 -o ConnectTimeout=20 -o ServerAliveInterval=30 -o ServerAliveCountMax=20
 
 jobs:
@@ -33,7 +28,6 @@ jobs:
     name: Lint, tipos e testes
     runs-on: ubuntu-latest
     timeout-minutes: 20
-
     services:
       postgres:
         image: postgres:16-alpine
@@ -45,14 +39,12 @@ jobs:
         options: >-
           --health-cmd "pg_isready -U rapidinho -d rapidinho_test"
           --health-interval 10s --health-timeout 5s --health-retries 5
-
       redis:
         image: redis:7-alpine
         ports: ['6379:6379']
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s --health-timeout 5s --health-retries 5
-
     env:
       DATABASE_URL: postgresql://rapidinho:rapidinho@localhost:5432/rapidinho_test?schema=public
       REDIS_URL: redis://localhost:6379
@@ -67,10 +59,8 @@ jobs:
       NEXT_PUBLIC_ADMIN_URL: http://localhost:3001
       NEXT_PUBLIC_SOCKET_URL: http://localhost:3002
       NEXT_TELEMETRY_DISABLED: '1'
-      # Os apps de desenvolvimento sobem nas portas internas do monorepo.
       E2E_BASE_URL: http://localhost:3000
       E2E_ADMIN_URL: http://localhost:3001
-
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -80,7 +70,6 @@ jobs:
         with:
           node-version: '22'
           cache: pnpm
-
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
       - run: pnpm --filter @rapidinho/database exec prisma migrate deploy
@@ -89,40 +78,25 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
       - run: pnpm db:seed
-
-      # Os E2E sobem os dois apps e exercitam o fluxo de pedido de ponta a
-      # ponta. Rodam depois do seed porque dependem dos dados de Palmital.
       - name: Instalar o Chromium do Playwright
         run: pnpm exec playwright install --with-deps chromium
-
       - name: Subir os apps para os testes de ponta a ponta
         run: |
           pnpm --filter @rapidinho/web dev > /tmp/web.log 2>&1 &
           pnpm --filter @rapidinho/admin dev > /tmp/admin.log 2>&1 &
-
-          # Espera os dois responderem antes de soltar o Playwright; um sleep
-          # fixo ora desperdiça tempo, ora falha em runner lento.
           for tentativa in $(seq 1 60); do
-            if curl -sf -o /dev/null http://localhost:3000/ \
-              && curl -sf -o /dev/null http://localhost:3001/entrar; then
+            if curl -sf -o /dev/null http://localhost:3000/ && curl -sf -o /dev/null http://localhost:3001/entrar; then
               echo "Apps no ar na tentativa $tentativa"
               exit 0
             fi
             sleep 3
           done
-
           echo "::error::Os apps não subiram em 3 minutos"
           tail -50 /tmp/web.log /tmp/admin.log
           exit 1
-
       - run: pnpm test:e2e
-
       - name: Guardar o relatório quando falhar
         if: failure()
-        # A cota de artefatos da conta pode estar cheia — e quando está, este
-        # passo falha e vira um segundo erro no log, escondendo o teste que
-        # realmente quebrou. O relatório é conveniência; o erro do teste é o
-        # que importa.
         continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
@@ -130,205 +104,273 @@ jobs:
           path: playwright-report/
           retention-days: 3
 
-  deploy:
-    name: Publicar na VPS
+  build-web:
+    name: Build web
     needs: verificar
     runs-on: ubuntu-latest
-    # O build agora é do runner e leva ~7 min. O que sobra de demorado é o
-    # `docker load` na VPS, que com load average 243 rasteja: no deploy #24 ele
-    # passou de 50 minutos. 150 cobre o primeiro envio, em que nenhuma camada
-    # existe do outro lado; nos seguintes só as alteradas são gravadas.
-    timeout-minutes: 150
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/rapidinho-web
+          tags: type=sha,format=long
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/rapidinho-web:${{ github.sha }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_WEB_URL=${{ env.CANONICAL_URL }}
+            NEXT_PUBLIC_ADMIN_URL=https://${{ env.ADMIN_DOMAIN }}
+            NEXT_PUBLIC_SOCKET_URL=${{ env.CANONICAL_URL }}
+            S3_PUBLIC_URL=${{ env.CANONICAL_URL }}/uploads
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
 
+  build-admin:
+    name: Build admin
+    needs: verificar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/rapidinho-admin
+          tags: type=sha,format=long
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/admin/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/rapidinho-admin:${{ github.sha }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_WEB_URL=${{ env.CANONICAL_URL }}
+            NEXT_PUBLIC_ADMIN_URL=https://${{ env.ADMIN_DOMAIN }}
+            NEXT_PUBLIC_SOCKET_URL=${{ env.CANONICAL_URL }}
+            S3_PUBLIC_URL=${{ env.CANONICAL_URL }}/uploads
+          cache-from: type=gha,scope=admin
+          cache-to: type=gha,mode=max,scope=admin
+
+  build-realtime:
+    name: Build realtime
+    needs: verificar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/rapidinho-realtime
+          tags: type=sha,format=long
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/realtime/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/rapidinho-realtime:${{ github.sha }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=realtime
+          cache-to: type=gha,mode=max,scope=realtime
+
+  build-worker:
+    name: Build worker
+    needs: verificar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/rapidinho-worker
+          tags: type=sha,format=long
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/worker/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/rapidinho-worker:${{ github.sha }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=worker
+          cache-to: type=gha,mode=max,scope=worker
+
+  build-migrate:
+    name: Build migrate
+    needs: verificar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/rapidinho-migrate
+          tags: type=sha,format=long
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          target: migrator
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/rapidinho-migrate:${{ github.sha }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=migrate
+          cache-to: type=gha,mode=max,scope=migrate
+
+  build-nginx:
+    name: Build nginx
+    needs: verificar
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/rapidinho-nginx
+          tags: type=sha,format=long
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./docker/nginx
+          file: ./docker/nginx/Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/rapidinho-nginx:${{ github.sha }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=nginx
+          cache-to: type=gha,mode=max,scope=nginx
+
+  deploy:
+    name: Publicar na VPS
+    needs: [build-web, build-admin, build-realtime, build-worker, build-migrate, build-nginx]
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
     environment:
       name: production
       url: https://rapidinhoentrega.com.br
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Definir a versão da release
+      - uses: actions/checkout@v4
+      - name: Definir tag imutável da release
         id: release
-        run: echo "version=$(git rev-parse --short HEAD)-$(date +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
-
+        run: echo "version=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
       - name: Instalar sshpass
         run: sudo apt-get update && sudo apt-get install -y sshpass
-
-      - name: Conferir o acesso à VPS
+      - name: Conferir acesso à VPS
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
         run: |
-          if [ -z "${SSHPASS:-}" ]; then
-            echo "::error::O secret VPS_PASSWORD está vazio ou não existe no repositório." >&2
-            exit 1
-          fi
-
-          if ! sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "echo ok"; then
-            echo "::error::Autenticação recusada. Confira o secret VPS_PASSWORD e se PasswordAuthentication/PermitRootLogin estão habilitados na VPS." >&2
-            exit 1
-          fi
-
+          test -n "${SSHPASS:-}" || { echo "::error::Secret VPS_PASSWORD ausente." >&2; exit 1; }
+          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "echo ok"
       - name: Preparar o ambiente da VPS
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
+        run: sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "APP_ROOT='$APP_ROOT' bash -s" < .github/scripts/preparar-vps.sh
+      - name: Empacotar arquivos operacionais da release
         run: |
-          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
-            "APP_ROOT='$APP_ROOT' bash -s" < .github/scripts/preparar-vps.sh
-
-      - name: Liberar espaço na VPS
-        env:
-          SSHPASS: ${{ secrets.VPS_PASSWORD }}
-        run: |
-          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
-            "APP_ROOT='$APP_ROOT' bash -s" < .github/scripts/liberar-espaco.sh
-
-      - name: Construir as imagens no runner
-        env:
-          RELEASE_TAG: ${{ steps.release.outputs.version }}
-        run: |
-          # O BUILD SAI DA VPS.
-          #
-          # O deploy #21 mediu a máquina antes de construir: load average 243,
-          # 2,7 GB de swap em uso e 494 MB de RAM livre, já assim nos 15 min
-          # anteriores ao nosso build. Nesse estado ela não constrói nada, e
-          # nem completa um handshake TLS com o Docker Hub — foi assim que os
-          # deploys #20 e #21 morreram.
-          #
-          # Aqui o runner tem CPU de sobra e rede boa. A VPS passa a só receber
-          # imagem pronta: nada de `next build`, nada de ida ao registro.
-          export NEXT_PUBLIC_WEB_URL="$CANONICAL_URL"
-          export NEXT_PUBLIC_ADMIN_URL="https://$ADMIN_DOMAIN"
-          export NEXT_PUBLIC_SOCKET_URL="$CANONICAL_URL"
-          export S3_PUBLIC_URL="$CANONICAL_URL/uploads"
-          # Só para a interpolação do compose, que resolve o arquivo inteiro
-          # antes de construir qualquer coisa. Nada disto entra em imagem: são
-          # valores de runtime, e o runtime é a VPS, com o .env dela.
-          export POSTGRES_PASSWORD=interpolacao
-          export MINIO_ROOT_USER=interpolacao
-          export MINIO_ROOT_PASSWORD=interpolacao
-          export DEPLOY_PORT=3100
-
-          docker compose -f docker-compose.yml -f docker-compose.prod.yml \
-            --profile ferramentas build --pull \
-            web admin realtime worker migrate
-
-          docker image ls --format '  {{.Repository}}:{{.Tag}}  {{.Size}}' \
-            | grep "$RELEASE_TAG" || true
-
-      - name: Enviar as imagens para a VPS
-        env:
-          SSHPASS: ${{ secrets.VPS_PASSWORD }}
-          RELEASE_TAG: ${{ steps.release.outputs.version }}
-        run: |
-          # zstd -3: comprime muito mais rápido que gzip, e o gargalo aqui é a
-          # VPS do outro lado, não a CPU do runner.
-          sudo apt-get install -y zstd >/dev/null
-
-          # Comprime para arquivo ANTES de enviar, em vez de canalizar direto.
-          # O disco do runner é rápido e sobra, e assim o tamanho do que vamos
-          # empurrar aparece no log — sem isso, uma transferência lenta é
-          # indistinguível de uma travada, que foi o que custou os deploys
-          # anteriores.
-          docker save \
-            "rapidinho-web:$RELEASE_TAG" \
-            "rapidinho-admin:$RELEASE_TAG" \
-            "rapidinho-realtime:$RELEASE_TAG" \
-            "rapidinho-worker:$RELEASE_TAG" \
-            "rapidinho-migrate:$RELEASE_TAG" \
-            | zstd -3 -T0 -o /tmp/imagens.tar.zst
-
-          echo "Payload: $(du -h /tmp/imagens.tar.zst | cut -f1)"
-
-          # A VPS descomprime e carrega. Só as camadas que ela ainda não tem
-          # são gravadas — do segundo deploy em diante a maior parte já está
-          # lá, e isto passa a ser rápido.
-          inicio=$(date +%s)
-          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
-            "zstd -d | docker load" < /tmp/imagens.tar.zst
-          echo "Imagens carregadas em $(( $(date +%s) - inicio ))s."
-
-      - name: Enviar o código para a VPS
+          tar -czf /tmp/release.tar.gz \
+            docker-compose.yml docker-compose.prod.yml docker \
+            .github/scripts/configurar-nginx.sh .github/scripts/aplicar-https.sh \
+            .github/scripts/emitir-ssl.sh .github/scripts/preparar-env.sh \
+            .github/scripts/remote-deploy.sh .github/scripts/verificar-deploy.sh \
+            scripts/gerar-marca.mjs
+      - name: Enviar arquivos operacionais
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
         run: |
           RELEASE_DIR="$APP_ROOT/releases/${{ steps.release.outputs.version }}"
           sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "mkdir -p '$RELEASE_DIR'"
-
-          # O .env fica de fora: ele vive na VPS e guarda as senhas geradas.
-          tar \
-            --exclude=.git \
-            --exclude=node_modules \
-            --exclude='./**/node_modules' \
-            --exclude=.next \
-            --exclude='./**/.next' \
-            --exclude=.turbo \
-            --exclude='./**/.turbo' \
-            --exclude=packages/database/generated \
-            --exclude=coverage \
-            --exclude=assets \
-            --exclude=.env \
-            -czf - . | \
-            sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "tar -xzf - -C '$RELEASE_DIR'"
-
-      - name: Escolher a porta e montar o .env
+          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "tar -xzf - -C '$RELEASE_DIR'" < /tmp/release.tar.gz
+      - name: Preparar configuração da aplicação
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
         run: |
           RELEASE_DIR="$APP_ROOT/releases/${{ steps.release.outputs.version }}"
           sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
-            "APP_ROOT='$APP_ROOT' \
-             SUPER_ADMIN_PHONE='${{ secrets.SUPER_ADMIN_PHONE }}' \
-             SENTRY_DSN='${{ secrets.SENTRY_DSN }}' \
-             CANONICAL_URL='$CANONICAL_URL' \
-             PRIMARY_DOMAIN='$PRIMARY_DOMAIN' \
-             ADMIN_DOMAIN='$ADMIN_DOMAIN' \
-             SSL_EMAIL='$SSL_EMAIL' \
-             PORT_RANGE_START='$PORT_RANGE_START' \
-             PORT_RANGE_END='$PORT_RANGE_END' \
-             bash '$RELEASE_DIR/.github/scripts/preparar-env.sh'"
-
-      - name: Subir a aplicação
+            "APP_ROOT='$APP_ROOT' GHCR_OWNER='${GITHUB_REPOSITORY_OWNER,,}' SUPER_ADMIN_PHONE='${{ secrets.SUPER_ADMIN_PHONE }}' SENTRY_DSN='${{ secrets.SENTRY_DSN }}' \
+             CANONICAL_URL='$CANONICAL_URL' PRIMARY_DOMAIN='$PRIMARY_DOMAIN' ADMIN_DOMAIN='$ADMIN_DOMAIN' SSL_EMAIL='$SSL_EMAIL' \
+             PORT_RANGE_START='$PORT_RANGE_START' PORT_RANGE_END='$PORT_RANGE_END' bash '$RELEASE_DIR/.github/scripts/preparar-env.sh'"
+      - name: Fazer pull do GHCR e subir a release
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
         run: |
-          RELEASE_DIR="$APP_ROOT/releases/${{ steps.release.outputs.version }}"
+          test -n "${GHCR_READ_TOKEN:-}" || { echo "::error::Configure GHCR_READ_TOKEN como token read:packages." >&2; exit 1; }
+          test -n "${GHCR_USERNAME:-}" || { echo "::error::Configure GHCR_USERNAME com o usuário dono do token GHCR." >&2; exit 1; }
+          printf '%s' "$GHCR_READ_TOKEN" | sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
+            "printf '%s' \"\$(cat)\" | docker login ghcr.io -u '$GHCR_USERNAME' --password-stdin"
           sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
-            "APP_ROOT='$APP_ROOT' RELEASE='${{ steps.release.outputs.version }}' \
-             RELEASE_TAG='${{ steps.release.outputs.version }}' \
-             bash '$RELEASE_DIR/.github/scripts/remote-deploy.sh'"
-
-      - name: Configurar o Nginx do host (HTTP)
+            "APP_ROOT='$APP_ROOT' RELEASE='${{ steps.release.outputs.version }}' RELEASE_TAG='${{ steps.release.outputs.version }}' \
+             GHCR_OWNER='${GITHUB_REPOSITORY_OWNER,,}' bash -s" \
+            < .github/scripts/remote-deploy.sh
+      - name: Configurar Nginx HTTP
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
-        run: |
-          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
-            "APP_ROOT='$APP_ROOT' SITE_NAME='$SITE_NAME' \
-             DOMAINS='$PRIMARY_DOMAIN $WWW_DOMAIN $ADMIN_DOMAIN' \
-             bash '$APP_ROOT/current/.github/scripts/configurar-nginx.sh'"
-
-      - name: Emitir o certificado SSL
+        run: sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "APP_ROOT='$APP_ROOT' SITE_NAME='$SITE_NAME' DOMAINS='$PRIMARY_DOMAIN $WWW_DOMAIN $ADMIN_DOMAIN' bash '$APP_ROOT/current/.github/scripts/configurar-nginx.sh'"
+      - name: Emitir certificado SSL
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
-        run: |
-          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
-            "PRIMARY_DOMAIN='$PRIMARY_DOMAIN' WWW_DOMAIN='$WWW_DOMAIN' \
-             ADMIN_DOMAIN='$ADMIN_DOMAIN' SSL_EMAIL='$SSL_EMAIL' VPS_HOST='$VPS_HOST' \
-             bash '$APP_ROOT/current/.github/scripts/emitir-ssl.sh'"
-
-      - name: Configurar o Nginx do host (HTTPS)
+        run: sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "PRIMARY_DOMAIN='$PRIMARY_DOMAIN' WWW_DOMAIN='$WWW_DOMAIN' ADMIN_DOMAIN='$ADMIN_DOMAIN' SSL_EMAIL='$SSL_EMAIL' VPS_HOST='$VPS_HOST' bash '$APP_ROOT/current/.github/scripts/emitir-ssl.sh'"
+      - name: Configurar Nginx HTTPS
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
-        run: |
-          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
-            "APP_ROOT='$APP_ROOT' SITE_NAME='$SITE_NAME' \
-             PRIMARY_DOMAIN='$PRIMARY_DOMAIN' WWW_DOMAIN='$WWW_DOMAIN' ADMIN_DOMAIN='$ADMIN_DOMAIN' \
-             bash '$APP_ROOT/current/.github/scripts/aplicar-https.sh'"
-
-      - name: Conferir o site no ar
+        run: sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "APP_ROOT='$APP_ROOT' SITE_NAME='$SITE_NAME' PRIMARY_DOMAIN='$PRIMARY_DOMAIN' WWW_DOMAIN='$WWW_DOMAIN' ADMIN_DOMAIN='$ADMIN_DOMAIN' bash '$APP_ROOT/current/.github/scripts/aplicar-https.sh'"
+      - name: Conferir o site
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
-        run: |
-          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
-            "APP_ROOT='$APP_ROOT' PRIMARY_DOMAIN='$PRIMARY_DOMAIN' ADMIN_DOMAIN='$ADMIN_DOMAIN' \
-             bash '$APP_ROOT/current/.github/scripts/verificar-deploy.sh'"
+        run: sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "APP_ROOT='$APP_ROOT' PRIMARY_DOMAIN='$PRIMARY_DOMAIN' ADMIN_DOMAIN='$ADMIN_DOMAIN' bash '$APP_ROOT/current/.github/scripts/verificar-deploy.sh'"

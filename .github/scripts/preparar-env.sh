@@ -11,6 +11,7 @@
 set -euo pipefail
 
 APP_ROOT="${APP_ROOT:?APP_ROOT não informado}"
+GHCR_OWNER="${GHCR_OWNER:?GHCR_OWNER não informado}"
 CANONICAL_URL="${CANONICAL_URL:?CANONICAL_URL não informado}"
 PRIMARY_DOMAIN="${PRIMARY_DOMAIN:?PRIMARY_DOMAIN não informado}"
 ADMIN_DOMAIN="${ADMIN_DOMAIN:?ADMIN_DOMAIN não informado}"
@@ -104,6 +105,7 @@ gravar_env "NODE_ENV" "production"
 # o nginx do host.
 gravar_env "NGINX_BIND" "127.0.0.1"
 gravar_env "HTTP_PORT" "$DEPLOY_PORT"
+gravar_env "GHCR_OWNER" "$GHCR_OWNER"
 gravar_env "WEB_DOMAIN" "$PRIMARY_DOMAIN"
 gravar_env "ADMIN_DOMAIN" "$ADMIN_DOMAIN"
 

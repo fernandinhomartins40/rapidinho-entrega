@@ -16,8 +16,6 @@ x-log: &log
 
 services:
   nginx:
-    build:
-      context: ./docker/nginx
     container_name: rapidinho-nginx
     # Só roteia e comprime.
     mem_limit: ${RAPIDINHO_MEM_NGINX:-128m}
@@ -51,14 +49,6 @@ services:
     networks: [rapidinho]
 
   web:
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-      args:
-        NEXT_PUBLIC_WEB_URL: ${NEXT_PUBLIC_WEB_URL}
-        NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL}
-        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
-        S3_PUBLIC_URL: ${S3_PUBLIC_URL}
     image: rapidinho-web:${RELEASE_TAG:-dev}
     container_name: rapidinho-web
     # Atende o cliente final: é quem não pode engasgar.
@@ -90,14 +80,6 @@ services:
     networks: [rapidinho]
 
   admin:
-    build:
-      context: .
-      dockerfile: apps/admin/Dockerfile
-      args:
-        NEXT_PUBLIC_WEB_URL: ${NEXT_PUBLIC_WEB_URL}
-        NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL}
-        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
-        S3_PUBLIC_URL: ${S3_PUBLIC_URL}
     image: rapidinho-admin:${RELEASE_TAG:-dev}
     container_name: rapidinho-admin
     # Menos tráfego que o web.
@@ -131,9 +113,6 @@ services:
   # Tempo real dos pedidos. Não publica porta no host: o Nginx encaminha
   # /socket.io para cá, mantendo a promessa de uma única porta externa.
   realtime:
-    build:
-      context: .
-      dockerfile: apps/realtime/Dockerfile
     image: rapidinho-realtime:${RELEASE_TAG:-dev}
     container_name: rapidinho-realtime
     # Repassa mensagens; I/O bound, quase sem CPU.
@@ -160,9 +139,6 @@ services:
   # Filas: imagens, notificações, cobrança de planos e expirações.
   # Não publica porta — não atende requisição, só consome fila.
   worker:
-    build:
-      context: .
-      dockerfile: apps/worker/Dockerfile
     image: rapidinho-worker:${RELEASE_TAG:-dev}
     container_name: rapidinho-worker
     # Trabalho de fundo DEVE ceder para quem espera a tela.

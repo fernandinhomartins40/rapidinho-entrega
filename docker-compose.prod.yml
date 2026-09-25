@@ -21,20 +21,7 @@ services:
   # com `--profile ferramentas run --rm migrate`.
   migrate:
     profiles: ['ferramentas']
-    build:
-      context: .
-      dockerfile: apps/web/Dockerfile
-      target: migrator
-      # Os mesmos args do serviço `web`, embora rodar migration não use
-      # nenhum deles: `migrator` deriva de `builder`, e um conjunto de args
-      # diferente faz o BuildKit tratar as camadas como outras e refazer o
-      # `next build` inteiro — dobrando o tempo do deploy sem mudar nada.
-      args:
-        NEXT_PUBLIC_WEB_URL: ${NEXT_PUBLIC_WEB_URL}
-        NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL}
-        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
-        S3_PUBLIC_URL: ${S3_PUBLIC_URL}
-    image: rapidinho-migrate:${RELEASE_TAG:-dev}
+    image: ${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-migrate:${RELEASE_TAG:-dev}
     env_file: .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-rapidinho}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rapidinho}?schema=public&connection_limit=5
@@ -44,27 +31,32 @@ services:
     networks: [rapidinho]
 
   nginx:
+    image: ${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-nginx:${RELEASE_TAG:-dev}
     restart: always
 
   web:
+    image: ${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-web:${RELEASE_TAG:-dev}
     restart: always
     # A VPS é compartilhada com outros sites: sem teto de memória, um pico de
     # tráfego aqui derruba os vizinhos.
     mem_limit: 1g
 
   admin:
+    image: ${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-admin:${RELEASE_TAG:-dev}
     restart: always
     mem_limit: 768m
 
   # Muitas conexões abertas, pouquíssimo processamento por evento: o consumo é
   # de socket, não de heap.
   realtime:
+    image: ${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-realtime:${RELEASE_TAG:-dev}
     restart: always
     mem_limit: 256m
 
   # O sharp reserva memória proporcional ao tamanho da imagem; o teto precisa
   # de folga para a foto de celular sem compressão.
   worker:
+    image: ${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-worker:${RELEASE_TAG:-dev}
     restart: always
     mem_limit: 768m
 

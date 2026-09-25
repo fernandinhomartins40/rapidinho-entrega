@@ -1,10 +1,45 @@
 # Ajustes de DESENVOLVIMENTO local.
 #
-# O compose carrega este arquivo automaticamente. Em produção use
-# `docker compose -f docker-compose.yml up -d`, que ignora este override —
-# lá o banco não deve ter porta publicada no host.
+# O compose carrega este arquivo automaticamente em desenvolvimento local.
+# Em produção passe explicitamente `docker-compose.yml` e
+# `docker-compose.prod.yml`; isso ignora este override, incluindo os builds
+# locais e as portas publicadas para Postgres, Redis e MinIO.
 
 services:
+  nginx:
+    build:
+      context: ./docker/nginx
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_WEB_URL: ${NEXT_PUBLIC_WEB_URL}
+        NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
+        S3_PUBLIC_URL: ${S3_PUBLIC_URL}
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        NEXT_PUBLIC_WEB_URL: ${NEXT_PUBLIC_WEB_URL}
+        NEXT_PUBLIC_ADMIN_URL: ${NEXT_PUBLIC_ADMIN_URL}
+        NEXT_PUBLIC_SOCKET_URL: ${NEXT_PUBLIC_SOCKET_URL}
+        S3_PUBLIC_URL: ${S3_PUBLIC_URL}
+
+  realtime:
+    build:
+      context: .
+      dockerfile: apps/realtime/Dockerfile
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+
   postgres:
     ports:
       - '5432:5432'
