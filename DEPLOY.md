@@ -6,17 +6,15 @@ A aplicação é executada na VPS `72.60.10.108`. O GitHub Actions compila as im
 
 1. Crie os secrets do repositório:
 
-   | Secret              | Obrigatório | Uso                                                                    |
-   | ------------------- | ----------- | ---------------------------------------------------------------------- |
-   | `VPS_PASSWORD`      | Sim         | Acesso SSH à VPS                                                       |
-   | `GHCR_USERNAME`     | Sim         | Usuário do GitHub dono do token de leitura                             |
-   | `GHCR_READ_TOKEN`   | Sim         | Personal access token com `read:packages` para baixar pacotes privados |
-   | `SUPER_ADMIN_PHONE` | Sim         | Telefone do primeiro administrador                                     |
-   | `SENTRY_DSN`        | Não         | Monitoramento de erros                                                 |
+   | Secret              | Obrigatório | Uso                                |
+   | ------------------- | ----------- | ---------------------------------- |
+   | `VPS_PASSWORD`      | Sim         | Acesso SSH à VPS                   |
+   | `SUPER_ADMIN_PHONE` | Sim         | Telefone do primeiro administrador |
+   | `SENTRY_DSN`        | Não         | Monitoramento de erros             |
 
-   O token GHCR deve pertencer à conta indicada por `GHCR_USERNAME` e ter acesso aos pacotes publicados. Não o grave no repositório ou no `.env` da VPS. O workflow envia-o por stdin a `docker login`, e o script remoto executa `docker logout` ao terminar.
+   Não há token do GHCR para configurar: o job de deploy baixa as imagens com o `GITHUB_TOKEN` do próprio job (`packages: read`), que expira quando ele termina.
 
-2. Confirme os pacotes em `ghcr.io/<owner>/rapidinho-{web,admin,realtime,worker,migrate,nginx}`. Se forem privados, a conta dona do `GHCR_READ_TOKEN` precisa ter acesso de leitura.
+2. Os pacotes ficam em `ghcr.io/<owner>/rapidinho-{web,admin,realtime,worker,migrate,nginx}`, vinculados a este repositório pelos builds.
 
 3. Configure DNS para `rapidinhoentrega.com.br`, `www.rapidinhoentrega.com.br` e `painel.rapidinhoentrega.com.br` apontando para a VPS.
 
@@ -26,13 +24,13 @@ O workflow `.github/workflows/deploy.yml` executa validação e, após sucesso, 
 
 O job `deploy` só começa depois que os cinco builds concluem. Ele envia os arquivos Compose, scripts operacionais e configuração Nginx; não envia código-fonte nem arquivos de imagem. Na VPS, a release:
 
-1. faz login no GHCR com token de leitura passado por stdin;
+1. faz login no GHCR com o `GITHUB_TOKEN` do job, passado por stdin, numa pasta de credenciais só desta aplicação (`$APP_ROOT/.docker-ghcr`) — a VPS é compartilhada e o `~/.docker` do root guarda o login GHCR de outros projetos, que um login/logout global apagaria;
 2. baixa as seis imagens da mesma tag SHA;
 3. inicia Postgres, Redis e MinIO;
 4. aplica migrations e seed essencial pela imagem `migrate`;
 5. inicia os serviços e verifica healthcheck HTTP;
 6. aponta `current` para a release e grava a tag no `.env`;
-7. encerra a sessão GHCR mesmo em caso de falha.
+7. apaga a pasta de credenciais do GHCR, mesmo em caso de falha.
 
 Use `docker-compose.yml` junto com `docker-compose.prod.yml` em produção. Não inclua `docker-compose.override.yml`, que publica portas de desenvolvimento.
 

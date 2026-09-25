@@ -32,10 +32,19 @@ compose() {
   docker compose -f docker-compose.yml -f docker-compose.prod.yml "$@"
 }
 
-echo "==> Autenticando no GHCR e baixando imagens da release $RELEASE_TAG"
-trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
+# Credencial do GHCR isolada numa pasta só desta aplicação.
+#
+# A VPS é compartilhada, e outros projetos guardam o PRÓPRIO login do GHCR no
+# ~/.docker do root. Um `docker login`/`docker logout` global sobrescreveria e
+# depois apagaria essa credencial, quebrando o deploy deles. Aqui o login (feito
+# pelo workflow com o GITHUB_TOKEN do job) mora em $GHCR_DOCKER_CONFIG, vale só
+# para os `pull` abaixo e é apagado ao final, com sucesso ou falha.
+GHCR_DOCKER_CONFIG="$APP_ROOT/.docker-ghcr"
+trap 'rm -rf "$GHCR_DOCKER_CONFIG"' EXIT
+
+echo "==> Baixando imagens da release $RELEASE_TAG do GHCR"
 for servico in web admin realtime worker migrate nginx; do
-  docker pull "ghcr.io/${GHCR_OWNER}/rapidinho-${servico}:${RELEASE_TAG}"
+  DOCKER_CONFIG="$GHCR_DOCKER_CONFIG" docker pull "ghcr.io/${GHCR_OWNER}/rapidinho-${servico}:${RELEASE_TAG}"
 done
 
 echo "==> Subindo banco, cache e storage"

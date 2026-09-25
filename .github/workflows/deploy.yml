@@ -307,6 +307,11 @@ jobs:
       [verificar, build-web, build-admin, build-realtime, build-worker, build-migrate, build-nginx]
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # `packages: read` deixa o GITHUB_TOKEN do job baixar as imagens que os
+    # builds acabaram de publicar — sem token pessoal guardado em secret.
+    permissions:
+      contents: read
+      packages: read
     environment:
       name: production
       url: https://rapidinhoentrega.com.br
@@ -354,13 +359,14 @@ jobs:
       - name: Fazer pull do GHCR e subir a release
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
-          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
-          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          test -n "${GHCR_READ_TOKEN:-}" || { echo "::error::Configure GHCR_READ_TOKEN como token read:packages." >&2; exit 1; }
-          test -n "${GHCR_USERNAME:-}" || { echo "::error::Configure GHCR_USERNAME com o usuário dono do token GHCR." >&2; exit 1; }
-          printf '%s' "$GHCR_READ_TOKEN" | sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
-            "printf '%s' \"\$(cat)\" | docker login ghcr.io -u '$GHCR_USERNAME' --password-stdin"
+          # Login com o token do próprio job, que expira quando ele termina.
+          # Vai para uma pasta só desta aplicação (ver remote-deploy.sh): o
+          # ~/.docker do root guarda o login GHCR de OUTROS projetos da VPS.
+          GHCR_DOCKER_CONFIG="$APP_ROOT/.docker-ghcr"
+          printf '%s' "$GHCR_TOKEN" | sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
+            "umask 077 && mkdir -p '$GHCR_DOCKER_CONFIG' && DOCKER_CONFIG='$GHCR_DOCKER_CONFIG' docker login ghcr.io -u '${{ github.actor }}' --password-stdin"
           sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
             "APP_ROOT='$APP_ROOT' RELEASE='${{ steps.release.outputs.version }}' RELEASE_TAG='${{ steps.release.outputs.version }}' \
              GHCR_OWNER='${GITHUB_REPOSITORY_OWNER,,}' bash -s" \
