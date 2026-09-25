@@ -243,7 +243,11 @@ services:
   minio:
     # Versão fixa, não `latest`: com tag móvel um `docker pull` troca a versão
     # em silêncio e não há rollback possível.
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    #
+    # Do quay.io, não do Docker Hub: a MinIO deixou de publicar imagens lá e o
+    # pull de `minio/minio` falha com "repository does not exist". É a mesma
+    # versão que outro projeto da VPS já usa, então nem há download.
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: rapidinho-minio
     # I/O, não CPU.
     cpus: ${RAPIDINHO_CPUS_MINIO:-0.5}
@@ -266,7 +270,7 @@ services:
 
   # Cria o bucket e libera leitura pública das imagens. Roda uma vez e sai.
   minio-init:
-    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z
     pids_limit: 64
     logging: *log
     container_name: rapidinho-minio-init

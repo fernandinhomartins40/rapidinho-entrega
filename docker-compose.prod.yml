@@ -21,7 +21,7 @@ services:
   # com `--profile ferramentas run --rm migrate`.
   migrate:
     profiles: ['ferramentas']
-    image: ${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-migrate:${RELEASE_TAG:-dev}
+    image: ghcr.io/${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-migrate:${RELEASE_TAG:-dev}
     env_file: .env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-rapidinho}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rapidinho}?schema=public&connection_limit=5
@@ -31,32 +31,32 @@ services:
     networks: [rapidinho]
 
   nginx:
-    image: ${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-nginx:${RELEASE_TAG:-dev}
+    image: ghcr.io/${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-nginx:${RELEASE_TAG:-dev}
     restart: always
 
   web:
-    image: ${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-web:${RELEASE_TAG:-dev}
+    image: ghcr.io/${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-web:${RELEASE_TAG:-dev}
     restart: always
     # A VPS é compartilhada com outros sites: sem teto de memória, um pico de
     # tráfego aqui derruba os vizinhos.
     mem_limit: 1g
 
   admin:
-    image: ${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-admin:${RELEASE_TAG:-dev}
+    image: ghcr.io/${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-admin:${RELEASE_TAG:-dev}
     restart: always
     mem_limit: 768m
 
   # Muitas conexões abertas, pouquíssimo processamento por evento: o consumo é
   # de socket, não de heap.
   realtime:
-    image: ${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-realtime:${RELEASE_TAG:-dev}
+    image: ghcr.io/${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-realtime:${RELEASE_TAG:-dev}
     restart: always
     mem_limit: 256m
 
   # O sharp reserva memória proporcional ao tamanho da imagem; o teto precisa
   # de folga para a foto de celular sem compressão.
   worker:
-    image: ${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-worker:${RELEASE_TAG:-dev}
+    image: ghcr.io/${GHCR_OWNER:?defina GHCR_OWNER}/${GHCR_IMAGE_PREFIX:-rapidinho}-worker:${RELEASE_TAG:-dev}
     restart: always
     mem_limit: 768m
 
