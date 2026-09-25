@@ -376,10 +376,14 @@ jobs:
           GHCR_DOCKER_CONFIG="$APP_ROOT/.docker-ghcr"
           printf '%s' "$GHCR_TOKEN" | sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
             "umask 077 && mkdir -p '$GHCR_DOCKER_CONFIG' && DOCKER_CONFIG='$GHCR_DOCKER_CONFIG' docker login ghcr.io -u '${{ github.actor }}' --password-stdin"
+          # Executa o script do pacote da release, e NÃO por `bash -s < script`:
+          # com o script na entrada padrão, o `docker compose run` das
+          # migrations lia essa entrada e engolia o resto do script. O bash
+          # terminava com sucesso logo após as migrations, sem trocar a release.
+          RELEASE_DIR="$APP_ROOT/releases/${{ steps.release.outputs.version }}"
           sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
             "APP_ROOT='$APP_ROOT' RELEASE='${{ steps.release.outputs.version }}' RELEASE_TAG='${{ steps.release.outputs.version }}' \
-             GHCR_OWNER='${GITHUB_REPOSITORY_OWNER,,}' bash -s" \
-            < .github/scripts/remote-deploy.sh
+             GHCR_OWNER='${GITHUB_REPOSITORY_OWNER,,}' bash '$RELEASE_DIR/.github/scripts/remote-deploy.sh' < /dev/null"
       - name: Configurar Nginx HTTP
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}

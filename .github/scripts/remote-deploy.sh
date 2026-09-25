@@ -69,7 +69,9 @@ done
 echo "==> Aplicando migrations"
 # O estágio `migrator` do Dockerfile: a imagem final é o standalone do Next e
 # não carrega o CLI do Prisma, que é devDependency.
-compose --profile ferramentas run --rm migrate || {
+# `-T` e `< /dev/null`: sem eles o `run` herda a entrada padrão do script.
+# Quando o script chegava por `bash -s`, isso consumia o resto dele em silêncio.
+compose --profile ferramentas run --rm -T migrate < /dev/null || {
   echo "Falha ao aplicar migrations — a versão anterior segue no ar." >&2
   exit 1
 }
@@ -78,9 +80,9 @@ compose --profile ferramentas run --rm migrate || {
 # sem eles a home não tem nem cidade para oferecer. Roda sempre, porque é
 # idempotente, e nunca semeia lojas ou produtos fictícios.
 echo "==> Semeando dados essenciais"
-compose --profile ferramentas run --rm \
+compose --profile ferramentas run --rm -T \
   -e SEED_MODE=essencial \
-  migrate pnpm --filter @rapidinho/database seed:essencial || {
+  migrate pnpm --filter @rapidinho/database seed:essencial < /dev/null || {
   echo "Falha ao semear os dados essenciais — a versão anterior segue no ar." >&2
   exit 1
 }
