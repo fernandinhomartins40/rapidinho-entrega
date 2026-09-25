@@ -1,0 +1,228 @@
+{
+  "assets": [
+    {
+      "file": "01-referencia/landing-original.png",
+      "format": "png",
+      "bytes": 2001039,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO",
+      "width": 783,
+      "height": 2008,
+      "aspect_ratio": 0.3899
+    },
+    {
+      "file": "02-marca/app-store-recorte-referencia.png",
+      "format": "png",
+      "bytes": 9469,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO",
+      "width": 115,
+      "height": 49,
+      "aspect_ratio": 2.3469
+    },
+    {
+      "file": "02-marca/google-play-recorte-referencia.png",
+      "format": "png",
+      "bytes": 9434,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO",
+      "width": 115,
+      "height": 49,
+      "aspect_ratio": 2.3469
+    },
+    {
+      "file": "02-marca/logo-referencia-baixa-resolucao.png",
+      "format": "png",
+      "bytes": 20022,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO",
+      "width": 178,
+      "height": 57,
+      "aspect_ratio": 3.1228
+    },
+    {
+      "file": "03-hero/cidade-noturna.png",
+      "format": "png",
+      "bytes": 1907401,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO",
+      "width": 1983,
+      "height": 793,
+      "aspect_ratio": 2.5006
+    },
+    {
+      "file": "03-hero/cidade-noturna.webp",
+      "format": "webp",
+      "bytes": 52588,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    },
+    {
+      "file": "03-hero/motoboy-scooter.png",
+      "format": "png",
+      "bytes": 1440545,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO",
+      "width": 1536,
+      "height": 1024,
+      "aspect_ratio": 1.5
+    },
+    {
+      "file": "03-hero/motoboy-scooter.webp",
+      "format": "webp",
+      "bytes": 137340,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    },
+    {
+      "file": "03-hero/rastros-velocidade.svg",
+      "format": "svg",
+      "bytes": 750,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    },
+    {
+      "file": "04-app/celular-vazio.png",
+      "format": "png",
+      "bytes": 1060073,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO",
+      "width": 1024,
+      "height": 1536,
+      "aspect_ratio": 0.6667
+    },
+    {
+      "file": "04-app/celular-vazio.webp",
+      "format": "webp",
+      "bytes": 58754,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    },
+    {
+      "file": "04-app/tela-app-referencia.svg",
+      "format": "svg",
+      "bytes": 2579,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    },
+    {
+      "file": "05-depoimentos/cliente-com-celular.png",
+      "format": "png",
+      "bytes": 2157110,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO",
+      "width": 1214,
+      "height": 1295,
+      "aspect_ratio": 0.9375
+    },
+    {
+      "file": "05-depoimentos/cliente-com-celular.webp",
+      "format": "webp",
+      "bytes": 348342,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    },
+    {
+      "file": "06-icones/bebidas.svg",
+      "format": "svg",
+      "bytes": 211,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    },
+    {
+      "file": "06-icones/escudo.svg",
+      "format": "svg",
+      "bytes": 202,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    },
+    {
+      "file": "06-icones/farmacia.svg",
+      "format": "svg",
+      "bytes": 131,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    },
+    {
+      "file": "06-icones/fone.svg",
+      "format": "svg",
+      "bytes": 241,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    },
+    {
+      "file": "06-icones/localizacao.svg",
+      "format": "svg",
+      "bytes": 183,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    },
+    {
+      "file": "06-icones/mercado.svg",
+      "format": "svg",
+      "bytes": 213,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    },
+    {
+      "file": "06-icones/outros.svg",
+      "format": "svg",
+      "bytes": 205,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    },
+    {
+      "file": "06-icones/pet-shop.svg",
+      "format": "svg",
+      "bytes": 307,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    },
+    {
+      "file": "06-icones/pin-marca.svg",
+      "format": "svg",
+      "bytes": 206,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    },
+    {
+      "file": "06-icones/raio.svg",
+      "format": "svg",
+      "bytes": 128,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    },
+    {
+      "file": "06-icones/restaurante.svg",
+      "format": "svg",
+      "bytes": 147,
+      "purpose": "TODO",
+      "css_usage": "TODO",
+      "fallback": "TODO"
+    }
+  ]
+}

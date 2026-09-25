@@ -1,128 +1,103 @@
 import Image from 'next/image';
-import { MapPin, ShieldCheck, Star, Zap } from 'lucide-react';
-import { getPublicEnv, MEDIDAS_DA_MARCA } from '@rapidinho/shared';
 import { Logotipo } from '@/components/marca/logo';
-import { SeletorDeCidade, type CidadeDisponivel } from './seletor-de-cidade';
+import { Cabecalho } from './cabecalho';
+import { NUMEROS } from './conteudo';
+import { MEDIDAS_DA_LANDING } from './medidas';
+import { Etiqueta, Pincelada, SelosDasLojas } from './pecas';
 
 /**
- * Topo da página.
+ * Topo da página: rua à noite ao fundo, o mascote acelerando à direita.
  *
- * Fundo navy da identidade visual, com o mascote à direita no desktop. O
- * seletor de cidade fica logo abaixo, avançando sobre o fundo: quem chega já
- * sabendo o que quer não deve precisar rolar para começar.
+ * O fundo é escurecido da esquerda para a direita — o texto fica sobre a parte
+ * mais escura e o brilho dos postes sobra para o lado do motoboy. As imagens
+ * são as únicas da página com prioridade de carga: são o que se vê primeiro.
  */
-export function Hero({ cidades }: { cidades: CidadeDisponivel[] }) {
-  const totalLojas = cidades.reduce((soma, cidade) => soma + cidade.lojas, 0);
-  const temOperacao = cidades.length > 0;
-
+export function Hero() {
   return (
-    <header className="relative">
-      {/*
-        O fundo mora num wrapper próprio, e não no <header>: o cartão abaixo
-        avança para cima com margem negativa, e um `overflow-hidden` no header
-        (necessário para conter o brilho e o mascote) o cortaria pela metade.
-      */}
-      <div className="bg-brand-deep relative overflow-hidden">
-        <div className="from-brand-deep via-brand-deep to-brand-deeper absolute inset-0 bg-gradient-to-b" />
-        <div className="bg-radial-glow absolute inset-0" aria-hidden />
-        <div className="bg-dot-grid absolute inset-0 opacity-[0.07]" aria-hidden />
+    <header id="inicio" className="relative isolate overflow-hidden bg-[#101112]">
+      <Image
+        src="/landing/cidade-noturna.webp"
+        alt=""
+        fill
+        priority
+        sizes="100vw"
+        className="-z-10 object-cover object-right"
+      />
+      <div
+        className="absolute inset-0 -z-10 bg-gradient-to-r from-[#101112] via-[#101112]/80 to-[#101112]/10"
+        aria-hidden
+      />
+      <div
+        className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-[#101112] to-transparent"
+        aria-hidden
+      />
 
-        {/* Mascote da marca. Decorativo: some no celular, onde o espaço é do
-            texto e da ação.
+      <Cabecalho logo={<Logotipo className="h-12 w-auto sm:h-14 lg:h-16" priority />} />
 
-            Sem `priority` de propósito. Ele é invisível abaixo de `lg`, e a
-            prioridade fazia o navegador pré-carregar 44 KB que a maioria do
-            público — celular, no interior — baixava sem nunca ver, disputando
-            banda com o conteúdo que de fato aparece.
+      <div className="relative mx-auto grid w-full max-w-[1200px] gap-6 px-5 pb-14 pt-6 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-center lg:gap-0 lg:pb-20 lg:pt-8">
+        <div className="relative z-10">
+          <Etiqueta>Entregas mais rápidas</Etiqueta>
 
-            As medidas vêm do módulo gerado com as artes: digitá-las foi o que
-            fez o Next reservar um espaço que não correspondia à imagem. */}
-        <div
-          className="pointer-events-none absolute -right-8 top-28 hidden w-[25rem] lg:block xl:-right-4 xl:top-24 xl:w-[30rem]"
-          aria-hidden
-        >
+          <h1 className="fonte-titulo mt-5 text-[2.6rem] leading-[1.02] text-white sm:text-6xl lg:text-[4.1rem]">
+            Seu pedido,
+            <br />
+            na velocidade
+            <br />
+            <span className="text-[#FFCB24]">da sua vida.</span>
+          </h1>
+
+          <p className="mt-6 max-w-md text-base leading-relaxed text-white/85 sm:text-lg">
+            Com o Rapidinho Entrega, você recebe o que precisa, quando precisa. Com mais
+            praticidade, segurança e variedade, direto na sua porta.
+          </p>
+
+          <SelosDasLojas className="mt-8" />
+
+          <dl className="mt-10 grid grid-cols-3 sm:flex">
+            {NUMEROS.map((numero, indice) => (
+              <div
+                key={numero.rotulo}
+                className={
+                  indice === 0 ? 'pr-3 sm:pr-7' : 'border-l border-white/20 px-3 sm:px-7'
+                }
+              >
+                <dt className="sr-only">{numero.rotulo}</dt>
+                <dd className="whitespace-nowrap text-xl font-extrabold text-[#FFCB24] sm:text-[1.7rem]">
+                  {numero.valor}
+                </dd>
+                <dd className="text-xs leading-snug text-white/85 sm:text-sm" aria-hidden>
+                  {numero.rotulo}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+
+        <div className="relative mx-auto w-full max-w-[34rem] lg:-mr-10 lg:max-w-none">
           <Image
-            src="/marca/mascote.webp"
-            {...MEDIDAS_DA_MARCA['mascote.webp']}
-            alt=""
-            sizes="(min-width: 1280px) 30rem, 25rem"
-            className="h-auto w-full drop-shadow-[0_25px_50px_rgba(0,0,0,0.45)]"
+            src="/landing/motoboy.webp"
+            {...MEDIDAS_DA_LANDING['motoboy.webp']}
+            alt="Mascote do Rapidinho Entrega pilotando uma scooter amarela com a caixa de entrega"
+            priority
+            sizes="(min-width: 1024px) 640px, (min-width: 640px) 34rem, 92vw"
+            className="relative h-auto w-full drop-shadow-[0_30px_40px_rgba(0,0,0,0.55)] lg:mt-6"
           />
+
+          {/* Frase manuscrita: decorativa, o h1 já diz o mesmo. */}
+          <p
+            className="fonte-manuscrita pointer-events-none absolute -top-2 right-0 hidden -rotate-[14deg] text-right text-[2.4rem] leading-[1.05] text-[#FFCB24] drop-shadow-[0_4px_12px_rgba(0,0,0,0.6)] sm:block lg:-right-2 lg:-top-6 xl:-right-8 xl:text-[2.75rem]"
+            aria-hidden
+          >
+            Chegou
+            <br />
+            Rápido,
+            <br />
+            <span className="pl-6">Chegou</span>
+            <br />
+            <span className="pl-16">Bem!</span>
+            <Pincelada className="-mt-1 ml-auto w-28 rotate-[8deg]" />
+          </p>
         </div>
-
-        <div className="relative z-10 mx-auto w-full max-w-6xl px-5 pb-32 pt-7 sm:pb-36 sm:pt-10">
-          <div className="flex items-center justify-between gap-4">
-            <Logotipo className="h-9 w-auto sm:h-11" priority />
-
-            {/* O painel é outro app, em subdomínio próprio: um caminho
-                relativo levaria a uma rota que não existe aqui. */}
-            <a
-              href={getPublicEnv().NEXT_PUBLIC_ADMIN_URL}
-              className="focus-visible:ring-brand-tint min-h-touch hidden items-center rounded-xl border border-white/25 px-4 text-sm font-semibold text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 sm:inline-flex"
-            >
-              Sou lojista
-            </a>
-          </div>
-
-          <div className="mt-12 max-w-2xl sm:mt-16">
-            <p className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-sm font-semibold text-white backdrop-blur-sm">
-              {temOperacao ? (
-                <>
-                  <MapPin className="text-brand-tint h-4 w-4" aria-hidden />
-                  {cidades.length === 1
-                    ? `Entregando em ${cidades[0]?.nome}`
-                    : `Entregando em ${cidades.length} cidades`}
-                  {totalLojas > 0 ? (
-                    <span className="text-white/60">
-                      · {totalLojas} {totalLojas === 1 ? 'loja' : 'lojas'}
-                    </span>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  <Star className="text-brand-tint h-4 w-4" aria-hidden />
-                  Estamos chegando na sua cidade
-                </>
-              )}
-            </p>
-
-            <h1 className="mt-6 text-[2.6rem] font-extrabold leading-[1.03] tracking-tight text-white sm:text-6xl">
-              O mercado, a farmácia
-              <br />
-              <span className="from-brand-tint via-brand-amber to-brand-flame bg-gradient-to-r bg-clip-text text-transparent">
-                e o melhor da cidade
-              </span>
-              <br />
-              na sua porta.
-            </h1>
-
-            <p className="mt-5 max-w-lg text-lg leading-relaxed text-white/75">
-              Peça do comércio que você já conhece. Pague no Pix, no cartão ou na entrega — e
-              acompanhe tudo em tempo real, do preparo até a sua porta.
-            </p>
-
-            <ul className="mt-8 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium text-white/70">
-              <li className="flex items-center gap-2">
-                <Zap className="text-brand-amber h-4 w-4" aria-hidden />
-                Entrega em minutos
-              </li>
-              <li className="flex items-center gap-2">
-                <ShieldCheck className="text-brand-amber h-4 w-4" aria-hidden />
-                Pagamento seguro
-              </li>
-              <li className="flex items-center gap-2">
-                <MapPin className="text-brand-amber h-4 w-4" aria-hidden />
-                Comércio da sua cidade
-              </li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* O cartão sobe sobre o fundo: dá profundidade e puxa o olho para a
-          ação principal. */}
-      <div className="relative z-10 mx-auto -mt-24 w-full max-w-3xl px-5 sm:-mt-28">
-        <SeletorDeCidade cidades={cidades} />
       </div>
     </header>
   );

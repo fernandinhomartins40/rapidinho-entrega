@@ -1,0 +1,146 @@
+[
+  {
+    "arquivo": "01-referencia/landing-original.png",
+    "bytes": 2001039,
+    "largura": 783,
+    "altura": 2008,
+    "transparencia": false
+  },
+  {
+    "arquivo": "02-marca/app-store-recorte-referencia.png",
+    "bytes": 9469,
+    "largura": 115,
+    "altura": 49,
+    "transparencia": false
+  },
+  {
+    "arquivo": "02-marca/google-play-recorte-referencia.png",
+    "bytes": 9434,
+    "largura": 115,
+    "altura": 49,
+    "transparencia": false
+  },
+  {
+    "arquivo": "02-marca/logo-referencia-baixa-resolucao.png",
+    "bytes": 20022,
+    "largura": 178,
+    "altura": 57,
+    "transparencia": false
+  },
+  {
+    "arquivo": "03-hero/cidade-noturna.png",
+    "bytes": 1413699,
+    "largura": 1983,
+    "altura": 793,
+    "transparencia": false
+  },
+  {
+    "arquivo": "03-hero/cidade-noturna.webp",
+    "bytes": 52588,
+    "largura": 1983,
+    "altura": 793,
+    "transparencia": false
+  },
+  {
+    "arquivo": "03-hero/motoboy-scooter.png",
+    "bytes": 1440545,
+    "largura": 1536,
+    "altura": 1024,
+    "transparencia": true
+  },
+  {
+    "arquivo": "03-hero/motoboy-scooter.webp",
+    "bytes": 137340,
+    "largura": 1536,
+    "altura": 1024,
+    "transparencia": true
+  },
+  {
+    "arquivo": "03-hero/rastros-velocidade.svg",
+    "bytes": 750
+  },
+  {
+    "arquivo": "04-app/celular-vazio.png",
+    "bytes": 1060073,
+    "largura": 1024,
+    "altura": 1536,
+    "transparencia": true
+  },
+  {
+    "arquivo": "04-app/celular-vazio.webp",
+    "bytes": 58754,
+    "largura": 1024,
+    "altura": 1536,
+    "transparencia": true
+  },
+  {
+    "arquivo": "04-app/tela-app-referencia.svg",
+    "bytes": 2579
+  },
+  {
+    "arquivo": "05-depoimentos/cliente-com-celular.png",
+    "bytes": 2157110,
+    "largura": 1214,
+    "altura": 1295,
+    "transparencia": true
+  },
+  {
+    "arquivo": "05-depoimentos/cliente-com-celular.webp",
+    "bytes": 348342,
+    "largura": 1214,
+    "altura": 1295,
+    "transparencia": true
+  },
+  {
+    "arquivo": "06-icones/bebidas.svg",
+    "bytes": 211
+  },
+  {
+    "arquivo": "06-icones/escudo.svg",
+    "bytes": 202
+  },
+  {
+    "arquivo": "06-icones/farmacia.svg",
+    "bytes": 131
+  },
+  {
+    "arquivo": "06-icones/fone.svg",
+    "bytes": 241
+  },
+  {
+    "arquivo": "06-icones/localizacao.svg",
+    "bytes": 183
+  },
+  {
+    "arquivo": "06-icones/mercado.svg",
+    "bytes": 213
+  },
+  {
+    "arquivo": "06-icones/outros.svg",
+    "bytes": 205
+  },
+  {
+    "arquivo": "06-icones/pet-shop.svg",
+    "bytes": 307
+  },
+  {
+    "arquivo": "06-icones/pin-marca.svg",
+    "bytes": 206
+  },
+  {
+    "arquivo": "06-icones/raio.svg",
+    "bytes": 128
+  },
+  {
+    "arquivo": "06-icones/restaurante.svg",
+    "bytes": 147
+  },
+  {
+    "arquivo": "07-documentacao/LEIA-ME.md",
+    "bytes": 4194
+  },
+  {
+    "arquivo": "07-documentacao/PROMPT-PARA-CLAUDE.md",
+    "bytes": 3120
+  }
+]

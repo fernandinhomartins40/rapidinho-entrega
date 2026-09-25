@@ -1,0 +1,15 @@
+# Prompt para copiar no Claude Code
+
+Implemente a landing page Rapidinho Entrega no meu projeto existente a partir de `01-referencia/landing-original.png` e dos assets deste pacote. Primeiro examine a stack, os componentes, as rotas e os estilos existentes; preserve lógica, APIs e identidade oficial do repositório. Não use a captura da landing como imagem de fundo da página.
+
+Estrutura da página: cabeçalho com marca e navegação; hero com título, botões das lojas e indicadores; quatro benefícios; seção do aplicativo com descrição e celular; quatro etapas de funcionamento; seis categorias de parceiros; depoimento; CTA final; rodapé. Transcreva o texto do print em HTML editável e confirme comigo somente trechos que estejam ilegíveis. Números de usuários, lojas, entregas e depoimentos devem ser tratados como conteúdo provisório até haver confirmação.
+
+Use `03-hero/cidade-noturna.webp` como fundo do hero com overlay para contraste, `03-hero/motoboy-scooter.webp` à direita, `03-hero/rastros-velocidade.svg` atrás da moto. Use `05-depoimentos/cliente-com-celular.webp` na faixa amarela. Use `04-app/celular-vazio.webp` como objeto decorativo e `04-app/tela-app-referencia.svg` somente se conseguir posicioná-lo corretamente; se a perspectiva impedir composição precisa, construa o smartphone e a tela em HTML/CSS, sem sobrepor o SVG a um ângulo incompatível. Os demais ícones estão em `06-icones`.
+
+A marca em `02-marca/logo-referencia-baixa-resolucao.png` e os recortes de lojas são apenas referências de resolução limitada: procure assets oficiais existentes no repositório e use esses se houver. Não redesenhe a marca por IA. Se não houver links reais das lojas, deixe botões sem promessa de download ativo e documente o ponto de integração.
+
+Faça todo o texto, botões, cards, stats, avaliações e navegação em HTML/CSS, com layout responsivo. Use cores base #101112, #FFCB24, #F04B28, #F5F7FA, #FFFFFF e adapte à tipografia oficial se existir. Prefira `picture` com WebP e PNG fallback para objetos transparentes e imagem de fundo, lazy-load fora do hero, tamanho explícito ou aspect-ratio para evitar salto de layout. No hero, carregamento prioritário do asset visível.
+
+Responsividade: desktop em colunas, tablet com 2 colunas para cards, mobile em uma coluna; não ocultar conteúdo essencial. A navegação mobile deve ser operável por teclado. CTAs com foco visível, nomes acessíveis e estados de hover/active/disabled. Se criar carrossel de depoimentos, implemente controles e indicadores reais; se houver apenas um depoimento confirmado, remova as setas e dots fictícios.
+
+Antes de editar, apresente os arquivos do projeto afetados. Ao concluir, rode as verificações disponíveis (lint, testes relevantes, build), confira visualmente em 1440, 768 e 390 px e liste dependências pendentes: logo oficial, URLs das lojas, prova das estatísticas e depoimento autorizado. Critérios de aceite: conteúdo do print reconhecível, sem texto rasterizado, sem sobreposição/clipping, mobile utilizável, imagens com alpha real e sem links quebrados.

@@ -1,11 +1,16 @@
 import { unstable_cache } from 'next/cache';
 import { prisma } from '@rapidinho/database';
+import Image from 'next/image';
 import { Hero } from '@/components/landing/hero';
 import { Beneficios } from '@/components/landing/beneficios';
-import { Categorias, emojiDaCategoria } from '@/components/landing/categorias';
+import { AppEmDestaque } from '@/components/landing/app-em-destaque';
 import { ComoFunciona } from '@/components/landing/como-funciona';
-import { ParaLojistas } from '@/components/landing/para-lojistas';
+import { Categorias } from '@/components/landing/categorias';
+import { Depoimentos } from '@/components/landing/depoimentos';
+import { ChamadaFinal } from '@/components/landing/chamada-final';
 import { Rodape } from '@/components/landing/rodape';
+import { fonteManuscrita, fonteTitulo } from '@/components/landing/fontes';
+import { MEDIDAS_DA_LANDING } from '@/components/landing/medidas';
 
 /**
  * Renderizada sob demanda, não no build: a imagem Docker é construída sem
@@ -32,8 +37,7 @@ const carregarVitrine = unstable_cache(
       prisma.storeCategory.findMany({
         where: { isActive: true },
         orderBy: { sortOrder: 'asc' },
-        take: 8,
-        select: { id: true, name: true, slug: true },
+        select: { slug: true },
       }),
     ]);
 
@@ -54,32 +58,38 @@ export default async function HomePage() {
     lojas: cidade._count.stores,
   }));
 
-  const categoriasDestaque = categorias.map((categoria) => ({
-    id: categoria.id,
-    nome: categoria.name,
-    slug: categoria.slug,
-    emoji: emojiDaCategoria(categoria.slug),
-  }));
-
   // Com uma cidade só, os cartões de categoria já levam direto para ela — não
   // faz sentido pedir uma escolha que só tem uma resposta.
   const cidadeUnica = cidadesDisponiveis.length === 1 ? cidadesDisponiveis[0]?.slug : undefined;
 
   return (
-    <>
-      <Hero cidades={cidadesDisponiveis} />
+    <div className={`${fonteTitulo.variable} ${fonteManuscrita.variable} bg-[#101112]`}>
+      <Hero />
 
       <main>
         <Beneficios />
+        <AppEmDestaque />
+        <ComoFunciona />
         <Categorias
-          categorias={categoriasDestaque}
+          slugsDisponiveis={categorias.map((categoria) => categoria.slug)}
           {...(cidadeUnica ? { cidadeSlug: cidadeUnica } : {})}
         />
-        <ComoFunciona />
-        <ParaLojistas />
+        <Depoimentos
+          foto={
+            <Image
+              src="/landing/cliente.webp"
+              {...MEDIDAS_DA_LANDING['cliente.webp']}
+              alt="Cliente sorrindo enquanto faz um pedido pelo celular"
+              loading="lazy"
+              sizes="(min-width: 1024px) 19rem, 15rem"
+              className="h-auto w-full"
+            />
+          }
+        />
+        <ChamadaFinal cidades={cidadesDisponiveis} />
       </main>
 
       <Rodape />
-    </>
+    </div>
   );
 }

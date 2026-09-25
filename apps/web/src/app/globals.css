@@ -1,1 +1,19 @@
 @import '@rapidinho/ui/styles.css';
+
+/*
+ * Tipografia da landing. As variáveis só existem dentro do wrapper da página
+ * inicial (ver `components/landing/fontes.ts`); fora dele o fallback assume.
+ * Sem `@layer`: as diretivas do Tailwind moram no arquivo importado, e o
+ * PostCSS exige que estejam no mesmo arquivo da camada.
+ */
+.fonte-titulo {
+  font-family: var(--font-titulo), var(--font-sans), system-ui, sans-serif;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.fonte-manuscrita {
+  font-family: var(--font-manuscrita), cursive;
+  font-weight: 400;
+}

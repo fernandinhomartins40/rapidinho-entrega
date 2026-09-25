@@ -21,6 +21,7 @@
     "db:seed": "pnpm --filter @rapidinho/database seed",
     "db:studio": "pnpm --filter @rapidinho/database studio",
     "marca:gerar": "node scripts/gerar-marca.mjs",
+    "landing:gerar": "node scripts/gerar-landing.mjs",
     "db:seed:essencial": "pnpm --filter @rapidinho/database seed:essencial",
     "test:e2e:ui": "playwright test --ui"
   },

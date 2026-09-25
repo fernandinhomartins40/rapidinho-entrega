@@ -1,89 +1,86 @@
+import Image from 'next/image';
 import Link from 'next/link';
-
-export interface CategoriaDestaque {
-  id: string;
-  nome: string;
-  slug: string;
-  emoji: string;
-}
+import { MEDIDAS_DA_LANDING, type ImagemDaLanding } from './medidas';
 
 /**
- * Vitrine de categorias.
- *
- * As categorias vêm do banco (são dado, não código), e o emoji entra como
- * fallback visual: um ícone colorido por categoria custaria upload e
- * manutenção para um ganho pequeno nesta seção.
+ * As seis vitrines da arte. Cada uma aponta para o slug de categoria do banco
+ * que mais se aproxima; se a categoria não existir (ou for "Outros"), o cartão
+ * leva para a cidade inteira.
  */
-const EMOJI_POR_SLUG: Record<string, string> = {
-  supermercado: '🛒',
-  mercearia: '🏪',
-  acougue: '🥩',
-  farmacia: '💊',
-  pizzaria: '🍕',
-  hamburgueria: '🍔',
-  lanchonete: '🥐',
-  'acai-e-sorvetes': '🍨',
-  restaurante: '🍽️',
-  petshop: '🐶',
-  'agua-e-gas': '💧',
-};
-
-export function emojiDaCategoria(slug: string): string {
-  return EMOJI_POR_SLUG[slug] ?? '🛍️';
-}
+const CATEGORIAS = [
+  { nome: 'Restaurantes', imagem: 'categorias/restaurantes.webp', slugs: ['restaurante', 'hamburgueria', 'lanchonete'] },
+  { nome: 'Mercado', imagem: 'categorias/mercado.webp', slugs: ['supermercado', 'mercearia'] },
+  { nome: 'Farmácia', imagem: 'categorias/farmacia.webp', slugs: ['farmacia'] },
+  { nome: 'Bebidas', imagem: 'categorias/bebidas.webp', slugs: ['bebidas', 'adega', 'agua-e-gas'] },
+  { nome: 'Pet Shop', imagem: 'categorias/pet-shop.webp', slugs: ['petshop', 'pet-shop'] },
+  { nome: 'Outros', imagem: 'categorias/outros.webp', slugs: [] },
+] as const satisfies ReadonlyArray<{ nome: string; imagem: ImagemDaLanding; slugs: readonly string[] }>;
 
 export function Categorias({
-  categorias,
+  slugsDisponiveis,
   cidadeSlug,
 }: {
-  categorias: CategoriaDestaque[];
+  /** Slugs das categorias ativas no banco. */
+  slugsDisponiveis: string[];
+  /** Com uma cidade só, os cartões já levam direto para ela. */
   cidadeSlug?: string;
 }) {
-  if (categorias.length === 0) return null;
+  const ativos = new Set(slugsDisponiveis);
 
   return (
-    <section aria-labelledby="categorias" className="mx-auto w-full max-w-5xl px-5 pt-20 sm:pt-24">
-      <h2 id="categorias" className="text-2xl font-bold tracking-tight sm:text-3xl">
-        O que você encontra
-      </h2>
-      <p className="text-muted-foreground mt-2">
-        Do arroz e feijão ao remédio de última hora, passando pela pizza de sexta.
-      </p>
+    <section aria-labelledby="parceiros" className="bg-white py-12 sm:py-14">
+      <div className="mx-auto grid w-full max-w-[1200px] items-center gap-8 px-5 sm:px-8 lg:grid-cols-[minmax(0,25rem)_minmax(0,1fr)] lg:gap-10">
+        <div>
+          <h2
+            id="parceiros"
+            className="fonte-titulo text-[1.75rem] leading-[1.12] text-[#101112] sm:text-[2rem]"
+          >
+            Parceiros para todas
+            <br />
+            as <span className="text-[#FFB900]">suas necessidades</span>
+          </h2>
+          <p className="mt-3 text-sm leading-relaxed text-[#3f4247]">
+            Do seu restaurante favorito ao mercado da sua região. Tudo em um só lugar.
+          </p>
+        </div>
 
-      <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {categorias.map((categoria) => {
-          const conteudo = (
-            <>
-              <span
-                className="bg-accent flex h-12 w-12 items-center justify-center rounded-xl text-2xl"
-                aria-hidden
-              >
-                {categoria.emoji}
-              </span>
-              <span className="mt-3 block text-sm font-semibold leading-snug sm:text-base">
-                {categoria.nome}
-              </span>
-            </>
-          );
+        <ul className="grid grid-cols-3 gap-3 sm:grid-cols-6">
+          {CATEGORIAS.map((categoria) => {
+            const slug = categoria.slugs.find((candidato) => ativos.has(candidato));
+            const conteudo = (
+              <>
+                <span className="flex h-16 items-center justify-center">
+                  <Image
+                    src={`/landing/${categoria.imagem}`}
+                    {...MEDIDAS_DA_LANDING[categoria.imagem]}
+                    alt=""
+                    loading="lazy"
+                    className="max-h-14 w-auto"
+                  />
+                </span>
+                <span className="mt-3 block text-sm font-bold text-[#101112]">{categoria.nome}</span>
+              </>
+            );
+            const estilo =
+              'flex h-full flex-col items-center justify-end rounded-2xl bg-[#F5F7FA] px-2 pb-4 pt-5 text-center';
 
-          // Sem cidade escolhida ainda, o cartão é só informativo: mandar para
-          // uma listagem vazia seria pior que não ter link.
-          return (
-            <li key={categoria.id}>
-              {cidadeSlug ? (
-                <Link
-                  href={`/${cidadeSlug}/${categoria.slug}`}
-                  className="border-input hover:border-primary focus-visible:ring-ring bg-card block h-full rounded-2xl border p-4 transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_28px_-16px_rgba(13,31,60,0.5)] focus-visible:outline-none focus-visible:ring-2"
-                >
-                  {conteudo}
-                </Link>
-              ) : (
-                <div className="border-input bg-card h-full rounded-2xl border p-4">{conteudo}</div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+            return (
+              <li key={categoria.nome}>
+                {cidadeSlug ? (
+                  <Link
+                    href={slug ? `/${cidadeSlug}/${slug}` : `/${cidadeSlug}`}
+                    className={`${estilo} transition-all hover:-translate-y-1 hover:shadow-[0_16px_30px_-18px_rgba(16,17,18,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFB900]`}
+                  >
+                    {conteudo}
+                  </Link>
+                ) : (
+                  <div className={estilo}>{conteudo}</div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </section>
   );
 }
