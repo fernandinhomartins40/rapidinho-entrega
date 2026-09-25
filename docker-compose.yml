@@ -41,7 +41,9 @@ services:
       minio:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost/nginx-health']
+      # 127.0.0.1, não localhost: no Alpine, localhost resolve primeiro para ::1
+      # e o nginx só escuta em IPv4 — o container ficava `unhealthy` servindo.
+      test: ['CMD', 'wget', '--spider', '-q', 'http://127.0.0.1/nginx-health']
       interval: 30s
       timeout: 5s
       retries: 3
