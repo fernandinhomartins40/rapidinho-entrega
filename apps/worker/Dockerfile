@@ -27,6 +27,9 @@ COPY --from=deps /app/apps ./apps
 COPY package.json pnpm-workspace.yaml ./
 COPY packages ./packages
 COPY apps/worker ./apps/worker
+# O `build` do serviço chama o empacotador da raiz; sem ele o build falha
+# com MODULE_NOT_FOUND.
+COPY scripts/empacotar-servico.mjs ./scripts/
 RUN pnpm --filter @rapidinho/database exec prisma generate
 RUN pnpm --filter @rapidinho/worker build
 
@@ -44,6 +47,10 @@ RUN addgroup --system --gid 1001 nodejs && \
 # `__dirname`.
 COPY --from=builder --chown=worker:nodejs /app/apps/worker/dist ./dist
 COPY --from=builder --chown=worker:nodejs /pronto/node_modules ./node_modules
+# O `pnpm deploy` copia o pacote respeitando o .gitignore, e `generated/`
+# (o cliente do Prisma) está ignorado lá. Sem esta linha o worker morre na
+# partida com ERR_MODULE_NOT_FOUND em @rapidinho/database/generated/client.
+COPY --from=builder --chown=worker:nodejs /app/packages/database/generated ./node_modules/@rapidinho/database/generated
 
 USER worker
 

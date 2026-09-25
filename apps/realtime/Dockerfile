@@ -25,6 +25,9 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY packages/config ./packages/config
 COPY packages/shared ./packages/shared
 COPY apps/realtime ./apps/realtime
+# O `build` do serviço chama o empacotador da raiz; sem ele o build falha
+# com MODULE_NOT_FOUND.
+COPY scripts/empacotar-servico.mjs ./scripts/
 RUN pnpm --filter @rapidinho/realtime build
 
 # Árvore só de produção. `pnpm deploy` resolve as dependências declaradas e
