@@ -19,7 +19,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "seed:essencial": "tsx prisma/seed/index.ts --essencial",
-    "seed:e2e": "tsx prisma/seed/e2e.ts"
+    "seed:e2e": "tsx prisma/seed/e2e.ts",
+    "seed:demo": "tsx prisma/seed/demo/index.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3"

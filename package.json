@@ -24,6 +24,7 @@
     "landing:gerar": "node scripts/gerar-landing.mjs",
     "db:seed:essencial": "pnpm --filter @rapidinho/database seed:essencial",
     "db:seed:e2e": "pnpm --filter @rapidinho/database seed:e2e",
+    "db:seed:demo": "pnpm --filter @rapidinho/database seed:demo",
     "test:e2e:ui": "playwright test --ui"
   },
   "pnpm": {
