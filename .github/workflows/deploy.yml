@@ -348,7 +348,7 @@ jobs:
             .github/scripts/configurar-nginx.sh .github/scripts/aplicar-https.sh \
             .github/scripts/emitir-ssl.sh .github/scripts/preparar-env.sh \
             .github/scripts/remote-deploy.sh .github/scripts/verificar-deploy.sh \
-            scripts/gerar-marca.mjs
+            scripts/gerar-marca.mjs scripts/backup-postgres.sh scripts/restaurar-postgres.sh
       - name: Enviar arquivos operacionais
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}

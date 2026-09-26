@@ -215,7 +215,10 @@ services:
       POSTGRES_INITDB_ARGS: '--locale-provider=icu --icu-locale=pt-BR --encoding=UTF8'
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./docker/postgres/backup:/backup
+      # Sem bind mount relativo aqui: cada release vive numa pasta própria, o
+      # caminho absoluto mudava a cada deploy e o compose recriava o Postgres
+      # (site fora do ar por alguns segundos em toda publicação). O backup não
+      # precisa de volume: scripts/backup-postgres.sh tira o dump pelo stdout.
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-rapidinho} -d ${POSTGRES_DB:-rapidinho}']
       interval: 10s
