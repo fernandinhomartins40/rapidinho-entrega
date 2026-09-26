@@ -44,7 +44,7 @@ export default async function PedidosPage() {
             <Receipt className="text-muted-foreground h-10 w-10" aria-hidden />
             <p className="font-semibold">Você ainda não fez nenhum pedido.</p>
             <Button asChild>
-              <Link href="/">Ver lojas</Link>
+              <Link href="/app">Ver lojas</Link>
             </Button>
           </CardContent>
         </Card>

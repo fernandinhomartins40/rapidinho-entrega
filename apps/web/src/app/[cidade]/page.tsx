@@ -5,6 +5,7 @@ import { prisma } from '@rapidinho/database';
 import { isStoreOpen } from '@rapidinho/shared';
 import { Logotipo } from '@/components/marca/logo';
 import { CartaoDeLoja, type LojaNaVitrine } from '@/components/app/cartao-de-loja';
+import { LembrarCidade } from '@/components/app/lembrar-cidade';
 import { imagemExibivel, SELECT_IMAGEM } from '@/lib/media';
 
 export const dynamic = 'force-dynamic';
@@ -179,13 +180,15 @@ export default async function CidadePage({
 
   return (
     <main>
+      <LembrarCidade slug={slug} />
       <header className="bg-brand-deep relative overflow-hidden px-5 pb-6 pt-5">
         <div className="bg-radial-glow absolute inset-0" aria-hidden />
         <div className="relative mx-auto max-w-lg">
           <div className="flex items-center justify-between gap-3">
             <Logotipo className="h-8 w-auto" priority />
+            {/* Troca de cidade dentro do app: `/` seria a landing de apresentação. */}
             <Link
-              href="/"
+              href="/app?trocar=1"
               className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-white"
             >
               <MapPin className="h-4 w-4" aria-hidden />

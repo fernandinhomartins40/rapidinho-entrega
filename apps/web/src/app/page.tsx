@@ -1,4 +1,5 @@
 import { unstable_cache } from 'next/cache';
+import { headers } from 'next/headers';
 import { prisma } from '@rapidinho/database';
 import Image from 'next/image';
 import { Hero } from '@/components/landing/hero';
@@ -11,6 +12,8 @@ import { ChamadaFinal } from '@/components/landing/chamada-final';
 import { Rodape } from '@/components/landing/rodape';
 import { fonteManuscrita, fonteTitulo } from '@/components/landing/fontes';
 import { MEDIDAS_DA_LANDING } from '@/components/landing/medidas';
+import { GuardaDoApp } from '@/components/landing/guarda-do-app';
+import { SCRIPT_GUARDA_DO_APP } from '@/components/landing/script-do-app';
 
 /**
  * Renderizada sob demanda, não no build: a imagem Docker é construída sem
@@ -49,6 +52,8 @@ const carregarVitrine = unstable_cache(
 
 export default async function HomePage() {
   const { cidades, categorias } = await carregarVitrine();
+  // O nonce da CSP, gerado no middleware: sem ele o script inline é bloqueado.
+  const nonce = (await headers()).get('x-nonce') ?? undefined;
 
   const cidadesDisponiveis = cidades.map((cidade) => ({
     id: cidade.id,
@@ -64,6 +69,9 @@ export default async function HomePage() {
 
   return (
     <div className={`${fonteTitulo.variable} ${fonteManuscrita.variable} bg-[#101112]`}>
+      {/* Primeira coisa da página: dentro do app instalado, sai antes de desenhar. */}
+      <script nonce={nonce} dangerouslySetInnerHTML={{ __html: SCRIPT_GUARDA_DO_APP }} />
+      <GuardaDoApp />
       <Hero />
 
       <main>

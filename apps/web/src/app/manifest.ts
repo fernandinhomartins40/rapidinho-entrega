@@ -14,7 +14,11 @@ export default function manifest(): MetadataRoute.Manifest {
     name: APP_NAME,
     short_name: 'Rapidinho',
     description: 'Mercado, farmácia e restaurante da sua cidade, entregues na sua porta.',
-    start_url: '/',
+    // `id` fixo em '/': sem ele o navegador identifica o app pelo start_url, e
+    // trocá-lo faria cada instalação existente virar um "app diferente".
+    id: '/',
+    // Abre no app, não na landing: quem instalou quer pedir, não conhecer a marca.
+    start_url: '/app',
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',

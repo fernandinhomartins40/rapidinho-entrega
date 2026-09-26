@@ -45,7 +45,7 @@ export default async function CarrinhoPage() {
               cada.
             </p>
             <Button asChild>
-              <Link href="/">Ver lojas</Link>
+              <Link href="/app">Ver lojas</Link>
             </Button>
           </CardContent>
         </Card>
