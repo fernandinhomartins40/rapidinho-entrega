@@ -17,6 +17,10 @@ server {
     }
 
     location / {
+        # www vai direto para o endereço principal, num salto só.
+        if ($host ~* ^www\.(.+)$) {
+            return 301 https://$1$request_uri;
+        }
         return 301 https://$host$request_uri;
     }
 }
@@ -37,6 +41,14 @@ ${HTTP2_DIRECTIVE}
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
     client_max_body_size 25m;
+
+    # Um endereço só: com e sem www são origens diferentes para o navegador,
+    # então login, carrinho e o app instalado (PWA) não se compartilhariam, e
+    # o buscador veria o site duplicado. O www continua no certificado para
+    # que este redirecionamento funcione em HTTPS.
+    if ($host ~* ^www\.(.+)$) {
+        return 301 https://$1$request_uri;
+    }
 
     location / {
         proxy_pass http://127.0.0.1:${DEPLOY_PORT};
