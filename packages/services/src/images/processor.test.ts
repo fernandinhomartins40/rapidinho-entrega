@@ -129,6 +129,7 @@ describe('processamento de imagem', () => {
   it('separa documento pessoal do que é público', () => {
     expect(isPrivateContext('COURIER_DOCUMENT')).toBe(true);
     expect(isPrivateContext('STORE_DOCUMENT')).toBe(true);
+    expect(isPrivateContext('PRESCRIPTION')).toBe(true);
     expect(isPrivateContext('PRODUCT')).toBe(false);
     expect(isPrivateContext('STORE_LOGO')).toBe(false);
   });

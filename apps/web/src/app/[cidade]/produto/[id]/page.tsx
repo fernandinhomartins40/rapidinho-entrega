@@ -44,6 +44,9 @@ export default async function ProdutoPage({
       minWeightGrams: true,
       isAvailable: true,
       pausedUntil: true,
+      stockQuantity: true,
+      prescription: true,
+      ageRestricted: true,
       image: { select: SELECT_IMAGEM },
       store: {
         select: {
@@ -136,7 +139,15 @@ export default async function ProdutoPage({
           porPeso: produto.sellingUnit === 'WEIGHT_KG',
           passoGramas: produto.weightStepGrams ?? 100,
           minimoGramas: produto.minWeightGrams ?? 100,
-          disponivel: produto.isAvailable && !pausado,
+          disponivel:
+            produto.isAvailable &&
+            !pausado &&
+            produto.prescription !== 'CONTROLLED' &&
+            (produto.sellingUnit === 'WEIGHT_KG' || produto.stockQuantity !== 0),
+          esgotado: produto.sellingUnit !== 'WEIGHT_KG' && produto.stockQuantity === 0,
+          estoque: produto.sellingUnit !== 'WEIGHT_KG' ? produto.stockQuantity : null,
+          receita: produto.prescription,
+          maiorDeIdade: produto.ageRestricted,
         }}
         loja={{
           id: produto.store.id,

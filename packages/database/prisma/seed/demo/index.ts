@@ -451,6 +451,9 @@ async function criarLojas(
           // Um ou outro item esgotado, como na vida real.
           isAvailable: !chance(0.03),
           isFeatured: chance(0.08),
+          // Bebida alcoólica do catálogo já avisa "menores de 18" na descrição.
+          ageRestricted: /menores de 18/i.test(produto.descricao ?? ''),
+          prescription: produto.receita ?? 'NONE',
           sortOrder: ordem,
           createdAt: entraEm,
         });
@@ -730,7 +733,9 @@ function montarItens(loja: LojaCriada, pedidoId: string, lotes: Lotes) {
         ),
       );
       const precos = escolhidos.map((sabor) => sabor.precos[tamanho.indice] ?? sabor.precos[0]!);
-      const borda = chance(0.35) ? um(loja.pizza.bordas) : null;
+      const borda = chance(0.35)
+        ? um(loja.pizza.bordas.filter((extra) => extra.nome.startsWith('Borda')))
+        : null;
       const unitario = Math.max(...precos) + (borda?.precoCents ?? 0);
       const itemId = randomUUID();
       lotes.itens.push({

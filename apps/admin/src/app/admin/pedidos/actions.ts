@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { AUDIT_ACTIONS, prisma } from '@rapidinho/database';
+import { AUDIT_ACTIONS, desfazerReservasDoPedido, prisma } from '@rapidinho/database';
 import { notificarUsuario, publishRealtimeMany } from '@rapidinho/services';
 import {
   cancelOrderSchema,
@@ -57,8 +57,8 @@ export async function cancelarPedidoPelaPlataforma(
 
     const motivo = `Cancelado pela plataforma: ${dados.reason}`;
 
-    await prisma.$transaction([
-      prisma.order.update({
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({
         where: { id: pedido.id },
         data: {
           status: 'CANCELLED',
@@ -66,16 +66,13 @@ export async function cancelarPedidoPelaPlataforma(
           cancelReason: motivo,
           cancelledBy: user.id,
         },
-      }),
-      prisma.orderStatusHistory.create({
+      });
+      await tx.orderStatusHistory.create({
         data: { orderId: pedido.id, status: 'CANCELLED', note: motivo, changedById: user.id },
-      }),
-      // Entrega em curso deixa de valer junto com o pedido.
-      prisma.delivery.updateMany({
-        where: { orderId: pedido.id, status: { notIn: ['DELIVERED', 'CANCELLED'] } },
-        data: { status: 'CANCELLED', cancelledAt: new Date() },
-      }),
-    ]);
+      });
+      // Entrega em curso, estoque e cupom voltam junto com o pedido.
+      await desfazerReservasDoPedido(tx, pedido.id);
+    });
 
     const canais = [REALTIME_CHANNELS.store(pedido.storeId), REALTIME_CHANNELS.order(pedido.id)];
     if (pedido.delivery?.courierId)

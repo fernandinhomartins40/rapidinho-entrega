@@ -16,6 +16,8 @@ export interface ProdutoDemo {
   descricao?: string;
   /** Vendido por quilo: o preço é do kg. */
   porKg?: boolean;
+  /** Farmácia: remédio que exige receita, ou controlado (não vende pelo app). */
+  receita?: 'REQUIRED' | 'CONTROLLED';
 }
 
 export interface SecaoDemo {
@@ -27,6 +29,13 @@ const p = (nome: string, precoCents: number, descricao?: string): ProdutoDemo =>
   nome,
   precoCents,
   ...(descricao ? { descricao } : {}),
+});
+
+const comReceita = (nome: string, precoCents: number): ProdutoDemo => ({
+  nome,
+  precoCents,
+  descricao: 'Venda sob prescrição médica: envie a foto da receita no pedido.',
+  receita: 'REQUIRED',
 });
 
 const kg = (nome: string, precoCents: number, descricao?: string): ProdutoDemo => ({
@@ -388,6 +397,21 @@ export const CATALOGO_FARMACIA: SecaoDemo[] = [
     ],
   },
   {
+    nome: 'Medicamentos com receita',
+    produtos: [
+      comReceita('Amoxicilina 500 mg (21 cápsulas)', 2890),
+      comReceita('Azitromicina 500 mg (3 comprimidos)', 3190),
+      comReceita('Losartana 50 mg (30 comprimidos)', 1490),
+      comReceita('Omeprazol 20 mg (28 cápsulas)', 1890),
+      {
+        nome: 'Clonazepam 2 mg (30 comprimidos)',
+        precoCents: 2290,
+        descricao: 'Controle especial: venda só no balcão, com a receita retida.',
+        receita: 'CONTROLLED',
+      },
+    ],
+  },
+  {
     nome: 'Primeiros socorros',
     produtos: [
       p('Curativo adesivo (40 unidades)', 1190),
@@ -443,7 +467,7 @@ export const CATALOGO_FARMACIA: SecaoDemo[] = [
 export interface PizzaDemo {
   tamanhos: { nome: string; maxSabores: number; fatias: number }[];
   sabores: { nome: string; descricao: string; precos: number[]; grupo: string }[];
-  bordas: { nome: string; tipo: 'EDGE' | 'CRUST'; precoCents: number }[];
+  bordas: { nome: string; tipo: 'EDGE' | 'CRUST' | 'TOPPING'; precoCents: number }[];
 }
 
 const salgada = (nome: string, descricao: string, base: number) => ({
@@ -505,6 +529,10 @@ export const PIZZA: PizzaDemo = {
     { nome: 'Borda de cheddar', tipo: 'EDGE', precoCents: 900 },
     { nome: 'Borda de chocolate', tipo: 'EDGE', precoCents: 1000 },
     { nome: 'Massa fina', tipo: 'CRUST', precoCents: 0 },
+    { nome: 'Massa integral', tipo: 'CRUST', precoCents: 500 },
+    { nome: 'Catupiry extra', tipo: 'TOPPING', precoCents: 600 },
+    { nome: 'Bacon extra', tipo: 'TOPPING', precoCents: 700 },
+    { nome: 'Orégano e azeite à parte', tipo: 'TOPPING', precoCents: 0 },
   ],
 };
 

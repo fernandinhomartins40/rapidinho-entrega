@@ -109,6 +109,8 @@ enum MediaContext {
   COURIER_DOCUMENT
   STORE_DOCUMENT
   PIZZA_FLAVOR
+  /// Foto da receita enviada pelo cliente para a farmácia avaliar.
+  PRESCRIPTION
 }
 
 enum OrderStatus {
@@ -475,16 +477,17 @@ model MediaAsset {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  userAvatar       User?             @relation("UserAvatar")
-  storeLogo        Store?            @relation("StoreLogo")
-  storeCover       Store?            @relation("StoreCover")
-  products         Product[]
-  pizzaFlavors     PizzaFlavor[]
-  menuCategories   MenuCategory[]
-  banners          Banner[]
-  storeCategories  StoreCategory[]
-  courierDocuments CourierDocument[]
-  storeDocuments   StoreDocument[]
+  userAvatar         User?             @relation("UserAvatar")
+  storeLogo          Store?            @relation("StoreLogo")
+  storeCover         Store?            @relation("StoreCover")
+  products           Product[]
+  pizzaFlavors       PizzaFlavor[]
+  menuCategories     MenuCategory[]
+  banners            Banner[]
+  storeCategories    StoreCategory[]
+  courierDocuments   CourierDocument[]
+  storeDocuments     StoreDocument[]
+  orderPrescriptions Order[]           @relation("OrderPrescription")
 
   @@index([context])
   @@index([checksum])
@@ -799,6 +802,12 @@ model Product {
   complementGroups ProductComplementGroup[]
   orderItems       OrderItem[]
   cartItems        CartItem[]
+  /// Farmácia: se o produto exige receita. Controlado (Portaria 344/98) não
+  /// pode ser vendido à distância — aparece, mas só se compra no balcão.
+  prescription     PrescriptionRule         @default(NONE)
+  /// Bebida alcoólica e afins: venda só para maiores de 18 (Lei 13.106/15),
+  /// com documento conferido na entrega.
+  ageRestricted    Boolean                  @default(false)
 
   @@index([storeId, isAvailable])
   @@index([categoryId, sortOrder])
@@ -946,8 +955,10 @@ model PizzaExtra {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  orderItems OrderItem[]
-  cartItems  CartItem[]
+  orderItems      OrderItem[]
+  cartItems       CartItem[]
+  cartItemExtras  CartItemPizzaExtra[]
+  orderItemExtras OrderItemPizzaExtra[]
 
   @@index([storeId, kind])
   @@map("pizza_extras")
@@ -1047,6 +1058,7 @@ model CartItem {
 
   complements CartItemComplement[]
   flavors     CartItemPizzaFlavor[]
+  pizzaExtras CartItemPizzaExtra[]
 
   @@index([cartId])
   @@map("cart_items")
@@ -1133,12 +1145,21 @@ model Order {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items            OrderItem[]
-  payment          Payment?
-  delivery         Delivery?
-  statusHistory    OrderStatusHistory[]
-  reviews          Review[]
-  couponRedemption CouponRedemption?
+  items               OrderItem[]
+  payment             Payment?
+  delivery            Delivery?
+  statusHistory       OrderStatusHistory[]
+  reviews             Review[]
+  couponRedemption    CouponRedemption?
+  /// Mercado: o que fazer se um item faltar na separação.
+  substitutionPolicy  SubstitutionPolicy?
+  /// Pedido com item 18+: quando o cliente declarou ter 18 anos. O entregador
+  /// confere o documento com foto na entrega.
+  ageConfirmedAt      DateTime?
+  /// Pedido com remédio que exige receita: foto enviada pelo cliente para o
+  /// farmacêutico avaliar. A receita original é conferida na entrega.
+  prescriptionImageId String?
+  prescriptionImage   MediaAsset?          @relation("OrderPrescription", fields: [prescriptionImageId], references: [id], onDelete: SetNull)
 
   @@index([storeId, status, createdAt])
   @@index([userId, createdAt])
@@ -1179,6 +1200,7 @@ model OrderItem {
 
   complements OrderItemComplement[]
   flavors     OrderItemPizzaFlavor[]
+  pizzaExtras OrderItemPizzaExtra[]
 
   @@index([orderId])
   @@map("order_items")
@@ -1979,4 +2001,49 @@ enum ErrandStatus {
   PICKED_UP
   DELIVERED
   CANCELLED
+}
+
+enum PrescriptionRule {
+  NONE
+  /// Tarja vermelha comum: pede a receita (foto) e o farmacêutico avalia.
+  REQUIRED
+  /// Controle especial: não vende à distância.
+  CONTROLLED
+}
+
+enum SubstitutionPolicy {
+  /// Trocar por similar de mesma qualidade e preço parecido.
+  SUBSTITUTE_SIMILAR
+  /// Chamar o cliente no WhatsApp antes de trocar.
+  CONTACT_ME
+  /// Tirar o item e seguir com o resto.
+  REMOVE_ITEM
+}
+
+/// Bordas, massa e adicionais escolhidos numa pizza do carrinho. Borda e massa
+/// são uma de cada; adicional pode ser mais de um.
+model CartItemPizzaExtra {
+  id         String     @id @default(cuid())
+  cartItemId String
+  cartItem   CartItem   @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
+  extraId    String
+  extra      PizzaExtra @relation(fields: [extraId], references: [id], onDelete: Cascade)
+
+  @@unique([cartItemId, extraId])
+  @@map("cart_item_pizza_extras")
+}
+
+/// Snapshot dos extras da pizza no pedido: nome, tipo e preço do momento.
+model OrderItemPizzaExtra {
+  id          String      @id @default(cuid())
+  orderItemId String
+  orderItem   OrderItem   @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  extraId     String?
+  extra       PizzaExtra? @relation(fields: [extraId], references: [id], onDelete: SetNull)
+  name        String
+  kind        String
+  priceCents  Int
+
+  @@index([orderItemId])
+  @@map("order_item_pizza_extras")
 }

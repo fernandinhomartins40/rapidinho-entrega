@@ -1,4 +1,5 @@
 import { prisma } from '@rapidinho/database';
+import { getStorage } from '@rapidinho/services';
 import { inicioDoDia as inicioDoDiaEmBrasilia } from '@rapidinho/shared';
 import { PainelDePedidos } from './painel-de-pedidos';
 import { getStoreContext, STATUS_EM_ABERTO } from '@/lib/store-context';
@@ -44,6 +45,9 @@ async function carregarPedidos(storeId: string) {
       estimatedReadyAt: true,
       cancelReason: true,
       addressSnapshot: true,
+      substitutionPolicy: true,
+      ageConfirmedAt: true,
+      prescriptionImage: { select: { largeKey: true, mediumKey: true, originalKey: true } },
       payment: { select: { method: true, status: true, changeForCents: true } },
       items: {
         select: {
@@ -58,6 +62,7 @@ async function carregarPedidos(storeId: string) {
           pizzaExtraName: true,
           complements: { select: { id: true, optionName: true, quantity: true, priceCents: true } },
           flavors: { select: { id: true, flavorName: true } },
+          pizzaExtras: { select: { id: true, name: true, kind: true } },
         },
       },
     },
@@ -88,15 +93,27 @@ export default async function PedidosPage() {
 
   return (
     <PainelDePedidos
-      pedidos={pedidos.map(({ userId, ...pedido }) => ({
-        ...pedido,
-        primeiroPedido:
-          userId != null &&
-          (entreguesPorCliente.get(userId) ?? 0) - (pedido.status === 'DELIVERED' ? 1 : 0) === 0,
-        createdAt: pedido.createdAt.toISOString(),
-        acceptedAt: pedido.acceptedAt?.toISOString() ?? null,
-        estimatedReadyAt: pedido.estimatedReadyAt?.toISOString() ?? null,
-      }))}
+      pedidos={await Promise.all(
+        pedidos.map(async ({ userId, prescriptionImage, ...pedido }) => ({
+          ...pedido,
+          // Receita é dado de saúde: fica no armazenamento privado e só abre
+          // por link assinado, que expira.
+          receitaUrl: prescriptionImage
+            ? await getStorage().getSignedUrl(
+                prescriptionImage.largeKey ??
+                  prescriptionImage.mediumKey ??
+                  prescriptionImage.originalKey,
+              )
+            : null,
+          ageConfirmedAt: pedido.ageConfirmedAt?.toISOString() ?? null,
+          primeiroPedido:
+            userId != null &&
+            (entreguesPorCliente.get(userId) ?? 0) - (pedido.status === 'DELIVERED' ? 1 : 0) === 0,
+          createdAt: pedido.createdAt.toISOString(),
+          acceptedAt: pedido.acceptedAt?.toISOString() ?? null,
+          estimatedReadyAt: pedido.estimatedReadyAt?.toISOString() ?? null,
+        })),
+      )}
       loja={{ nome: store.name, alertaSonoro: store.soundAlertEnabled }}
       realtime={realtime}
     />

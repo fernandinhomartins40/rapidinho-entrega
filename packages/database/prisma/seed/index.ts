@@ -480,6 +480,7 @@ async function seedStores(
             sellingUnit: product.sellingUnit ?? 'UNIT',
             weightStepGrams: product.sellingUnit === 'WEIGHT_KG' ? 100 : null,
             minWeightGrams: product.sellingUnit === 'WEIGHT_KG' ? 200 : null,
+            ageRestricted: /cerveja|vinho|vodka|cacha[cç]a/i.test(product.name),
             sortOrder: productIndex,
           },
         });

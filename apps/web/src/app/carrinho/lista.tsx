@@ -92,8 +92,16 @@ export function ListaDoCarrinho({
 
                 {item.indisponivel ? (
                   <Badge variant="warning" className="mt-1">
-                    Indisponível agora
+                    {item.motivoIndisponivel ?? 'Indisponível agora'}
                   </Badge>
+                ) : null}
+                {item.exigeReceita ? (
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Exige receita (foto no fim do pedido)
+                  </p>
+                ) : null}
+                {item.maiorDeIdade ? (
+                  <p className="text-muted-foreground mt-1 text-xs">+18 · documento na entrega</p>
                 ) : null}
 
                 <div className="mt-2 flex items-center justify-between gap-3">

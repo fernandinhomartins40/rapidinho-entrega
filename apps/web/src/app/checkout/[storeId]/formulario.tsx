@@ -4,7 +4,7 @@ import { useActionState, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Banknote, CreditCard, MapPin, QrCode, Store } from 'lucide-react';
-import { Button, Card, CardContent, Input, Label, cn } from '@rapidinho/ui';
+import { Button, Card, CardContent, ImageUploader, Input, Label, cn } from '@rapidinho/ui';
 import { formatCents, PAYMENT_METHOD_LABEL } from '@rapidinho/shared';
 import type { CarrinhoResolvido } from '@/lib/cart';
 import type { ResumoDoCheckout } from '@/lib/checkout';
@@ -24,6 +24,13 @@ interface Endereco {
   isDefault: boolean;
 }
 
+/** Mercado: o que fazer se um item faltar na separação (o cliente escolhe). */
+const POLITICAS_DE_SUBSTITUICAO = [
+  ['CONTACT_ME', 'Me chame no WhatsApp antes de trocar'],
+  ['SUBSTITUTE_SIMILAR', 'Pode trocar por similar (mesma qualidade e preço parecido)'],
+  ['REMOVE_ITEM', 'Pode tirar o item e mandar o resto'],
+] as const;
+
 const ICONE: Record<Pagamento, typeof QrCode> = {
   PIX: QrCode,
   CREDIT_CARD_ONLINE: CreditCard,
@@ -41,6 +48,7 @@ export function FormularioDeCheckout({
   cupom,
   cliente,
   pagamentoSugerido,
+  exigencias,
 }: {
   carrinho: CarrinhoResolvido;
   loja: {
@@ -52,7 +60,10 @@ export function FormularioDeCheckout({
     tempoMin: number;
     cidadeSlug: string;
     cidadeId: string;
+    ehMercado: boolean;
   };
+  /** O que este carrinho exige por causa do ramo dos itens. */
+  exigencias: { maioridade: boolean; receita: boolean; temPesavel: boolean };
   enderecos: Endereco[];
   resumo: ResumoDoCheckout;
   tipo: 'DELIVERY' | 'PICKUP';
@@ -75,6 +86,10 @@ export function FormularioDeCheckout({
   });
   const [troco, setTroco] = useState('');
   const [codigoDoCupom, setCodigoDoCupom] = useState(cupom);
+  const [receitaId, setReceitaId] = useState<string | null>(null);
+  const [maioridade, setMaioridade] = useState(false);
+  const faltaExigencia =
+    (exigencias.receita && !receitaId) || (exigencias.maioridade && !maioridade);
   const atalhosDeTroco = sugerirTroco(resumo.totalCents);
 
   /** Recarrega a página com a escolha na URL: o servidor recalcula tudo. */
@@ -104,6 +119,7 @@ export function FormularioDeCheckout({
         <input type="hidden" name="addressId" value={enderecoEscolhido ?? ''} />
         <input type="hidden" name="couponCode" value={codigoDoCupom} />
         <input type="hidden" name="notes" value={carrinho.notes ?? ''} />
+        <input type="hidden" name="prescriptionImageId" value={receitaId ?? ''} />
 
         {loja.aceitaRetirada ? (
           <Card>
@@ -296,6 +312,84 @@ export function FormularioDeCheckout({
           </CardContent>
         </Card>
 
+        {exigencias.receita ? (
+          // RDC 44/2009: o farmacêutico avalia a receita antes de separar, e a
+          // original é conferida na entrega.
+          <Card>
+            <CardContent className="space-y-3 pt-5">
+              <p className="font-semibold">Receita médica</p>
+              <p className="text-muted-foreground text-sm">
+                Um dos remédios exige receita. Envie a foto para o farmacêutico avaliar — e tenha a
+                receita original em mãos: o entregador confere na entrega.
+              </p>
+              <ImageUploader
+                context="PRESCRIPTION"
+                value={receitaId}
+                onChange={setReceitaId}
+                label="Foto da receita"
+              />
+              {estado.fieldErrors?.prescriptionImageId ? (
+                <p className="text-destructive text-sm">{estado.fieldErrors.prescriptionImageId}</p>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {exigencias.maioridade ? (
+          // Lei 13.106/15: vender bebida alcoólica a menor de 18 é crime.
+          <Card>
+            <CardContent className="pt-5">
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  name="confirmaMaioridade"
+                  value="sim"
+                  checked={maioridade}
+                  onChange={(evento) => setMaioridade(evento.target.checked)}
+                  className="accent-primary mt-0.5 h-5 w-5 shrink-0"
+                />
+                <span className="text-sm">
+                  <span className="block font-semibold">Tenho 18 anos ou mais</span>
+                  <span className="text-muted-foreground">
+                    O pedido tem bebida alcoólica. Na entrega, apresente um documento com foto — sem
+                    ele, o entregador não pode entregar esses itens.
+                  </span>
+                </span>
+              </label>
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {loja.ehMercado ? (
+          <Card>
+            <CardContent className="space-y-3 pt-5">
+              <p className="font-semibold">Se faltar algum item</p>
+              <ul className="space-y-2">
+                {POLITICAS_DE_SUBSTITUICAO.map(([valor, rotulo], indice) => (
+                  <li key={valor}>
+                    <label className="border-input has-[:checked]:border-primary has-[:checked]:bg-accent flex cursor-pointer items-center gap-3 rounded-xl border-2 p-3">
+                      <input
+                        type="radio"
+                        name="substitutionPolicy"
+                        value={valor}
+                        defaultChecked={indice === 0}
+                        className="accent-primary h-5 w-5"
+                      />
+                      <span className="text-sm font-medium">{rotulo}</span>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+              {exigencias.temPesavel ? (
+                <p className="text-muted-foreground text-xs">
+                  Itens vendidos por peso (frutas, carnes, frios) são pesados na separação: o valor
+                  final pode variar um pouco para mais ou para menos.
+                </p>
+              ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
+
         {!cliente.nome ? (
           <Card>
             <CardContent className="space-y-3 pt-5">
@@ -361,7 +455,7 @@ export function FormularioDeCheckout({
               type="submit"
               size="lg"
               block
-              disabled={pendente || resumo.bloqueio != null || pagamento == null}
+              disabled={pendente || resumo.bloqueio != null || pagamento == null || faltaExigencia}
             >
               {pendente ? 'Enviando…' : `Fazer pedido · ${formatCents(resumo.totalCents)}`}
             </Button>

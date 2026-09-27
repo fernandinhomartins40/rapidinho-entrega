@@ -37,6 +37,8 @@ export const ASPECT_RATIOS = {
   COURIER_DOCUMENT: 4 / 3,
   STORE_DOCUMENT: 4 / 3,
   PIZZA_FLAVOR: 1,
+  // Receita em papel, em pé.
+  PRESCRIPTION: 3 / 4,
 } as const;
 
 export type UploadContext = keyof typeof ASPECT_RATIOS;

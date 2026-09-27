@@ -37,6 +37,7 @@ export default async function CheckoutPage({
         acceptsCardOnDelivery: true,
         avgPrepTimeMinutes: true,
         avgDeliveryTimeMinutes: true,
+        segment: true,
         city: { select: { id: true, name: true, slug: true } },
       },
     }),
@@ -101,6 +102,12 @@ export default async function CheckoutPage({
         tempoMin: loja.avgPrepTimeMinutes + loja.avgDeliveryTimeMinutes,
         cidadeSlug: loja.city.slug,
         cidadeId: loja.city.id,
+        ehMercado: loja.segment === 'MARKET',
+      }}
+      exigencias={{
+        maioridade: carrinho.exigeMaioridade,
+        receita: carrinho.exigeReceita,
+        temPesavel: carrinho.itens.some((item) => item.sellingUnit === 'WEIGHT_KG'),
       }}
       enderecos={enderecos}
       resumo={resumo}

@@ -30,6 +30,12 @@ export interface ItemDoCarrinho {
   imagem: { url: string | null; blurDataUrl: string | null };
   /// Indisponível desde que o item entrou no carrinho.
   indisponivel: boolean;
+  /// Por que está indisponível, para dizer ao cliente o que fazer.
+  motivoIndisponivel: string | null;
+  /// Farmácia: se o produto exige receita (controlado nem entra no carrinho).
+  exigeReceita: boolean;
+  /// Bebida alcoólica e afins: venda só para maiores de 18.
+  maiorDeIdade: boolean;
   /// `grupo` e `optionId` seguem para o snapshot do pedido: a comanda precisa
   /// dizer de qual grupo veio cada escolha, mesmo que o grupo mude depois.
   complementos: {
@@ -44,6 +50,9 @@ export interface ItemDoCarrinho {
     tamanho: string;
     /// Preço de cada sabor naquele tamanho, para auditar a regra aplicada.
     sabores: { id: string; nome: string; precoCents: number }[];
+    /// Borda, massa e adicionais escolhidos.
+    extras: { id: string; nome: string; tipo: string; precoCents: number }[];
+    /// Nomes dos extras juntos e a soma dos preços, para a tela e o snapshot.
     extra: string | null;
     extraPrecoCents: number;
   } | null;
@@ -67,6 +76,10 @@ export interface CarrinhoResolvido {
   /// Totais SEM entrega nem desconto: dependem de endereço e cupom.
   subtotalCents: number;
   temIndisponivel: boolean;
+  /// O checkout pede a foto da receita quando algum item exige.
+  exigeReceita: boolean;
+  /// O checkout pede a declaração de maioridade quando algum item é 18+.
+  exigeMaioridade: boolean;
 }
 
 /** Carrega o carrinho do usuário numa loja, já com preços recalculados. */
@@ -107,11 +120,20 @@ export async function carregarCarrinho(
               isAvailable: true,
               pausedUntil: true,
               deletedAt: true,
+              stockQuantity: true,
+              prescription: true,
+              ageRestricted: true,
               image: { select: SELECT_IMAGEM },
             },
           },
           pizzaSize: { select: { id: true, name: true, maxFlavors: true } },
-          pizzaExtra: { select: { name: true, priceCents: true, isAvailable: true } },
+          pizzaExtras: {
+            select: {
+              extra: {
+                select: { id: true, name: true, kind: true, priceCents: true, isAvailable: true },
+              },
+            },
+          },
           complements: {
             select: {
               id: true,
@@ -150,6 +172,19 @@ export async function carregarCarrinho(
   const itens: ItemDoCarrinho[] = [];
 
   for (const item of carrinho.items) {
+    // Borda, massa e adicionais: uma lista só, na ordem borda → massa → resto.
+    const ordemDoTipo = (tipo: string) => (tipo === 'EDGE' ? 0 : tipo === 'CRUST' ? 1 : 2);
+    const extras = item.pizzaExtras
+      .map(({ extra }) => ({
+        id: extra.id,
+        nome: extra.name,
+        tipo: extra.kind,
+        precoCents: extra.priceCents,
+        disponivel: extra.isAvailable,
+      }))
+      .sort((a, b) => ordemDoTipo(a.tipo) - ordemDoTipo(b.tipo));
+    const precoDosExtras = extras.reduce((soma, extra) => soma + extra.precoCents, 0);
+
     const complementos = item.complements.map((complemento) => ({
       id: complemento.id,
       nome: complemento.option.name,
@@ -176,7 +211,7 @@ export async function carregarCarrinho(
           pizza: {
             rule: regraDePizza,
             maxFlavors: item.pizzaSize.maxFlavors,
-            extraPriceCents: item.pizzaExtra?.priceCents ?? 0,
+            extraPriceCents: precoDosExtras,
             flavors: item.flavors.map((sabor) => ({
               flavorId: sabor.flavor.id,
               name: sabor.flavor.name,
@@ -206,12 +241,37 @@ export async function carregarCarrinho(
     // Um item vira indisponível quando qualquer peça dele sai do ar: o
     // produto, um sabor ou um complemento escolhido. Avisar antes do checkout
     // é melhor que a loja recusar o pedido depois.
-    const indisponivel = item.pizzaSize
-      ? item.flavors.some((sabor) => !sabor.flavor.isAvailable)
+    const produtoForaDoAr = item.pizzaSize
+      ? item.flavors.some((sabor) => !sabor.flavor.isAvailable) ||
+        extras.some((extra) => !extra.disponivel)
       : !item.product ||
         item.product.deletedAt != null ||
         !item.product.isAvailable ||
         (item.product.pausedUntil != null && item.product.pausedUntil > new Date());
+
+    // Estoque controlado pela loja: não dá para pedir mais do que ela tem.
+    // Produto por peso não conta unidade (o estoque dele é da balança).
+    const estoque = item.product?.stockQuantity ?? null;
+    const semEstoque =
+      !item.pizzaSize &&
+      item.product?.sellingUnit !== 'WEIGHT_KG' &&
+      estoque != null &&
+      estoque < item.quantity;
+
+    // Controlado (Portaria 344/98): não se vende à distância. Se o produto
+    // passou a controlado depois de entrar no carrinho, sai daqui.
+    const controlado = item.product?.prescription === 'CONTROLLED';
+
+    const motivoIndisponivel = controlado
+      ? 'Remédio controlado: só no balcão da farmácia, com a receita.'
+      : produtoForaDoAr || complementos.some((c) => !c.disponivel)
+        ? 'Indisponível no momento.'
+        : semEstoque
+          ? estoque === 0
+            ? 'Esgotado.'
+            : `Só ${estoque} em estoque — diminua a quantidade.`
+          : null;
+    const indisponivel = motivoIndisponivel != null;
 
     itens.push({
       id: item.id,
@@ -224,7 +284,10 @@ export async function carregarCarrinho(
       sellingUnit: (item.product?.sellingUnit ?? 'UNIT') as 'UNIT' | 'WEIGHT_KG',
       observacao: item.notes,
       imagem: imagemExibivel(item.product?.image),
-      indisponivel: indisponivel || complementos.some((c) => !c.disponivel),
+      indisponivel,
+      motivoIndisponivel,
+      exigeReceita: item.product?.prescription === 'REQUIRED',
+      maiorDeIdade: item.product?.ageRestricted ?? false,
       complementos: complementos.map((c) => ({
         id: c.id,
         optionId: c.optionId,
@@ -243,8 +306,9 @@ export async function carregarCarrinho(
                 sabor.flavor.prices.find((preco) => preco.sizeId === item.pizzaSize?.id)
                   ?.priceCents ?? 0,
             })),
-            extra: item.pizzaExtra?.name ?? null,
-            extraPrecoCents: item.pizzaExtra?.priceCents ?? 0,
+            extras: extras.map(({ disponivel: _disponivel, ...extra }) => extra),
+            extra: extras.length ? extras.map((extra) => extra.nome).join(' + ') : null,
+            extraPrecoCents: precoDosExtras,
           }
         : null,
       unitTotalCents: preco.unitTotalCents,
@@ -267,6 +331,8 @@ export async function carregarCarrinho(
     notes: carrinho.notes,
     subtotalCents: itens.reduce((soma, item) => soma + item.totalCents, 0),
     temIndisponivel: itens.some((item) => item.indisponivel),
+    exigeReceita: itens.some((item) => item.exigeReceita),
+    exigeMaioridade: itens.some((item) => item.maiorDeIdade),
   };
 }
 

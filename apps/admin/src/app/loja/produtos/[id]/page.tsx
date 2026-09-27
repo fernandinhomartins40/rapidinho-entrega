@@ -33,6 +33,8 @@ export default async function EditarProdutoPage({ params }: { params: Promise<{ 
         isAvailable: true,
         isFeatured: true,
         stockQuantity: true,
+        prescription: true,
+        ageRestricted: true,
         sortOrder: true,
         image: { select: SELECT_IMAGEM },
         complementGroups: { select: { groupId: true } },
@@ -69,6 +71,7 @@ export default async function EditarProdutoPage({ params }: { params: Promise<{ 
         }}
         categorias={categorias}
         gruposDeComplemento={gruposDeComplemento}
+        ehFarmacia={store.segment === 'PHARMACY'}
       />
     </div>
   );

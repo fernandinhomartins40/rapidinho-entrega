@@ -36,6 +36,11 @@ interface Props {
     passoGramas: number;
     minimoGramas: number;
     disponivel: boolean;
+    esgotado: boolean;
+    /** Estoque controlado pela loja (null = não controla). */
+    estoque: number | null;
+    receita: 'NONE' | 'REQUIRED' | 'CONTROLLED';
+    maiorDeIdade: boolean;
   };
   loja: { id: string; nome: string; slug: string; aberta: boolean; motivoFechada: string | null };
   grupos: Grupo[];
@@ -167,9 +172,35 @@ export function FormularioDoProduto({ produto, loja, grupos, cidadeSlug }: Props
         </p>
       ) : null}
 
-      {!produto.disponivel ? (
+      {produto.receita === 'CONTROLLED' ? (
+        // Portaria 344/98 e RDC 44/2009: controlado não se vende à distância.
         <p className="bg-destructive/10 text-destructive rounded-xl p-3 text-sm font-medium">
-          Este item está indisponível no momento.
+          Remédio de controle especial: por lei, só é vendido no balcão da farmácia, com a receita.
+          Não dá para pedir pelo app.
+        </p>
+      ) : !produto.disponivel ? (
+        <p className="bg-destructive/10 text-destructive rounded-xl p-3 text-sm font-medium">
+          {produto.esgotado ? 'Esgotado no momento.' : 'Este item está indisponível no momento.'}
+        </p>
+      ) : null}
+
+      {produto.receita === 'REQUIRED' ? (
+        <p className="bg-accent text-accent-foreground rounded-xl p-3 text-sm">
+          <strong>Exige receita.</strong> No fim do pedido você envia a foto para o farmacêutico
+          avaliar, e o entregador confere a receita original na entrega.
+        </p>
+      ) : null}
+
+      {produto.maiorDeIdade ? (
+        <p className="bg-accent text-accent-foreground rounded-xl p-3 text-sm">
+          <strong>Venda para maiores de 18 anos.</strong> Na entrega, apresente um documento com
+          foto.
+        </p>
+      ) : null}
+
+      {produto.disponivel && produto.estoque != null && produto.estoque <= 5 ? (
+        <p className="text-warning-text text-sm font-semibold">
+          {produto.estoque === 1 ? 'Última unidade!' : `Só restam ${produto.estoque} unidades.`}
         </p>
       ) : null}
 
@@ -340,7 +371,11 @@ export function FormularioDoProduto({ produto, loja, grupos, cidadeSlug }: Props
                 variant="outline"
                 size="icon"
                 aria-label="Aumentar quantidade"
-                onClick={() => setQuantidade((atual) => Math.min(99, atual + 1))}
+                // Não passa do estoque que a loja tem.
+                disabled={produto.estoque != null && quantidade >= produto.estoque}
+                onClick={() =>
+                  setQuantidade((atual) => Math.min(produto.estoque ?? 99, 99, atual + 1))
+                }
               >
                 <Plus className="h-5 w-5" aria-hidden />
               </Button>

@@ -27,6 +27,10 @@ export const productSchema = quickProductSchema.extend({
   isAvailable: z.boolean().default(true),
   stockQuantity: z.number().int().min(0).nullable().optional(),
   isFeatured: z.boolean().default(false),
+  /** Farmácia: se exige receita (controlado não se vende à distância). */
+  prescription: z.enum(['NONE', 'REQUIRED', 'CONTROLLED']).default('NONE'),
+  /** Bebida alcoólica e afins: venda só para maiores de 18. */
+  ageRestricted: z.boolean().default(false),
   sortOrder: z.number().int().min(0).default(0),
   complementGroupIds: z.array(cuidSchema).max(30).default([]),
 });
@@ -110,7 +114,8 @@ export const pizzaFlavorSchema = z.object({
 
 export const pizzaExtraSchema = z.object({
   name: z.string().min(2).max(60),
-  kind: z.enum(['CRUST', 'EDGE']).default('EDGE'),
+  /** Borda (uma por pizza), massa (uma) ou adicional (quantos o cliente quiser). */
+  kind: z.enum(['CRUST', 'EDGE', 'TOPPING']).default('EDGE'),
   priceCents: centsSchema.default(0),
   isAvailable: z.boolean().default(true),
 });

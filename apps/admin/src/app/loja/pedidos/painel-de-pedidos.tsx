@@ -19,7 +19,13 @@ import {
 import { aceitarPedido, cancelarPedido, mudarStatusDoPedido } from './actions';
 import { iniciarAlerta, pararAlerta, prepararAudio } from '@/lib/alerta-sonoro';
 import { Comanda, abrirImpressao } from './comanda';
-import { formatarEndereco, lerEndereco, type PedidoNaTela } from './tipos';
+import {
+  extrasDaPizza,
+  formatarEndereco,
+  lerEndereco,
+  POLITICA_DE_SUBSTITUICAO,
+  type PedidoNaTela,
+} from './tipos';
 
 interface Props {
   pedidos: PedidoNaTela[];
@@ -356,8 +362,10 @@ function CartaoDePedido({
                   + {complemento.quantity}× {complemento.optionName}
                 </p>
               ))}
-              {item.pizzaExtraName ? (
-                <p className="text-muted-foreground pl-4">+ {item.pizzaExtraName}</p>
+              {(extrasDaPizza(item.pizzaExtras) ?? item.pizzaExtraName) ? (
+                <p className="text-muted-foreground pl-4">
+                  + {extrasDaPizza(item.pizzaExtras) ?? item.pizzaExtraName}
+                </p>
               ) : null}
               {item.notes ? (
                 <p className="text-warning-text pl-4 font-medium">Obs.: {item.notes}</p>
@@ -412,6 +420,33 @@ function CartaoDePedido({
 
         {pedido.notes ? (
           <p className="text-warning-text text-sm font-medium">Obs.: {pedido.notes}</p>
+        ) : null}
+
+        {/* O que cada ramo exige, onde a loja e o entregador olham. */}
+        {pedido.substitutionPolicy ? (
+          <p className="bg-accent text-accent-foreground rounded-lg px-3 py-2 text-sm font-medium">
+            {POLITICA_DE_SUBSTITUICAO[pedido.substitutionPolicy]}
+          </p>
+        ) : null}
+        {pedido.ageConfirmedAt ? (
+          <p className="bg-warning/15 text-warning-text rounded-lg px-3 py-2 text-sm font-semibold">
+            Item +18: conferir documento com foto na entrega. Sem documento, não entregar a bebida.
+          </p>
+        ) : null}
+        {pedido.receitaUrl ? (
+          <p className="bg-accent text-accent-foreground flex flex-wrap items-center justify-between gap-2 rounded-lg px-3 py-2 text-sm">
+            <span className="font-semibold">
+              Exige receita: avaliar a foto antes de separar e conferir a original na entrega.
+            </span>
+            <a
+              href={pedido.receitaUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-semibold underline"
+            >
+              Ver receita
+            </a>
+          </p>
         ) : null}
         {pedido.cancelReason ? (
           <p className="text-destructive text-sm">Motivo: {pedido.cancelReason}</p>

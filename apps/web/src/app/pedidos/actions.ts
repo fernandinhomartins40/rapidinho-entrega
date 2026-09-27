@@ -4,17 +4,20 @@ import { revalidatePath } from 'next/cache';
 import { prisma } from '@rapidinho/database';
 import { reviewSchema } from '@rapidinho/shared';
 import { runAuthedAction, type ActionResult } from '@/lib/action';
+import { validarItem } from '@/lib/regras-do-item';
 
 /**
  * Ações sobre pedidos já feitos: repetir e avaliar.
  */
 
 /**
- * Recria o carrinho a partir de um pedido anterior.
+ * Recria o carrinho a partir de um pedido anterior — pizza inclusive.
  *
- * O que não existe mais é simplesmente pulado, e o cliente é avisado: exigir
- * que todo o pedido continue disponível faria o botão falhar justamente nos
- * pedidos antigos, que são os que mais dá vontade de repetir.
+ * Cada item passa pelas mesmas regras de quem monta na hora
+ * (`validarItem`): estoque, grupo obrigatório, sabor com preço no tamanho,
+ * remédio controlado. O que não passa mais é pulado, e o cliente é avisado:
+ * exigir que todo o pedido continue igual faria o botão falhar justamente
+ * nos pedidos antigos, que são os que mais dá vontade de repetir.
  */
 export async function pedirNovamente(orderId: string): Promise<ActionResult> {
   return runAuthedAction(async (user) => {
@@ -29,7 +32,11 @@ export async function pedirNovamente(orderId: string): Promise<ActionResult> {
             quantity: true,
             weightGrams: true,
             notes: true,
+            pizzaSizeId: true,
+            pizzaExtraId: true,
             complements: { select: { optionId: true, quantity: true } },
+            flavors: { select: { flavorId: true } },
+            pizzaExtras: { select: { extraId: true } },
           },
         },
       },
@@ -41,33 +48,9 @@ export async function pedirNovamente(orderId: string): Promise<ActionResult> {
       return { ok: false, message: `${pedido.store.name} não está mais disponível.` };
     }
 
-    const agora = new Date();
-    const idsDeProduto = pedido.items
-      .map((item) => item.productId)
-      .filter((id): id is string => id != null);
-
-    const disponiveis = await prisma.product.findMany({
-      where: {
-        id: { in: idsDeProduto },
-        storeId: pedido.storeId,
-        deletedAt: null,
-        isAvailable: true,
-        OR: [{ pausedUntil: null }, { pausedUntil: { lte: agora } }],
-      },
-      select: { id: true },
-    });
-
-    const podeAdicionar = new Set(disponiveis.map((produto) => produto.id));
-    const itens = pedido.items.filter(
-      (item) => item.productId != null && podeAdicionar.has(item.productId),
-    );
-
-    if (itens.length === 0) {
-      return { ok: false, message: 'Nenhum item deste pedido está disponível agora.' };
-    }
-
-    // Complementos também podem ter saído do ar desde então.
-    const idsDeOpcao = itens.flatMap((item) =>
+    // Complemento que saiu do ar some do item em silêncio; se ele era
+    // obrigatório, a regra do grupo barra o item inteiro logo abaixo.
+    const idsDeOpcao = pedido.items.flatMap((item) =>
       item.complements
         .map((complemento) => complemento.optionId)
         .filter((id): id is string => id != null),
@@ -87,19 +70,71 @@ export async function pedirNovamente(orderId: string): Promise<ActionResult> {
       select: { id: true },
     });
 
-    for (const item of itens) {
-      const complementos = item.complements.filter(
-        (complemento) => complemento.optionId && opcaoOk.has(complemento.optionId),
-      );
+    let adicionados = 0;
+
+    for (const original of pedido.items) {
+      // Produto apagado ou tamanho de pizza que não existe mais.
+      if (original.productId == null && original.pizzaSizeId == null) continue;
+
+      const extrasDoPedido = original.pizzaExtras
+        .map((extra) => extra.extraId)
+        .filter((id): id is string => id != null);
+
+      const item = {
+        productId: original.productId ?? undefined,
+        quantity: original.quantity,
+        weightGrams: original.weightGrams ?? undefined,
+        notes: original.notes ?? undefined,
+        complements: original.complements
+          .filter((complemento) => complemento.optionId && opcaoOk.has(complemento.optionId))
+          .map((complemento) => ({
+            optionId: complemento.optionId!,
+            quantity: complemento.quantity,
+          })),
+        pizzaSizeId: original.pizzaSizeId ?? undefined,
+        // Pedido de antes da pizza com vários adicionais: a borda única.
+        pizzaExtraIds:
+          extrasDoPedido.length > 0
+            ? extrasDoPedido
+            : original.pizzaExtraId
+              ? [original.pizzaExtraId]
+              : [],
+        flavorIds: original.flavors
+          .map((sabor) => sabor.flavorId)
+          .filter((id): id is string => id != null),
+      };
+
+      // Sabor apagado: a pizza não é mais a mesma, melhor não adivinhar.
+      if (item.pizzaSizeId && item.flavorIds.length !== original.flavors.length) continue;
+
+      const jaNoCarrinho = item.productId
+        ? ((
+            await prisma.cartItem.aggregate({
+              where: { productId: item.productId, cartId: carrinho.id },
+              _sum: { quantity: true },
+            })
+          )._sum.quantity ?? 0)
+        : 0;
+
+      const regra = await validarItem(pedido.storeId, item, {
+        quantidadeJaNoCarrinho: jaNoCarrinho,
+      });
+      if (!regra.ok) continue;
+
+      const simples =
+        item.productId != null &&
+        item.complements.length === 0 &&
+        item.pizzaSizeId == null &&
+        !item.notes;
 
       // Item simples que já está no carrinho soma na mesma linha (mesma regra
       // de `adicionarAoCarrinho`): repetir o pedido duas vezes não duplica.
-      if (complementos.length === 0 && !item.notes) {
+      if (simples) {
         const igual = await prisma.cartItem.findFirst({
           where: {
             cartId: carrinho.id,
             productId: item.productId,
-            weightGrams: item.weightGrams,
+            weightGrams: item.weightGrams ?? null,
             notes: null,
             pizzaSizeId: null,
             complements: { none: {} },
@@ -113,6 +148,7 @@ export async function pedirNovamente(orderId: string): Promise<ActionResult> {
             where: { id: igual.id },
             data: { quantity: Math.min(99, igual.quantity + item.quantity) },
           });
+          adicionados += 1;
           continue;
         }
       }
@@ -120,29 +156,32 @@ export async function pedirNovamente(orderId: string): Promise<ActionResult> {
       await prisma.cartItem.create({
         data: {
           cartId: carrinho.id,
-          productId: item.productId,
+          productId: item.productId ?? null,
           quantity: item.quantity,
-          weightGrams: item.weightGrams,
-          notes: item.notes,
-          complements: {
-            create: complementos.map((complemento) => ({
-              optionId: complemento.optionId!,
-              quantity: complemento.quantity,
-            })),
-          },
+          weightGrams: item.weightGrams ?? null,
+          notes: item.notes ?? null,
+          pizzaSizeId: item.pizzaSizeId ?? null,
+          pizzaExtras: { create: item.pizzaExtraIds.map((extraId) => ({ extraId })) },
+          complements: { create: item.complements },
+          flavors: { create: item.flavorIds.map((flavorId) => ({ flavorId })) },
         },
       });
+      adicionados += 1;
+    }
+
+    if (adicionados === 0) {
+      return { ok: false, message: 'Nenhum item deste pedido está disponível agora.' };
     }
 
     revalidatePath('/carrinho');
 
-    const pulados = pedido.items.length - itens.length;
+    const pulados = pedido.items.length - adicionados;
 
     return {
       ok: true,
       message:
         pulados > 0
-          ? `${itens.length} item(ns) no carrinho. ${pulados} não está(ão) disponível(is) agora.`
+          ? `${adicionados} item(ns) no carrinho. ${pulados} não está(ão) disponível(is) agora.`
           : 'Itens adicionados ao carrinho.',
     };
   });

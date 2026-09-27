@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { prisma } from '@rapidinho/database';
+import { desfazerReservasDoPedido, prisma } from '@rapidinho/database';
 import { logger, notificarUsuario, publishRealtimeMany } from '@rapidinho/services';
 import {
   canTransition,
@@ -210,8 +210,8 @@ export async function cancelarPedido(entrada: unknown): Promise<ActionResult> {
       };
     }
 
-    await prisma.$transaction([
-      prisma.order.update({
+    await prisma.$transaction(async (tx) => {
+      await tx.order.update({
         where: { id: pedido.id },
         data: {
           status: destino,
@@ -219,16 +219,19 @@ export async function cancelarPedido(entrada: unknown): Promise<ActionResult> {
           cancelReason: dados.reason,
           cancelledBy: access.user.id,
         },
-      }),
-      prisma.orderStatusHistory.create({
+      });
+      await tx.orderStatusHistory.create({
         data: {
           orderId: pedido.id,
           status: destino,
           note: dados.reason,
           changedById: access.user.id,
         },
-      }),
-    ]);
+      });
+      // Estoque de volta à prateleira, corrida do entregador cancelada e
+      // cupom devolvido ao cliente.
+      await desfazerReservasDoPedido(tx, pedido.id);
+    });
 
     await publishRealtimeMany(canaisDoPedido(pedido), REALTIME_EVENTS.orderCancelled, {
       orderId: pedido.id,

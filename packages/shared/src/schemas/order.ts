@@ -36,7 +36,10 @@ export const cartItemSchema = z
       .max(50)
       .default([]),
     pizzaSizeId: cuidSchema.optional(),
+    /** Legado: uma borda só. Os novos pedidos usam `pizzaExtraIds`. */
     pizzaExtraId: cuidSchema.optional(),
+    /** Borda, massa e adicionais da pizza (uma borda e uma massa no máximo). */
+    pizzaExtraIds: z.array(cuidSchema).max(12).default([]),
     flavorIds: z.array(cuidSchema).max(8).default([]),
   })
   .refine((data) => data.productId != null || data.pizzaSizeId != null, {

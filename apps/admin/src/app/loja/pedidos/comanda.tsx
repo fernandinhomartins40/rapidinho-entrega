@@ -3,7 +3,13 @@
 import { useEffect, useState } from 'react';
 import { Button } from '@rapidinho/ui';
 import { formatCents, PAYMENT_METHOD_LABEL } from '@rapidinho/shared';
-import { formatarEndereco, lerEndereco, type PedidoNaTela } from './tipos';
+import {
+  extrasDaPizza,
+  formatarEndereco,
+  lerEndereco,
+  POLITICA_DE_SUBSTITUICAO,
+  type PedidoNaTela,
+} from './tipos';
 
 /**
  * Comanda para impressora térmica.
@@ -190,7 +196,9 @@ export function Comanda({
                   + {complemento.quantity}x {complemento.optionName}
                 </p>
               ))}
-              {item.pizzaExtraName ? <p className="recuo">+ {item.pizzaExtraName}</p> : null}
+              {(extrasDaPizza(item.pizzaExtras) ?? item.pizzaExtraName) ? (
+                <p className="recuo">+ {extrasDaPizza(item.pizzaExtras) ?? item.pizzaExtraName}</p>
+              ) : null}
               {item.notes ? <p className="recuo negrito">OBS: {item.notes}</p> : null}
             </div>
           ))}
@@ -235,6 +243,21 @@ export function Comanda({
             <>
               <p>{separador}</p>
               <p className="negrito">OBS: {pedido.notes}</p>
+            </>
+          ) : null}
+
+          {pedido.substitutionPolicy || pedido.ageConfirmedAt || pedido.receitaUrl ? (
+            <>
+              <p>{separador}</p>
+              {pedido.substitutionPolicy ? (
+                <p className="negrito">{POLITICA_DE_SUBSTITUICAO[pedido.substitutionPolicy]}</p>
+              ) : null}
+              {pedido.ageConfirmedAt ? (
+                <p className="negrito">ITEM +18: CONFERIR DOCUMENTO COM FOTO</p>
+              ) : null}
+              {pedido.receitaUrl ? (
+                <p className="negrito">EXIGE RECEITA: CONFERIR A ORIGINAL NA ENTREGA</p>
+              ) : null}
             </>
           ) : null}
 

@@ -50,6 +50,8 @@ const CONTEXT_PREFIX: Record<UploadContext, string> = {
   // Documentos não vão para o prefixo público: só acessíveis por URL assinada.
   COURIER_DOCUMENT: 'private/entregadores',
   STORE_DOCUMENT: 'private/lojas',
+  // Receita é dado de saúde (LGPD, dado sensível): só por URL assinada.
+  PRESCRIPTION: 'private/receitas',
 };
 
 export function isPrivateContext(context: UploadContext): boolean {

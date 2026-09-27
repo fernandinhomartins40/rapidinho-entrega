@@ -1,4 +1,4 @@
-import { prisma } from '@rapidinho/database';
+import { desfazerReservasDoPedido, prisma } from '@rapidinho/database';
 import { publishRealtimeMany, notificarUsuario } from '@rapidinho/services';
 import { REALTIME_CHANNELS, REALTIME_EVENTS } from '@rapidinho/shared';
 
@@ -49,14 +49,8 @@ export async function expirarPedido(orderId: string): Promise<void> {
       },
     });
 
-    // Devolve o cupom: ele foi contado no checkout e o pedido não aconteceu.
-    if (pedido.couponId) {
-      await tx.couponRedemption.deleteMany({ where: { orderId: pedido.id } });
-      await tx.coupon.update({
-        where: { id: pedido.couponId },
-        data: { usageCount: { decrement: 1 } },
-      });
-    }
+    // Devolve estoque, corrida e cupom: o pedido não aconteceu.
+    await desfazerReservasDoPedido(tx, pedido.id);
   });
 
   await publishRealtimeMany(

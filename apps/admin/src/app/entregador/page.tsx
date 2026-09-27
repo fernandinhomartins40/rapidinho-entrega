@@ -93,6 +93,8 @@ export default async function EntregadorPage() {
             customerPhone: true,
             totalCents: true,
             addressSnapshot: true,
+            ageConfirmedAt: true,
+            prescriptionImageId: true,
             payment: { select: { method: true, status: true, changeForCents: true } },
             store: {
               select: { name: true, phone: true, street: true, number: true, neighborhood: true },

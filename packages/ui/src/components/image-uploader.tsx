@@ -54,6 +54,7 @@ const CONTEXT_HINT: Record<UploadContext, string> = {
   COURIER_DOCUMENT: 'Foto do documento',
   STORE_DOCUMENT: 'Foto do documento',
   PIZZA_FLAVOR: 'Foto do sabor',
+  PRESCRIPTION: 'Foto da receita (a folha inteira, legível)',
 };
 
 export function ImageUploader({

@@ -401,7 +401,7 @@ function Extras({ extras }: { extras: Extra[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Bordas e massas</CardTitle>
+        <CardTitle>Bordas, massas e adicionais</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <form action={acao} className="flex flex-wrap items-end gap-3">
@@ -419,6 +419,7 @@ function Extras({ extras }: { extras: Extra[] }) {
             >
               <option value="EDGE">Borda</option>
               <option value="CRUST">Massa</option>
+              <option value="TOPPING">Adicional</option>
             </select>
           </div>
           <div className="w-32">
@@ -438,7 +439,10 @@ function Extras({ extras }: { extras: Extra[] }) {
         ) : null}
 
         {extras.length === 0 ? (
-          <p className="text-muted-foreground text-sm">Nenhuma borda ou massa cadastrada.</p>
+          <p className="text-muted-foreground text-sm">
+            Nenhuma borda, massa ou adicional cadastrado. O cliente escolhe uma borda, uma massa e
+            quantos adicionais quiser.
+          </p>
         ) : (
           <ul className="space-y-2">
             {extras.map((extra) => (
@@ -447,7 +451,13 @@ function Extras({ extras }: { extras: Extra[] }) {
                   {extra.name}
                   <span className="text-muted-foreground text-sm">
                     {' '}
-                    · {extra.kind === 'CRUST' ? 'Massa' : 'Borda'} · {formatCents(extra.priceCents)}
+                    ·{' '}
+                    {extra.kind === 'CRUST'
+                      ? 'Massa'
+                      : extra.kind === 'TOPPING'
+                        ? 'Adicional'
+                        : 'Borda'}{' '}
+                    · {formatCents(extra.priceCents)}
                   </span>
                 </p>
                 <Button

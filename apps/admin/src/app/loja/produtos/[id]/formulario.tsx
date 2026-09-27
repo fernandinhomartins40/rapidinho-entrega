@@ -34,14 +34,23 @@ interface Props {
     isAvailable: boolean;
     isFeatured: boolean;
     stockQuantity: number | null;
+    prescription: string;
+    ageRestricted: boolean;
     sortOrder: number;
     gruposSelecionados: string[];
   };
+  /** Só farmácia vê o campo de receita. */
+  ehFarmacia?: boolean;
   categorias: { id: string; name: string }[];
   gruposDeComplemento: { id: string; name: string; isRequired: boolean }[];
 }
 
-export function FormularioDeProduto({ produto, categorias, gruposDeComplemento }: Props) {
+export function FormularioDeProduto({
+  produto,
+  categorias,
+  gruposDeComplemento,
+  ehFarmacia = false,
+}: Props) {
   const [estado, acao, pendente] = useActionState(atualizarProduto, ACTION_IDLE);
   const [imagemId, setImagemId] = useState<string | null>(produto.imageId);
   const [porPeso, setPorPeso] = useState(produto.sellingUnit === 'WEIGHT_KG');
@@ -143,6 +152,32 @@ export function FormularioDeProduto({ produto, categorias, gruposDeComplemento }
             defaultChecked={produto.isFeatured}
             label="Destacar no cardápio"
           />
+          <SwitchField
+            name="ageRestricted"
+            defaultChecked={produto.ageRestricted}
+            label="Venda só para maiores de 18 (bebida alcoólica, tabaco)"
+            description="O cliente declara ter 18 anos no pedido e o entregador confere o documento com foto."
+          />
+
+          {ehFarmacia ? (
+            <div className="border-t pt-4">
+              <Label htmlFor="prescription">Receita</Label>
+              <select
+                id="prescription"
+                name="prescription"
+                defaultValue={produto.prescription}
+                className="border-input bg-background min-h-touch mt-1 w-full rounded-lg border px-3"
+              >
+                <option value="NONE">Não exige receita (isento de prescrição)</option>
+                <option value="REQUIRED">
+                  Exige receita (tarja vermelha): cliente envia a foto, farmacêutico avalia
+                </option>
+                <option value="CONTROLLED">
+                  Controle especial (tarja preta/Portaria 344): só no balcão, não vende pelo app
+                </option>
+              </select>
+            </div>
+          ) : null}
 
           <div className="border-t pt-4">
             <SwitchField

@@ -22,6 +22,13 @@ import { runAuthedAction, type ActionResult } from '@/lib/action';
 import { carregarCarrinho } from '@/lib/cart';
 import { calcularCheckout } from '@/lib/checkout';
 
+/** Estoque acabou entre o carrinho e o "Fazer pedido": desfaz a transação. */
+class EstoqueInsuficiente extends Error {
+  constructor(readonly produto: string) {
+    super(`Estoque insuficiente: ${produto}`);
+  }
+}
+
 /**
  * Criação do pedido.
  *
@@ -108,10 +115,53 @@ export async function finalizarPedido(
           select: { startsAt: true, endsAt: true, reason: true },
         },
         subscription: { select: { plan: { select: { commissionRate: true } } } },
+        segment: true,
       },
     });
 
     if (!loja) return { ok: false, message: 'Loja indisponível.' };
+
+    // ---- Regras de cada ramo ------------------------------------------------
+
+    // Bebida alcoólica e afins (Lei 13.106/15): o cliente declara ter 18 anos
+    // e o entregador confere o documento com foto na entrega.
+    if (carrinho.exigeMaioridade && formData.get('confirmaMaioridade') !== 'sim') {
+      return {
+        ok: false,
+        message: 'Confirme que você tem 18 anos ou mais para pedir este item.',
+        fieldErrors: { confirmaMaioridade: 'Obrigatório para item +18' },
+      };
+    }
+
+    // Remédio que exige receita (RDC 44/2009): a foto vai para o farmacêutico
+    // avaliar; a receita original é conferida na entrega. Controlado nem chega
+    // aqui — é barrado ao entrar no carrinho.
+    let receitaId: string | null = null;
+    if (carrinho.exigeReceita) {
+      const enviada = String(formData.get('prescriptionImageId') ?? '');
+      const receita = enviada
+        ? await prisma.mediaAsset.findFirst({
+            where: { id: enviada, context: 'PRESCRIPTION', uploadedById: user.id },
+            select: { id: true },
+          })
+        : null;
+      if (!receita) {
+        return {
+          ok: false,
+          message: 'Envie a foto da receita: a farmácia precisa avaliar antes de separar.',
+          fieldErrors: { prescriptionImageId: 'Foto da receita obrigatória' },
+        };
+      }
+      receitaId = receita.id;
+    }
+
+    // Mercado: o que fazer se um item faltar na separação.
+    const politicas = ['SUBSTITUTE_SIMILAR', 'CONTACT_ME', 'REMOVE_ITEM'] as const;
+    const escolhida = String(formData.get('substitutionPolicy') ?? '');
+    const politicaDeSubstituicao =
+      loja.segment === 'MARKET'
+        ? (politicas.find((politica) => politica === escolhida) ?? 'CONTACT_ME')
+        : null;
 
     // A loja pode ter fechado entre montar o carrinho e confirmar: deixar
     // passar geraria um pedido que ninguém vai preparar.
@@ -214,112 +264,157 @@ export async function finalizarPedido(
         ? 'ACCEPTED'
         : 'RECEIVED';
 
-    const pedido = await prisma.$transaction(async (tx) => {
-      const criado = await tx.order.create({
-        data: {
-          number: numero,
-          cityId: loja.cityId,
-          storeId: loja.id,
-          userId: user.id,
-          type: dados.type,
-          status: statusInicial,
-          customerName: nomeDoCliente,
-          customerPhone: telefoneDoCliente,
-          addressId: endereco?.id ?? null,
-          // Snapshot: o cliente pode editar o endereço depois, e a comanda
-          // precisa continuar mostrando para onde foi entregue.
-          addressSnapshot: endereco
-            ? {
-                street: endereco.street,
-                number: endereco.number,
-                complement: endereco.complement,
-                neighborhood: endereco.neighborhood,
-                referencePoint: endereco.referencePoint,
-                zipCode: endereco.zipCode,
-              }
-            : undefined,
-          subtotalCents: resumo.subtotalCents,
-          deliveryFeeCents: resumo.deliveryFeeCents,
-          discountCents: resumo.discountCents,
-          totalCents: resumo.totalCents,
-          commissionCents: resumo.commissionCents,
-          commissionRate: comissao,
-          couponId: resumo.couponId,
-          notes: dados.notes ?? null,
-          estimatedPrepMinutes: loja.avgPrepTimeMinutes,
-          ...(statusInicial === 'ACCEPTED' ? { acceptedAt: new Date() } : {}),
-          items: {
-            create: carrinho.itens.map((item) => ({
-              productId: item.productId,
-              productName: item.nome,
-              productType: item.pizza ? 'PIZZA' : 'SIMPLE',
-              quantity: item.quantidade,
-              weightGrams: item.weightGrams,
-              unitPriceCents: item.unitTotalCents,
-              totalCents: item.totalCents,
-              notes: item.observacao,
-              pizzaSizeName: item.pizza?.tamanho ?? null,
-              pizzaExtraName: item.pizza?.extra ?? null,
-              complements: {
-                create: item.complementos.map((complemento) => ({
-                  optionId: complemento.optionId,
-                  groupName: complemento.grupo,
-                  optionName: complemento.nome,
-                  quantity: complemento.quantidade,
-                  priceCents: complemento.precoCents,
-                })),
+    let pedido: { id: string; number: string };
+    try {
+      pedido = await prisma.$transaction(async (tx) => {
+        // Baixa do estoque dentro da mesma transação do pedido: se dois clientes
+        // pedirem a última unidade ao mesmo tempo, só o primeiro leva — o
+        // `updateMany` condicionado a "tem estoque suficiente" não deixa passar
+        // o segundo, e a transação inteira volta.
+        const porProduto = new Map<string, number>();
+        for (const item of carrinho.itens) {
+          if (item.productId && item.sellingUnit !== 'WEIGHT_KG') {
+            porProduto.set(item.productId, (porProduto.get(item.productId) ?? 0) + item.quantidade);
+          }
+        }
+        const controlados = await tx.product.findMany({
+          where: { id: { in: [...porProduto.keys()] }, stockQuantity: { not: null } },
+          select: { id: true, name: true },
+        });
+        for (const produto of controlados) {
+          const quantidade = porProduto.get(produto.id)!;
+          const { count } = await tx.product.updateMany({
+            where: { id: produto.id, stockQuantity: { gte: quantidade } },
+            data: { stockQuantity: { decrement: quantidade } },
+          });
+          if (count === 0) throw new EstoqueInsuficiente(produto.name);
+        }
+
+        const criado = await tx.order.create({
+          data: {
+            number: numero,
+            cityId: loja.cityId,
+            storeId: loja.id,
+            userId: user.id,
+            type: dados.type,
+            status: statusInicial,
+            customerName: nomeDoCliente,
+            customerPhone: telefoneDoCliente,
+            addressId: endereco?.id ?? null,
+            // Snapshot: o cliente pode editar o endereço depois, e a comanda
+            // precisa continuar mostrando para onde foi entregue.
+            addressSnapshot: endereco
+              ? {
+                  street: endereco.street,
+                  number: endereco.number,
+                  complement: endereco.complement,
+                  neighborhood: endereco.neighborhood,
+                  referencePoint: endereco.referencePoint,
+                  zipCode: endereco.zipCode,
+                }
+              : undefined,
+            subtotalCents: resumo.subtotalCents,
+            deliveryFeeCents: resumo.deliveryFeeCents,
+            discountCents: resumo.discountCents,
+            totalCents: resumo.totalCents,
+            commissionCents: resumo.commissionCents,
+            commissionRate: comissao,
+            couponId: resumo.couponId,
+            notes: dados.notes ?? null,
+            substitutionPolicy: politicaDeSubstituicao,
+            ageConfirmedAt: carrinho.exigeMaioridade ? new Date() : null,
+            prescriptionImageId: receitaId,
+            estimatedPrepMinutes: loja.avgPrepTimeMinutes,
+            ...(statusInicial === 'ACCEPTED' ? { acceptedAt: new Date() } : {}),
+            items: {
+              create: carrinho.itens.map((item) => ({
+                productId: item.productId,
+                productName: item.nome,
+                productType: item.pizza ? 'PIZZA' : 'SIMPLE',
+                quantity: item.quantidade,
+                weightGrams: item.weightGrams,
+                unitPriceCents: item.unitTotalCents,
+                totalCents: item.totalCents,
+                notes: item.observacao,
+                pizzaSizeName: item.pizza?.tamanho ?? null,
+                pizzaExtraName: item.pizza?.extra ?? null,
+                complements: {
+                  create: item.complementos.map((complemento) => ({
+                    optionId: complemento.optionId,
+                    groupName: complemento.grupo,
+                    optionName: complemento.nome,
+                    quantity: complemento.quantidade,
+                    priceCents: complemento.precoCents,
+                  })),
+                },
+                flavors: {
+                  create: (item.pizza?.sabores ?? []).map((sabor) => ({
+                    flavorId: sabor.id,
+                    flavorName: sabor.nome,
+                    priceCents: sabor.precoCents,
+                  })),
+                },
+                pizzaExtraPriceCents: item.pizza?.extraPrecoCents ?? null,
+                pizzaExtras: {
+                  create: (item.pizza?.extras ?? []).map((extra) => ({
+                    extraId: extra.id,
+                    name: extra.nome,
+                    kind: extra.tipo,
+                    priceCents: extra.precoCents,
+                  })),
+                },
+              })),
+            },
+            statusHistory: {
+              create: { status: statusInicial, changedById: user.id },
+            },
+            payment: {
+              create: {
+                method: dados.paymentMethod,
+                // Sempre PENDING no início: Pix e cartão aguardam o webhook,
+                // dinheiro e maquininha são acertados na entrega.
+                status: 'PENDING',
+                provider: pagamentoOnline ? undefined : 'OFFLINE',
+                amountCents: resumo.totalCents,
+                changeForCents: dados.changeForCents ?? null,
+                platformFeeCents: resumo.commissionCents,
+                settlementMode: loja.settlementMode,
               },
-              flavors: {
-                create: (item.pizza?.sabores ?? []).map((sabor) => ({
-                  flavorId: sabor.id,
-                  flavorName: sabor.nome,
-                  priceCents: sabor.precoCents,
-                })),
-              },
-              pizzaExtraPriceCents: item.pizza?.extraPrecoCents ?? null,
-            })),
-          },
-          statusHistory: {
-            create: { status: statusInicial, changedById: user.id },
-          },
-          payment: {
-            create: {
-              method: dados.paymentMethod,
-              // Sempre PENDING no início: Pix e cartão aguardam o webhook,
-              // dinheiro e maquininha são acertados na entrega.
-              status: 'PENDING',
-              provider: pagamentoOnline ? undefined : 'OFFLINE',
-              amountCents: resumo.totalCents,
-              changeForCents: dados.changeForCents ?? null,
-              platformFeeCents: resumo.commissionCents,
-              settlementMode: loja.settlementMode,
             },
           },
-        },
-        select: { id: true, number: true },
+          select: { id: true, number: true },
+        });
+
+        if (resumo.couponId) {
+          await tx.couponRedemption.create({
+            data: {
+              couponId: resumo.couponId,
+              userId: user.id,
+              orderId: criado.id,
+              discountCents: resumo.discountCents,
+            },
+          });
+          await tx.coupon.update({
+            where: { id: resumo.couponId },
+            data: { usageCount: { increment: 1 } },
+          });
+        }
+
+        // O carrinho só some depois que o pedido existe: falhar no meio deixaria
+        // o cliente sem carrinho e sem pedido.
+        await tx.cart.delete({ where: { id: carrinho.id } });
+
+        return criado;
       });
-
-      if (resumo.couponId) {
-        await tx.couponRedemption.create({
-          data: {
-            couponId: resumo.couponId,
-            userId: user.id,
-            orderId: criado.id,
-            discountCents: resumo.discountCents,
-          },
-        });
-        await tx.coupon.update({
-          where: { id: resumo.couponId },
-          data: { usageCount: { increment: 1 } },
-        });
+    } catch (error) {
+      if (error instanceof EstoqueInsuficiente) {
+        return {
+          ok: false,
+          message: `Acabou o estoque de "${error.produto}" enquanto você finalizava. Ajuste o carrinho e tente de novo.`,
+        };
       }
-
-      // O carrinho só some depois que o pedido existe: falhar no meio deixaria
-      // o cliente sem carrinho e sem pedido.
-      await tx.cart.delete({ where: { id: carrinho.id } });
-
-      return criado;
-    });
+      throw error;
+    }
 
     if (dados.paymentMethod === 'PIX') {
       await gerarCobrancaPix({

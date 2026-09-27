@@ -42,6 +42,10 @@ interface MinhaCorrida {
     customerPhone: string;
     totalCents: number;
     addressSnapshot: unknown;
+    /** Pedido com item +18: conferir documento com foto. */
+    ageConfirmedAt: Date | string | null;
+    /** Pedido com remédio que exige receita: conferir a original. */
+    prescriptionImageId: string | null;
     payment: { method: string; status: string; changeForCents: number | null } | null;
     store: {
       name: string;
@@ -251,6 +255,20 @@ export function PainelDoEntregador({
                             </p>
                           ) : null}
                         </div>
+                      ) : null}
+
+                      {corrida.order.ageConfirmedAt ? (
+                        // Lei 13.106/15: sem documento com foto de maior de
+                        // idade, a bebida volta para a loja.
+                        <p className="bg-warning/15 text-warning-text rounded-lg p-3 text-sm font-semibold">
+                          Tem item +18: confira o documento com foto do cliente. Menor de idade ou
+                          sem documento, não entregue esses itens.
+                        </p>
+                      ) : null}
+                      {corrida.order.prescriptionImageId ? (
+                        <p className="bg-accent text-accent-foreground rounded-lg p-3 text-sm font-semibold">
+                          Tem remédio com receita: confira a receita original na entrega.
+                        </p>
                       ) : null}
 
                       <p className="font-semibold">
