@@ -94,6 +94,17 @@ export function Rodape() {
                 </Link>
               </li>
             ))}
+            <li>
+              {/* Login da equipe da plataforma. O painel é outro app, em subdomínio
+                  próprio; `destino` leva direto à área de super admin. */}
+              <a
+                href={`${getPublicEnv().NEXT_PUBLIC_ADMIN_URL}/entrar?destino=${encodeURIComponent('/admin')}`}
+                className={estiloLink.replace('text-sm', 'text-xs')}
+                rel="nofollow"
+              >
+                Acesso administrativo
+              </a>
+            </li>
           </ul>
           <p>Entrega de confiança, sempre com você.</p>
         </div>

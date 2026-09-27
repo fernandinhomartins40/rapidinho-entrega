@@ -59,6 +59,7 @@ export const AUDIT_ACTIONS = {
   impersonationEnded: 'impersonation.ended',
   payoutCreated: 'payout.created',
   payoutPaid: 'payout.paid',
+  orderCancelledByPlatform: 'order.cancelled_by_platform',
   dataExported: 'lgpd.data_exported',
   dataDeleted: 'lgpd.data_deleted',
 } as const;

@@ -15,6 +15,7 @@ import {
   MapPin,
   Megaphone,
   Menu,
+  ShoppingBag,
   Users,
   Wallet,
   X,
@@ -26,6 +27,7 @@ import { sair } from '@/app/actions';
 
 const NAV = [
   { href: '/admin', label: 'Visão geral', icon: LayoutDashboard, exact: true },
+  { href: '/admin/pedidos', label: 'Pedidos', icon: ShoppingBag },
   { href: '/admin/cidades', label: 'Cidades', icon: MapPin },
   { href: '/admin/lojas', label: 'Lojas', icon: Building2 },
   { href: '/admin/usuarios', label: 'Usuários', icon: Users },

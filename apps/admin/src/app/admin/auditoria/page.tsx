@@ -45,6 +45,7 @@ const ACAO_LABEL: Record<string, string> = {
   'impersonation.ended': 'Saiu do modo lojista',
   'payout.created': 'Gerou repasse',
   'payout.paid': 'Confirmou repasse',
+  'order.cancelled_by_platform': 'Cancelou pedido',
   'lgpd.data_exported': 'Exportou dados (LGPD)',
   'lgpd.data_deleted': 'Excluiu dados (LGPD)',
 };

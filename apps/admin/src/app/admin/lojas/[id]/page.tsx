@@ -13,6 +13,7 @@ import {
 } from '@rapidinho/shared';
 import { Badge, Card, CardContent, CardHeader, CardTitle } from '@rapidinho/ui';
 import { AcoesDaLoja } from './acoes-da-loja';
+import { dataHora } from '../../pedidos/formatos';
 
 export const dynamic = 'force-dynamic';
 
@@ -218,8 +219,14 @@ export default async function LojaDetalhePage({ params }: { params: Promise<{ id
         </Card>
 
         <Card className="lg:col-span-2">
-          <CardHeader>
+          <CardHeader className="flex-row items-center justify-between space-y-0">
             <CardTitle>Últimos pedidos</CardTitle>
+            <Link
+              href={`/admin/pedidos?aba=todos&periodo=tudo&loja=${loja.id}`}
+              className="text-primary-text text-sm font-medium hover:underline"
+            >
+              Ver todos
+            </Link>
           </CardHeader>
           <CardContent>
             {ultimosPedidos.length === 0 ? (
@@ -228,10 +235,13 @@ export default async function LojaDetalhePage({ params }: { params: Promise<{ id
               <ul className="divide-y text-sm">
                 {ultimosPedidos.map((pedido) => (
                   <li key={pedido.id} className="flex items-center justify-between py-2">
-                    <span className="font-medium">#{pedido.number}</span>
-                    <span className="text-muted-foreground">
-                      {pedido.createdAt.toLocaleString('pt-BR')}
-                    </span>
+                    <Link
+                      href={`/admin/pedidos/${pedido.id}`}
+                      className="text-primary-text font-medium hover:underline"
+                    >
+                      #{pedido.number}
+                    </Link>
+                    <span className="text-muted-foreground">{dataHora(pedido.createdAt)}</span>
                     <span className="font-medium">{formatCents(pedido.totalCents)}</span>
                   </li>
                 ))}
