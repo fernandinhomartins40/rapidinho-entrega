@@ -76,7 +76,7 @@ export function ConviteDeInstalacao() {
   return (
     <div className="pb-safe fixed inset-x-0 bottom-16 z-50 px-4">
       <div className="bg-card mx-auto flex max-w-lg items-center gap-3 rounded-2xl border p-3 shadow-lg">
-        <Download className="text-primary h-6 w-6 shrink-0" aria-hidden />
+        <Download className="text-primary-text h-6 w-6 shrink-0" aria-hidden />
         <div className="min-w-0 flex-1">
           <p className="font-semibold leading-tight">Instalar o Rapidinho</p>
           <p className="text-muted-foreground text-sm">Abre mais rápido e funciona sem internet.</p>

@@ -1,11 +1,84 @@
 import Image from 'next/image';
-import type { ArteDoPrato as Arte } from '@rapidinho/shared';
+import {
+  Apple,
+  Baby,
+  Beef,
+  Beer,
+  CakeSlice,
+  Candy,
+  Carrot,
+  ChefHat,
+  Citrus,
+  Coffee,
+  Cookie,
+  Croissant,
+  CupSoda,
+  Drumstick,
+  Droplet,
+  Egg,
+  Fish,
+  Flame,
+  Grape,
+  IceCreamCone,
+  Milk,
+  Package,
+  PawPrint,
+  Pill,
+  Pizza,
+  Salad,
+  Sandwich,
+  ShoppingBasket,
+  Soup,
+  SprayCan,
+  Utensils,
+  Wheat,
+  Wine,
+  type LucideIcon,
+} from 'lucide-react';
+import type { ArteDoPrato as Arte, IconeDoPrato } from '@rapidinho/shared';
 import { cn } from '@rapidinho/ui';
 
+const ICONES: Record<IconeDoPrato, LucideIcon> = {
+  Apple,
+  Baby,
+  Beef,
+  Beer,
+  CakeSlice,
+  Candy,
+  Carrot,
+  ChefHat,
+  Citrus,
+  Coffee,
+  Cookie,
+  Croissant,
+  CupSoda,
+  Drumstick,
+  Droplet,
+  Egg,
+  Fish,
+  Flame,
+  Grape,
+  IceCreamCone,
+  Milk,
+  Package,
+  PawPrint,
+  Pill,
+  Pizza,
+  Salad,
+  Sandwich,
+  ShoppingBasket,
+  Soup,
+  SprayCan,
+  Utensils,
+  Wheat,
+  Wine,
+};
+
 /**
- * A cara do prato: a foto da loja quando existe; quando não, uma arte feita do
- * próprio prato (emoji grande sobre o degradê do tipo). Hoje nenhuma loja
- * subiu foto — sem isto, uma vitrine de pratos seria uma parede de cinza.
+ * A cara do prato: a foto da loja quando existe; quando não, o ícone do tipo
+ * em traço fino sobre um tom pastel. Hoje nenhuma loja subiu foto — sem isto
+ * a vitrine seria uma parede de cinza, e com desenho colorido grande ficava
+ * com cara de livro infantil.
  */
 export function ArteDoPrato({
   imagem,
@@ -18,7 +91,7 @@ export function ArteDoPrato({
   imagem: string | null;
   arte: Arte;
   nome: string;
-  tamanho?: 'sm' | 'md' | 'lg';
+  tamanho?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
   prioridade?: boolean;
 }) {
@@ -37,31 +110,28 @@ export function ArteDoPrato({
     );
   }
 
+  const Icone = ICONES[arte.icone] ?? Utensils;
+
   return (
     <div
       role="img"
       aria-label={nome}
       className={cn('relative flex items-center justify-center overflow-hidden', className)}
-      style={{ background: `linear-gradient(145deg, ${arte.fundo[0]}, ${arte.fundo[1]})` }}
+      style={{ backgroundColor: arte.tom.fundo, color: arte.tom.tinta }}
     >
-      {/* Brilho e textura: sem isso o degradê liso parece placeholder. */}
-      <span
+      <Icone
         aria-hidden
-        className="absolute inset-0 opacity-30"
-        style={{
-          background:
-            'radial-gradient(circle at 30% 20%, rgba(255,255,255,0.55), transparent 45%), radial-gradient(circle at 80% 90%, rgba(0,0,0,0.35), transparent 50%)',
-        }}
-      />
-      <span
-        aria-hidden
+        strokeWidth={1.25}
         className={cn(
-          'relative select-none drop-shadow-[0_10px_18px_rgba(0,0,0,0.35)]',
-          tamanho === 'lg' ? 'text-[6.5rem]' : tamanho === 'md' ? 'text-6xl' : 'text-4xl',
+          tamanho === 'lg'
+            ? 'h-24 w-24'
+            : tamanho === 'md'
+              ? 'h-14 w-14'
+              : tamanho === 'sm'
+                ? 'h-10 w-10'
+                : 'h-7 w-7',
         )}
-      >
-        {arte.emoji}
-      </span>
+      />
     </div>
   );
 }

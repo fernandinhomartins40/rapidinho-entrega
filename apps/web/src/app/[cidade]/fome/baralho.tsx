@@ -4,7 +4,19 @@ import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { ChevronRight, RotateCcw, Users } from 'lucide-react';
+import {
+  ChevronRight,
+  Clock,
+  Coins,
+  Heart,
+  Leaf,
+  RotateCcw,
+  SearchX,
+  Shuffle,
+  UtensilsCrossed,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import {
   combinaComAVontade,
   CURTIDAS_PARA_DECIDIR,
@@ -18,6 +30,16 @@ import { ArteDoPrato } from '@/components/app/arte-do-prato';
 import type { PratoNaVitrine } from '@/lib/pratos';
 import { criarSessaoEmGrupo } from './actions';
 import { CartaoDoBaralho } from './cartao';
+
+const ICONE_DA_VONTADE: Record<Vontade, LucideIcon> = {
+  'tanto-faz': Shuffle,
+  fome: UtensilsCrossed,
+  rapido: Clock,
+  barato: Coins,
+  doce: Heart,
+  dividir: Users,
+  leve: Leaf,
+};
 
 /**
  * "Tô com fome", sozinho.
@@ -85,7 +107,7 @@ export function Baralho({
               'Seus finalistas'
             ) : (
               <>
-                Tô com fome. <span className="text-primary">Mas de quê?</span>
+                Tô com fome. <span className="text-primary-text">Mas de quê?</span>
               </>
             )}
           </h1>
@@ -102,24 +124,27 @@ export function Baralho({
       {!decidido ? (
         <>
           <ul className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5" aria-label="Vontade">
-            {VONTADES.map((opcao) => (
-              <li key={opcao.id}>
-                <button
-                  type="button"
-                  aria-pressed={vontade === opcao.id}
-                  onClick={() => setVontade(opcao.id)}
-                  className={cn(
-                    'min-h-touch flex items-center gap-1.5 whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition-colors',
-                    vontade === opcao.id
-                      ? 'border-primary bg-primary text-primary-foreground'
-                      : 'bg-secondary border-transparent',
-                  )}
-                >
-                  <span aria-hidden>{opcao.emoji}</span>
-                  {opcao.rotulo}
-                </button>
-              </li>
-            ))}
+            {VONTADES.map((opcao) => {
+              const Icone = ICONE_DA_VONTADE[opcao.id];
+              return (
+                <li key={opcao.id}>
+                  <button
+                    type="button"
+                    aria-pressed={vontade === opcao.id}
+                    onClick={() => setVontade(opcao.id)}
+                    className={cn(
+                      'min-h-touch flex items-center gap-1.5 whitespace-nowrap rounded-full border px-4 text-sm font-semibold transition-colors',
+                      vontade === opcao.id
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'bg-secondary border-transparent',
+                    )}
+                  >
+                    <Icone className="h-4 w-4" aria-hidden />
+                    {opcao.rotulo}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
 
           <Progresso curtidos={curtidos.length} />
@@ -132,9 +157,11 @@ export function Baralho({
             />
           ) : (
             <div className="bg-card rounded-3xl border p-8 text-center">
-              <p className="text-4xl" aria-hidden>
-                🤔
-              </p>
+              <SearchX
+                className="text-muted-foreground mx-auto h-9 w-9"
+                strokeWidth={1.5}
+                aria-hidden
+              />
               <p className="mt-3 font-bold">Acabaram os pratos desta vontade.</p>
               <p className="text-muted-foreground mt-1 text-sm">
                 Troque a vontade aí em cima ou recomece do zero.
@@ -209,7 +236,7 @@ function Finalistas({
                 </span>
               </span>
               <span className="shrink-0 text-right">
-                <span className="text-primary block font-extrabold">
+                <span className="text-primary-text block font-extrabold">
                   {formatCents(prato.precoCents)}
                 </span>
                 <span className="text-primary-text inline-flex items-center text-sm font-semibold">
@@ -247,7 +274,7 @@ function DecidirJunto({ cidadeSlug, pratos }: { cidadeSlug: string; pratos: Prat
         onClick={() => setAberto(true)}
         className="bg-secondary flex shrink-0 flex-col items-center gap-0.5 rounded-2xl px-3 py-2 text-xs font-bold"
       >
-        <Users className="text-primary h-5 w-5" aria-hidden />
+        <Users className="text-primary-text h-5 w-5" aria-hidden />
         Decidir
         <br />
         junto
@@ -257,7 +284,7 @@ function DecidirJunto({ cidadeSlug, pratos }: { cidadeSlug: string; pratos: Prat
 
   return (
     <div className="bg-card fixed inset-x-4 top-20 z-50 mx-auto max-w-md space-y-3 rounded-3xl border p-5 shadow-2xl">
-      <p className="text-lg font-extrabold">Decidir junto 💛</p>
+      <p className="text-lg font-extrabold">Decidir junto</p>
       <p className="text-muted-foreground text-sm">
         Você manda um link. Cada um passa os mesmos pratos no próprio celular e, quando todos
         curtirem o mesmo, dá match.

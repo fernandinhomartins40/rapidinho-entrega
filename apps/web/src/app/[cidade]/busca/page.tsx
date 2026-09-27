@@ -6,6 +6,7 @@ import { Card, CardContent } from '@rapidinho/ui';
 import { formatCents, isStoreOpen } from '@rapidinho/shared';
 import { CartaoDeLoja, type LojaNaVitrine } from '@/components/app/cartao-de-loja';
 import { imagemExibivel, SELECT_IMAGEM } from '@/lib/media';
+import { produtosDasLojas } from '@/lib/produtos-da-loja';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Buscar' };
@@ -107,6 +108,7 @@ async function buscar(citySlug: string, termo: string) {
         isPausedUntil: true,
         pauseReason: true,
         sellsAtCounterPrice: true,
+        segment: true,
         category: { select: { name: true, slug: true } },
         logo: { select: SELECT_IMAGEM },
         hours: { select: { weekday: true, opensAt: true, closesAt: true, isActive: true } },
@@ -135,6 +137,15 @@ async function buscar(citySlug: string, termo: string) {
     }),
   ]);
 
+  const produtosDasLojasAchadas = await produtosDasLojas(
+    lojas.map((loja) => ({
+      id: loja.id,
+      slug: loja.slug,
+      segmento: loja.segment,
+      cidadeSlug: citySlug,
+    })),
+  );
+
   const comStatus: LojaNaVitrine[] = lojas.map((loja) => {
     const abertura = isStoreOpen({
       hours: loja.hours,
@@ -161,6 +172,7 @@ async function buscar(citySlug: string, termo: string) {
       imagem: imagemExibivel(loja.logo),
       patrocinada: false,
       precoDeBalcao: loja.sellsAtCounterPrice,
+      produtos: produtosDasLojasAchadas.get(loja.id) ?? [],
     };
   });
 

@@ -19,6 +19,7 @@ export function selectDaLojaNaVitrine(agora: Date) {
     isPausedUntil: true,
     pauseReason: true,
     sellsAtCounterPrice: true,
+    segment: true,
     city: { select: { slug: true } },
     category: { select: { name: true, slug: true } },
     logo: { select: SELECT_IMAGEM },

@@ -25,7 +25,7 @@ export default async function ContaPage() {
       <Card>
         <CardContent className="flex items-center gap-3 pt-5">
           <span className="bg-accent flex h-12 w-12 items-center justify-center rounded-full">
-            <User className="text-primary h-6 w-6" aria-hidden />
+            <User className="text-primary-text h-6 w-6" aria-hidden />
           </span>
           <div className="min-w-0">
             <p className="truncate font-bold">{user.name ?? 'Cliente'}</p>

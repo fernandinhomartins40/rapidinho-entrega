@@ -23,7 +23,7 @@ export function FormularioDeCidade() {
   if (estado.ok) {
     return (
       <div className="bg-card mt-6 space-y-3 rounded-3xl border p-6 text-center" role="status">
-        <PartyPopper className="text-primary mx-auto h-10 w-10" aria-hidden />
+        <PartyPopper className="text-primary-text mx-auto h-10 w-10" aria-hidden />
         <p className="text-xl font-extrabold">Pedido registrado!</p>
         <p className="text-muted-foreground">
           {estado.naFila === 1
@@ -71,7 +71,7 @@ export function FormularioDeCidade() {
                   onChange={() => setPerfil(opcao.valor)}
                   className="sr-only"
                 />
-                <Icone className={cn('h-6 w-6', ativo && 'text-primary')} aria-hidden />
+                <Icone className={cn('h-6 w-6', ativo && 'text-primary-text')} aria-hidden />
                 {opcao.rotulo}
               </label>
             );

@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { Moon } from 'lucide-react';
 import { prisma } from '@rapidinho/database';
 import { getCurrentUser } from '@rapidinho/auth';
 import { pratosDaCidade } from '@/lib/pratos';
@@ -30,9 +31,7 @@ export default async function FomePage({ params }: { params: Promise<{ cidade: s
     <main className="mx-auto max-w-lg px-5 pb-6 pt-[max(1.25rem,env(safe-area-inset-top))]">
       {pratos.length === 0 ? (
         <div className="bg-card mt-10 rounded-3xl border p-8 text-center">
-          <p className="text-4xl" aria-hidden>
-            😴
-          </p>
+          <Moon className="text-muted-foreground mx-auto h-9 w-9" strokeWidth={1.5} aria-hidden />
           <p className="mt-3 font-bold">Nenhuma loja de comida aberta agora em {cidade.name}.</p>
           <p className="text-muted-foreground mt-1 text-sm">
             Volte mais tarde — ou veja mercados e farmácias na tela inicial.

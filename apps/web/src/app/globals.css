@@ -19,62 +19,64 @@
 }
 
 /*
- * Tema do aplicativo: preto com o amarelo da marca, como a arte do celular na
- * landing. Fica aqui, e não no pacote de UI, porque o painel da loja continua
- * claro — é tela de balcão, usada o dia inteiro sob luz de loja.
+ * Tema do aplicativo: claro, com o preto da marca só no topo (logo, endereço
+ * e busca, como na arte do celular) e o amarelo reservado para ação e
+ * destaque. Fundo off-white e cartões brancos: lê bem no sol e não cansa.
+ * Fica aqui, e não no pacote de UI, porque o painel da loja tem o próprio
+ * tema.
  *
  * Sem `@layer`: estas regras precisam vencer as do pacote, que moram na camada
- * base. A landing não usa esses tokens (tem as cores da arte fixas), então ela
- * segue igual.
+ * base. A landing não usa esses tokens (tem as cores da arte fixas).
  */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
-  --background: 240 7% 5%;
-  --foreground: 0 0% 98%;
+  --background: 40 20% 97%;
+  --foreground: 220 14% 10%;
 
-  --card: 240 5% 10%;
-  --card-foreground: 0 0% 98%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 14% 10%;
 
-  --popover: 240 5% 11%;
-  --popover-foreground: 0 0% 98%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 220 14% 10%;
 
-  /* Amarelo da arte (#FFB900). Sobre ele o texto é preto: 11:1. */
+  /* Amarelo da arte (#FFB900) como preenchimento; o texto sobre ele é preto. */
   --primary: 44 100% 50%;
-  --primary-foreground: 240 10% 6%;
-  /* Sobre o fundo preto o amarelo já passa folgado como texto (11:1). */
-  --primary-text: 44 100% 55%;
+  --primary-foreground: 220 14% 8%;
+  /* Como TEXTO sobre fundo claro o amarelo some (1,7:1): âmbar escuro, 5:1. */
+  --primary-text: 32 95% 30%;
 
-  --secondary: 240 5% 15%;
-  --secondary-foreground: 0 0% 96%;
+  --secondary: 40 12% 93%;
+  --secondary-foreground: 220 14% 12%;
 
-  --muted: 240 5% 14%;
-  --muted-foreground: 240 5% 68%;
+  --muted: 40 12% 94%;
+  --muted-foreground: 220 8% 40%;
 
-  --accent: 44 45% 14%;
-  --accent-foreground: 44 100% 70%;
+  --accent: 44 100% 95%;
+  --accent-foreground: 32 95% 24%;
 
-  --destructive: 0 78% 56%;
+  --destructive: 0 72% 46%;
   --destructive-foreground: 0 0% 100%;
 
-  --success: 145 58% 44%;
-  --success-foreground: 240 10% 6%;
+  --success: 150 60% 30%;
+  --success-foreground: 0 0% 100%;
 
   --warning: 44 100% 50%;
-  --warning-foreground: 240 10% 6%;
-  --warning-text: 44 100% 60%;
+  --warning-foreground: 220 14% 8%;
+  --warning-text: 32 95% 30%;
 
-  --border: 240 5% 19%;
-  --input: 240 5% 24%;
-  --ring: 44 100% 50%;
+  --border: 40 10% 88%;
+  --input: 40 8% 82%;
+  --ring: 44 100% 45%;
 
-  --brand-deep: 240 7% 5%;
+  /* O preto do topo e das faixas de marca. */
+  --brand-deep: 240 7% 6%;
   --brand-deeper: 0 0% 0%;
   --brand-tint: 44 100% 64%;
   --brand-amber: 44 100% 50%;
   --brand-flame: 24 100% 52%;
 
-  --radius: 1rem;
+  --radius: 0.75rem;
 }
 
 /* Botão "Pedir" da barra: vidro amarelo, com o brilho da borda de cima. */
@@ -85,8 +87,8 @@
   box-shadow:
     inset 0 1px 1px rgba(255, 255, 255, 0.7),
     inset 0 -6px 14px rgba(180, 100, 0, 0.35),
-    0 10px 28px rgba(255, 185, 0, 0.45),
-    0 0 0 6px rgba(12, 12, 14, 0.9);
+    0 8px 20px rgba(214, 150, 0, 0.35),
+    0 0 0 5px hsl(0 0% 100%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
   backdrop-filter: blur(14px) saturate(160%);
 }

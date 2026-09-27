@@ -211,7 +211,7 @@ export function AcompanhamentoDoPedido({ pedido, realtime }: Props) {
       {pedido.delivery?.courier ? (
         <Card>
           <CardContent className="flex items-center gap-3 pt-5">
-            <Bike className="text-primary h-6 w-6 shrink-0" aria-hidden />
+            <Bike className="text-primary-text h-6 w-6 shrink-0" aria-hidden />
             <div className="min-w-0 flex-1">
               <p className="font-semibold">{pedido.delivery.courier.user.name ?? 'Entregador'}</p>
               <p className="text-muted-foreground text-sm">está levando seu pedido</p>

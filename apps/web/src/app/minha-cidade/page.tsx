@@ -40,7 +40,7 @@ export default async function MinhaCidadePage() {
       <h1 className="mt-5 text-[1.75rem] font-extrabold leading-tight tracking-tight">
         Sua cidade ainda não tem app de entrega?
         <br />
-        <span className="text-primary">Então traga o Rapidinho.</span>
+        <span className="text-primary-text">Então traga o Rapidinho.</span>
       </h1>
       <p className="text-muted-foreground mt-3">
         As grandes plataformas não chegam em cidade pequena. A gente chega — quando a cidade mostra
@@ -62,7 +62,7 @@ export default async function MinhaCidadePage() {
                 className="bg-card flex items-center justify-between gap-3 rounded-2xl border px-4 py-3"
               >
                 <span className="flex items-center gap-3">
-                  <span className="text-primary w-5 font-extrabold">{posicao + 1}º</span>
+                  <span className="text-primary-text w-5 font-extrabold">{posicao + 1}º</span>
                   <span className="font-semibold">
                     {linha.cityName}/{linha.state}
                   </span>

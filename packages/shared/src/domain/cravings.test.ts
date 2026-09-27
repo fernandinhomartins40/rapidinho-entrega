@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  arteDoProduto,
   classificarPrato,
   combinaComAVontade,
   proximoCartao,
@@ -8,26 +9,26 @@ import {
 
 describe('classificarPrato', () => {
   it.each([
-    ['Marmita fitness', 'saudavel', '🍱'],
-    ['Feijoada completa', 'refeicao', '🍲'],
-    ['Combo Smash', 'lanche', '🍔'],
-    ['Cachorro-quente completo', 'lanche', '🌭'],
-    ['Coxinha de frango', 'salgado', '🍗'],
-    ['Porção de fritas', 'porcao', '🍟'],
-    ['Açaí 300 ml', 'doce', '🍇'],
-    ['Torta de limão (fatia)', 'doce', '🍰'],
-    ['Refrigerante lata 350 ml', 'bebida', '🥤'],
-    ['Chocolate quente', 'bebida', '🍫'],
-    ['Filé de frango grelhado', 'saudavel', '🍗'],
-  ])('%s → %s %s', (nome, tipo, emoji) => {
+    ['Marmita fitness', 'saudavel', 'Salad'],
+    ['Feijoada completa', 'refeicao', 'Soup'],
+    ['Combo Smash', 'lanche', 'Sandwich'],
+    ['Cachorro-quente completo', 'lanche', 'Sandwich'],
+    ['Coxinha de frango', 'salgado', 'Drumstick'],
+    ['Porção de fritas', 'porcao', 'Utensils'],
+    ['Açaí 300 ml', 'doce', 'Grape'],
+    ['Torta de limão (fatia)', 'doce', 'CakeSlice'],
+    ['Refrigerante lata 350 ml', 'bebida', 'CupSoda'],
+    ['Chocolate quente', 'bebida', 'Candy'],
+    ['Filé de frango grelhado', 'saudavel', 'Drumstick'],
+  ])('%s → %s %s', (nome, tipo, icone) => {
     const arte = classificarPrato(nome);
     expect(arte.tipo).toBe(tipo);
-    expect(arte.emoji).toBe(emoji);
+    expect(arte.icone).toBe(icone);
   });
 
   it('sabor de pizza é sempre pizza e rende para dividir', () => {
     const arte = classificarPrato('Chocolate com morango', 'Doces', true);
-    expect(arte).toMatchObject({ tipo: 'pizza', emoji: '🍕', paraDividir: true });
+    expect(arte).toMatchObject({ tipo: 'pizza', icone: 'Pizza', paraDividir: true });
   });
 
   it('porção e combo família rendem para dividir; marmita não', () => {
@@ -45,6 +46,24 @@ const prato = (dados: Partial<PratoDoBaralho> & { chave: string }): PratoDoBaral
   lojaId: 'loja',
   popularidade: 0.5,
   ...dados,
+});
+
+describe('arteDoProduto', () => {
+  it.each([
+    ['Arroz branco 5 kg', 'MARKET', 'Wheat'],
+    ['Leite integral 1 L', 'MARKET', 'Milk'],
+    ['Detergente 500 ml', 'MARKET', 'SprayCan'],
+    ['Dipirona 500 mg', 'PHARMACY', 'Pill'],
+    ['Fralda infantil M', 'PHARMACY', 'Baby'],
+    ['Ração para cachorro 15 kg', 'OTHER', 'PawPrint'],
+    ['Botijão de gás P13', 'OTHER', 'Flame'],
+  ])('%s (%s) → %s', (nome, segmento, icone) => {
+    expect(arteDoProduto(nome, segmento).icone).toBe(icone);
+  });
+
+  it('restaurante usa a classificação de prato', () => {
+    expect(arteDoProduto('Combo Smash', 'RESTAURANT').tipo).toBe('lanche');
+  });
 });
 
 describe('combinaComAVontade', () => {

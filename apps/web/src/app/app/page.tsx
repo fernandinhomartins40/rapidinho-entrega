@@ -77,7 +77,7 @@ export default async function EntradaDoApp({
                   className="border-input hover:border-primary hover:bg-accent focus-visible:ring-ring min-h-touch group flex items-center justify-between gap-3 rounded-xl border-2 p-4 transition-colors focus-visible:outline-none focus-visible:ring-2"
                 >
                   <span className="flex min-w-0 items-center gap-3">
-                    <span className="bg-primary/12 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                    <span className="bg-primary/12 text-primary-text flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
                       <MapPin className="h-5 w-5" aria-hidden />
                     </span>
                     <span className="min-w-0">
@@ -94,7 +94,7 @@ export default async function EntradaDoApp({
                     </span>
                   </span>
                   <ArrowRight
-                    className="text-muted-foreground group-hover:text-primary h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5"
+                    className="text-muted-foreground group-hover:text-primary-text h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5"
                     aria-hidden
                   />
                 </Link>
@@ -108,7 +108,7 @@ export default async function EntradaDoApp({
           href="/minha-cidade"
           className="hover:border-primary mt-6 flex items-center gap-3 rounded-xl border-2 border-dashed p-4 transition-colors"
         >
-          <span className="bg-primary/12 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+          <span className="bg-primary/12 text-primary-text flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
             <MapPin className="h-5 w-5" aria-hidden />
           </span>
           <span className="min-w-0 flex-1">

@@ -12,6 +12,7 @@ import { LembrarCidade } from '@/components/app/lembrar-cidade';
 import { PecaDeNovo, type PedidoParaRepetir } from '@/components/app/peca-de-novo';
 import { SaindoAgora } from '@/components/app/saindo-agora';
 import { pratosDaCidade } from '@/lib/pratos';
+import { produtosDasLojas } from '@/lib/produtos-da-loja';
 import { MEDIDAS_DA_LANDING } from '@/components/landing/medidas';
 import { GRUPOS_DE_CATEGORIA, pertenceAoGrupo } from '@/lib/grupos-de-categoria';
 import { imagemExibivel, SELECT_IMAGEM } from '@/lib/media';
@@ -43,7 +44,7 @@ export async function generateMetadata({ params }: { params: Promise<{ cidade: s
 async function carregarVitrine(citySlug: string) {
   const cidade = await prisma.city.findFirst({
     where: { slug: citySlug, isActive: true },
-    select: { id: true, name: true, state: true },
+    select: { id: true, name: true, state: true, slug: true },
   });
 
   if (!cidade) return null;
@@ -70,6 +71,7 @@ async function carregarVitrine(citySlug: string) {
         isPausedUntil: true,
         pauseReason: true,
         sellsAtCounterPrice: true,
+        segment: true,
         category: { select: { name: true, slug: true } },
         logo: { select: SELECT_IMAGEM },
         hours: { select: { weekday: true, opensAt: true, closesAt: true, isActive: true } },
@@ -115,6 +117,16 @@ async function carregarVitrine(citySlug: string) {
 
   const idsImpulsionados = new Set(impulsionadas.map((boost) => boost.storeId));
 
+  // O que cada loja vende, para a faixa do cartão.
+  const produtos = await produtosDasLojas(
+    lojas.map((loja) => ({
+      id: loja.id,
+      slug: loja.slug,
+      segmento: loja.segment,
+      cidadeSlug: cidade.slug,
+    })),
+  );
+
   const comStatus: LojaNaVitrine[] = lojas.map((loja) => {
     const abertura = isStoreOpen({
       hours: loja.hours,
@@ -141,6 +153,7 @@ async function carregarVitrine(citySlug: string) {
       imagem: imagemExibivel(loja.logo),
       patrocinada: idsImpulsionados.has(loja.id),
       precoDeBalcao: loja.sellsAtCounterPrice,
+      produtos: produtos.get(loja.id) ?? [],
     };
   });
 
@@ -252,7 +265,8 @@ export default async function CidadePage({
     <main className="mx-auto max-w-lg">
       <LembrarCidade slug={slug} />
 
-      <header className="px-5 pb-2 pt-[max(1rem,env(safe-area-inset-top))]">
+      {/* Topo preto da marca, como na arte; o resto da tela é claro. */}
+      <header className="bg-brand-deep rounded-b-[1.75rem] px-5 pb-6 pt-[max(1rem,env(safe-area-inset-top))] text-white">
         <div className="flex justify-center">
           <Logotipo className="h-11 w-auto" priority />
         </div>
@@ -263,9 +277,9 @@ export default async function CidadePage({
           href={endereco ? '/enderecos' : '/app?trocar=1'}
           className="mt-4 flex items-center gap-2.5 rounded-xl py-1"
         >
-          <MapPin className="text-primary h-7 w-7 shrink-0" strokeWidth={2.2} aria-hidden />
+          <MapPin className="text-primary h-6 w-6 shrink-0" strokeWidth={2} aria-hidden />
           <span className="min-w-0 flex-1">
-            <span className="text-muted-foreground block text-xs leading-tight">Entregar em</span>
+            <span className="block text-xs leading-tight text-white/60">Entregar em</span>
             <span className="flex items-center gap-1 font-semibold leading-snug">
               <span className="truncate">
                 {endereco ?? `${dados.cidade.name}/${dados.cidade.state}`}
@@ -277,13 +291,13 @@ export default async function CidadePage({
 
         <Link
           href={`/${slug}/busca`}
-          className="mt-4 flex min-h-12 items-center gap-3 rounded-2xl bg-white px-4 text-[15px] text-neutral-500 shadow-[0_6px_20px_rgba(0,0,0,0.35)]"
+          className="mt-4 flex min-h-12 items-center gap-3 rounded-xl bg-white px-4 text-[15px] text-neutral-500"
         >
           <Search className="h-5 w-5 text-neutral-700" aria-hidden />O que você precisa hoje?
         </Link>
       </header>
 
-      <div className="space-y-7 px-5 pt-4">
+      <div className="space-y-7 px-5 pt-5">
         <section aria-labelledby="categorias">
           <h2 id="categorias" className="sr-only">
             Categorias
@@ -299,8 +313,8 @@ export default async function CidadePage({
                     aria-current={ativo ? 'true' : undefined}
                     scroll={false}
                     className={cn(
-                      'flex aspect-[1/0.92] flex-col items-center justify-center gap-2 rounded-2xl bg-white px-1 text-center shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-transform active:scale-95',
-                      ativo && 'ring-primary ring-4',
+                      'flex aspect-[1/0.92] flex-col items-center justify-center gap-2 rounded-xl border border-black/5 bg-white px-1 text-center shadow-[0_2px_10px_rgba(20,20,20,0.06)] transition-transform active:scale-95',
+                      ativo && 'ring-primary ring-2',
                     )}
                   >
                     <span className="flex h-12 items-center justify-center">
@@ -326,7 +340,7 @@ export default async function CidadePage({
         {/* Faixa da arte: é também a porta do pedido por lista. */}
         <Link
           href={`/${slug}/pedir`}
-          className="relative flex min-h-[8.5rem] items-center overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#141416] via-[#1a1a1d] to-[#2a2010] p-5"
+          className="bg-brand-deep relative flex min-h-[8.5rem] items-center overflow-hidden rounded-xl p-5 text-white"
         >
           <span className="relative z-10 max-w-[60%]">
             <span className="block text-[17px] font-bold leading-snug">

@@ -52,7 +52,7 @@ export function BotaoFavorito({
         className,
       )}
     >
-      <Heart className={cn('h-5 w-5', favorita && 'fill-primary text-primary')} aria-hidden />
+      <Heart className={cn('h-5 w-5', favorita && 'fill-primary text-primary-text')} aria-hidden />
     </button>
   );
 }

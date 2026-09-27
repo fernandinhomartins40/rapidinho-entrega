@@ -4,6 +4,7 @@ import { prisma } from '@rapidinho/database';
 import { getCurrentUser } from '@rapidinho/auth';
 import { Button } from '@rapidinho/ui';
 import { CartaoDeLoja } from '@/components/app/cartao-de-loja';
+import { produtosDasLojas } from '@/lib/produtos-da-loja';
 import { paraLojaNaVitrine, selectDaLojaNaVitrine } from '@/lib/vitrine';
 
 export const dynamic = 'force-dynamic';
@@ -34,8 +35,20 @@ export default async function FavoritosPage() {
     select: { store: { select: selectDaLojaNaVitrine(new Date()) } },
   });
 
+  const produtos = await produtosDasLojas(
+    favoritos.map(({ store }) => ({
+      id: store.id,
+      slug: store.slug,
+      segmento: store.segment,
+      cidadeSlug: store.city.slug,
+    })),
+  );
+
   const lojas = favoritos
-    .map(({ store }) => ({ cidade: store.city.slug, loja: paraLojaNaVitrine(store) }))
+    .map(({ store }) => ({
+      cidade: store.city.slug,
+      loja: { ...paraLojaNaVitrine(store), produtos: produtos.get(store.id) ?? [] },
+    }))
     .sort((a, b) => Number(b.loja.aberta) - Number(a.loja.aberta));
 
   return (
@@ -64,7 +77,7 @@ function Vazio({ texto, acao }: { texto: string; acao: { href: string; rotulo: s
   return (
     <div className="bg-card mt-6 flex flex-col items-center gap-3 rounded-2xl border px-6 py-10 text-center">
       <span className="bg-accent flex h-14 w-14 items-center justify-center rounded-full">
-        <Heart className="text-primary h-7 w-7" aria-hidden />
+        <Heart className="text-primary-text h-7 w-7" aria-hidden />
       </span>
       <p className="text-muted-foreground">{texto}</p>
       <Button asChild>

@@ -10,27 +10,84 @@
 import { normalizarTexto } from './shopping-list';
 
 export type TipoDePrato =
-  'refeicao' | 'lanche' | 'pizza' | 'salgado' | 'porcao' | 'doce' | 'saudavel' | 'bebida' | 'prato';
+  | 'refeicao'
+  | 'lanche'
+  | 'pizza'
+  | 'salgado'
+  | 'porcao'
+  | 'doce'
+  | 'saudavel'
+  | 'bebida'
+  | 'prato'
+  | 'mercado'
+  | 'farmacia'
+  | 'pet'
+  | 'outros';
+
+/** Nome do ícone (lucide) que desenha o prato. O app resolve o nome no ícone. */
+export type IconeDoPrato =
+  | 'Pizza'
+  | 'Sandwich'
+  | 'Salad'
+  | 'Soup'
+  | 'Beef'
+  | 'Drumstick'
+  | 'Fish'
+  | 'IceCreamCone'
+  | 'CakeSlice'
+  | 'Cookie'
+  | 'Candy'
+  | 'Coffee'
+  | 'CupSoda'
+  | 'Citrus'
+  | 'Croissant'
+  | 'Utensils'
+  | 'ChefHat'
+  | 'Grape'
+  | 'Carrot'
+  | 'Wheat'
+  | 'Milk'
+  | 'Egg'
+  | 'Apple'
+  | 'Beer'
+  | 'Wine'
+  | 'SprayCan'
+  | 'ShoppingBasket'
+  | 'Pill'
+  | 'Baby'
+  | 'PawPrint'
+  | 'Flame'
+  | 'Droplet'
+  | 'Package';
 
 export interface ArteDoPrato {
   tipo: TipoDePrato;
-  emoji: string;
-  /** Degradê do cartão quando não há foto: [de, para]. */
-  fundo: [string, string];
+  icone: IconeDoPrato;
+  /** Tom do cartão quando não há foto: fundo pastel e cor do traço. */
+  tom: { fundo: string; tinta: string };
   /** Porção, pizza, combo família: rende para mais de uma pessoa. */
   paraDividir: boolean;
 }
 
-const FUNDOS: Record<TipoDePrato, [string, string]> = {
-  refeicao: ['#ff8a00', '#c2410c'],
-  lanche: ['#ffb900', '#d97706'],
-  pizza: ['#ef4444', '#991b1b'],
-  salgado: ['#f59e0b', '#b45309'],
-  porcao: ['#facc15', '#ca8a04'],
-  doce: ['#ec4899', '#9d174d'],
-  saudavel: ['#22c55e', '#15803d'],
-  bebida: ['#38bdf8', '#0369a1'],
-  prato: ['#f97316', '#9a3412'],
+/**
+ * Tons por tipo: pastel no fundo e a cor forte só no traço do ícone. Cartão
+ * de cor chapada com desenho grande parecia livro infantil; isto parece
+ * cardápio.
+ */
+const TONS: Record<TipoDePrato, { fundo: string; tinta: string }> = {
+  refeicao: { fundo: '#FFF1E6', tinta: '#C2410C' },
+  lanche: { fundo: '#FFF6DB', tinta: '#B45309' },
+  pizza: { fundo: '#FDECEC', tinta: '#B91C1C' },
+  salgado: { fundo: '#FFF3DC', tinta: '#A16207' },
+  porcao: { fundo: '#FEF7D6', tinta: '#A16207' },
+  doce: { fundo: '#FCEBF3', tinta: '#BE185D' },
+  saudavel: { fundo: '#E8F5EC', tinta: '#15803D' },
+  bebida: { fundo: '#E7F3FB', tinta: '#0369A1' },
+  prato: { fundo: '#F3F1EC', tinta: '#44403C' },
+  mercado: { fundo: '#EEF4E6', tinta: '#3F6212' },
+  farmacia: { fundo: '#E8F1FB', tinta: '#1D4ED8' },
+  pet: { fundo: '#F3ECE6', tinta: '#7C4A21' },
+  outros: { fundo: '#F1F0EE', tinta: '#44403C' },
 };
 
 /** Regras em ordem: a primeira que casa decide o tipo. */
@@ -63,45 +120,46 @@ const TIPOS: Array<[TipoDePrato, RegExp]> = [
   ],
 ];
 
-/** Emoji mais específico primeiro; o do tipo é a sobra. */
-const EMOJIS: Array<[RegExp, string]> = [
-  [/\bpizza/, '🍕'],
-  [/\b(marmita|marmitex|executivo)\b/, '🍱'],
-  [/\b(feijoada|escondidinho|strogonoff|estrogonofe)\b/, '🍲'],
-  [/\b(peixe|tilapia)\b/, '🐟'],
-  [/\b(sushi|temaki)\b/, '🍣'],
-  [/\b(lasanha|macarrao|espaguete|yakisoba)\b/, '🍝'],
+/** Ícone mais específico primeiro; o do tipo é a sobra. */
+const ICONES: Array<[RegExp, IconeDoPrato]> = [
+  [/\bpizza/, 'Pizza'],
+  [/\b(feijoada|escondidinho|strogonoff|estrogonofe|caldo|sopa)\b/, 'Soup'],
+  [/\b(peixe|tilapia|sushi|temaki)\b/, 'Fish'],
+  [/\b(lasanha|macarrao|espaguete|yakisoba|risoto)\b/, 'ChefHat'],
   // Frango antes de filé: "Filé de frango" é frango.
-  [/\b(frango|coxinha|passarinho)\b/, '🍗'],
-  [/\b(bife|carne|picanha|costela|file)\b/, '🥩'],
-  [/\b(cachorro|hot dog)\b/, '🌭'],
-  [/\b(sanduiche|misto|beirute|wrap)\b/, '🥪'],
-  [/\b(burger|hamburguer|x-\w+|smash|combo)\b/, '🍔'],
-  [/\b(pastel|risole|enroladinho|esfiha|esfirra|empada|kibe|quibe)\b/, '🥟'],
-  [/\bpao de queijo\b/, '🧀'],
-  [/\b(fritas|batata)\b/, '🍟'],
-  [/\bonion\b/, '🧅'],
-  [/\bmandioca\b/, '🍠'],
-  [/\bacai\b/, '🍇'],
-  [/\b(sorvete|sundae|picole)\b/, '🍨'],
-  [/\bmilk-?shake\b/, '🥤'],
-  [/\b(bolo|torta|cheesecake|pudim)\b/, '🍰'],
-  [/\b(brigadeiro|chocolate|brownie|petit)\b/, '🍫'],
-  [/\b(salada|poke|bowl|veggie)\b/, '🥗'],
-  [/\b(suco|vitamina|limonada)\b/, '🧃'],
-  [/\b(cafe|cappuccino)\b/, '☕'],
+  [/\b(frango|coxinha|passarinho)\b/, 'Drumstick'],
+  [/\b(bife|carne|picanha|costela|file)\b/, 'Beef'],
+  [
+    /\b(cachorro|hot dog|sanduiche|misto|beirute|wrap|burger|hamburguer|x-\w+|smash|combo)\b/,
+    'Sandwich',
+  ],
+  [/\b(pastel|risole|enroladinho|esfiha|esfirra|empada|kibe|quibe|pao de queijo)\b/, 'Croissant'],
+  [/\bmandioca\b/, 'Carrot'],
+  [/\bacai\b/, 'Grape'],
+  [/\b(sorvete|sundae|picole)\b/, 'IceCreamCone'],
+  [/\bmilk-?shake\b/, 'CupSoda'],
+  [/\b(bolo|torta|cheesecake|pudim)\b/, 'CakeSlice'],
+  [/\bcookie\b/, 'Cookie'],
+  [/\b(brigadeiro|chocolate|brownie|petit)\b/, 'Candy'],
+  [/\b(salada|poke|bowl|veggie)\b/, 'Salad'],
+  [/\b(suco|vitamina|limonada)\b/, 'Citrus'],
+  [/\b(cafe|cappuccino)\b/, 'Coffee'],
 ];
 
-const EMOJI_DO_TIPO: Record<TipoDePrato, string> = {
-  refeicao: '🍛',
-  lanche: '🍔',
-  pizza: '🍕',
-  salgado: '🥟',
-  porcao: '🍟',
-  doce: '🍰',
-  saudavel: '🥗',
-  bebida: '🥤',
-  prato: '🍽️',
+const ICONE_DO_TIPO: Record<TipoDePrato, IconeDoPrato> = {
+  refeicao: 'Utensils',
+  lanche: 'Sandwich',
+  pizza: 'Pizza',
+  salgado: 'Croissant',
+  porcao: 'Utensils',
+  doce: 'CakeSlice',
+  saudavel: 'Salad',
+  bebida: 'CupSoda',
+  prato: 'Utensils',
+  mercado: 'ShoppingBasket',
+  farmacia: 'Pill',
+  pet: 'PawPrint',
+  outros: 'Package',
 };
 
 const PARA_DIVIDIR =
@@ -125,16 +183,78 @@ export function classificarPrato(
       TIPOS.find(([, regra]) => regra.test(texto))?.[0] ??
       'prato');
 
-  const emoji = ehSaborDePizza
-    ? '🍕'
-    : (EMOJIS.find(([regra]) => regra.test(soNome))?.[1] ?? EMOJI_DO_TIPO[tipo]);
+  const icone = ehSaborDePizza
+    ? 'Pizza'
+    : (ICONES.find(([regra]) => regra.test(soNome))?.[1] ?? ICONE_DO_TIPO[tipo]);
 
   return {
     tipo,
-    emoji,
-    fundo: FUNDOS[tipo],
+    icone,
+    tom: TONS[tipo],
     paraDividir: tipo === 'pizza' || PARA_DIVIDIR.test(soNome),
   };
+}
+
+/** Ícones de mercado, do mais específico ao mais geral. */
+const ICONES_DE_MERCADO: Array<[RegExp, IconeDoPrato]> = [
+  [/\b(cafe)\b/, 'Coffee'],
+  [/\b(frango|asa|coxa|sobrecoxa|peito)\b/, 'Drumstick'],
+  [/\b(carne|alcatra|picanha|patinho|acem|costela|linguica|bife|moida|file)\b/, 'Beef'],
+  [/\b(peixe|tilapia|sardinha|atum)\b/, 'Fish'],
+  [/\b(leite|iogurte|queijo|manteiga|requeijao|creme de leite)\b/, 'Milk'],
+  [/\bovos?\b/, 'Egg'],
+  [/\b(pao|paes|bisnaga|torrada)\b/, 'Croissant'],
+  [
+    /\b(banana|maca|laranja|limao|tomate|alface|cebola|batata|cenoura|fruta|verdura|legume|mamao|abacaxi)\b/,
+    'Apple',
+  ],
+  [/\b(cerveja|chopp)\b/, 'Beer'],
+  [/\bvinho\b/, 'Wine'],
+  [/\b(refrigerante|refri|suco|agua mineral|guarana|coca)\b/, 'CupSoda'],
+  [
+    /\b(detergente|sabao|amaciante|desinfetante|agua sanitaria|limpador|esponja|saco de lixo|papel higienico)\b/,
+    'SprayCan',
+  ],
+  [/\b(arroz|feijao|macarrao|farinha|acucar|oleo|sal|fuba|aveia|biscoito)\b/, 'Wheat'],
+  [/\b(chocolate|bala|doce|bombom)\b/, 'Candy'],
+];
+
+/**
+ * Arte de um produto qualquer da loja, conforme o segmento: prato de
+ * restaurante usa `classificarPrato`; mercado, farmácia, pet e gás ganham os
+ * ícones deles, para a faixa de produtos do cartão da loja não mostrar um
+ * garfo e faca num pacote de arroz.
+ */
+export function arteDoProduto(
+  nome: string,
+  segmento: 'RESTAURANT' | 'MARKET' | 'PHARMACY' | 'OTHER' | string,
+  categoria?: string | null,
+): ArteDoPrato {
+  if (segmento === 'RESTAURANT') return classificarPrato(nome, categoria);
+
+  const texto = normalizarTexto(`${nome} ${categoria ?? ''}`);
+  const base = { paraDividir: false };
+
+  if (segmento === 'MARKET') {
+    const icone = ICONES_DE_MERCADO.find(([regra]) => regra.test(texto))?.[1] ?? 'ShoppingBasket';
+    return { ...base, tipo: 'mercado', icone, tom: TONS.mercado };
+  }
+  if (segmento === 'PHARMACY') {
+    const icone: IconeDoPrato = /\b(fralda|bebe|infantil|mamadeira)\b/.test(texto)
+      ? 'Baby'
+      : 'Pill';
+    return { ...base, tipo: 'farmacia', icone, tom: TONS.farmacia };
+  }
+  if (/\b(racao|pet|cachorro|gato|areia|petisco|coleira)\b/.test(texto)) {
+    return { ...base, tipo: 'pet', icone: 'PawPrint', tom: TONS.pet };
+  }
+  if (/\b(gas|botijao|p13)\b/.test(texto)) {
+    return { ...base, tipo: 'outros', icone: 'Flame', tom: TONS.outros };
+  }
+  if (/\b(agua|galao)\b/.test(texto)) {
+    return { ...base, tipo: 'outros', icone: 'Droplet', tom: TONS.bebida };
+  }
+  return { ...base, tipo: 'outros', icone: 'Package', tom: TONS.outros };
 }
 
 /* ------------------------------------------------------------------------ */
@@ -153,13 +273,13 @@ export interface PratoDoBaralho {
 }
 
 export const VONTADES = [
-  { id: 'tanto-faz', rotulo: 'Tanto faz', emoji: '🤷' },
-  { id: 'fome', rotulo: 'Matar a fome', emoji: '🍽️' },
-  { id: 'rapido', rotulo: 'Chega rápido', emoji: '⚡' },
-  { id: 'barato', rotulo: 'Até R$ 25', emoji: '💸' },
-  { id: 'doce', rotulo: 'Doce', emoji: '🍫' },
-  { id: 'dividir', rotulo: 'Pra dividir', emoji: '👥' },
-  { id: 'leve', rotulo: 'Algo leve', emoji: '🥗' },
+  { id: 'tanto-faz', rotulo: 'Tanto faz' },
+  { id: 'fome', rotulo: 'Matar a fome' },
+  { id: 'rapido', rotulo: 'Chega rápido' },
+  { id: 'barato', rotulo: 'Até R$ 25' },
+  { id: 'doce', rotulo: 'Doce' },
+  { id: 'dividir', rotulo: 'Pra dividir' },
+  { id: 'leve', rotulo: 'Algo leve' },
 ] as const;
 
 export type Vontade = (typeof VONTADES)[number]['id'];

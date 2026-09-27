@@ -3,7 +3,18 @@
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Check, ChevronRight, Copy, Heart, Share2, Users } from 'lucide-react';
+import {
+  Check,
+  ChevronRight,
+  Copy,
+  Heart,
+  Hourglass,
+  PartyPopper,
+  Share2,
+  UtensilsCrossed,
+  Users,
+  type LucideIcon,
+} from 'lucide-react';
 import { formatCents } from '@rapidinho/shared';
 import { Button } from '@rapidinho/ui';
 import { ArteDoPrato } from '@/components/app/arte-do-prato';
@@ -52,7 +63,7 @@ export function EscolhaEmGrupo({
 
   if (expirada || placar?.expirada) {
     return (
-      <Aviso emoji="⌛" titulo="Esta escolha em grupo já acabou.">
+      <Aviso icone={Hourglass} titulo="Esta escolha em grupo já acabou.">
         <Button asChild className="mt-4">
           <Link href={`/${cidade.slug}/fome`}>Começar outra</Link>
         </Button>
@@ -182,10 +193,10 @@ function Participantes({ placar, total }: { placar: Placar | null; total: number
 function DeuMatch({ prato, placar }: { prato: PratoNaVitrine; placar: Placar }) {
   return (
     <div className="space-y-5 text-center">
-      <p className="text-5xl" aria-hidden>
-        🎉
-      </p>
-      <h1 className="text-primary text-3xl font-extrabold">Deu match!</h1>
+      <span className="bg-accent text-primary-text mx-auto flex h-16 w-16 items-center justify-center rounded-full">
+        <PartyPopper className="h-8 w-8" strokeWidth={1.5} aria-hidden />
+      </span>
+      <h1 className="text-primary-text text-3xl font-extrabold">Deu match!</h1>
       <p className="text-muted-foreground">
         {placar.participantes.map((pessoa) => pessoa.apelido).join(', ')} querem o mesmo prato.
       </p>
@@ -202,7 +213,7 @@ function DeuMatch({ prato, placar }: { prato: PratoNaVitrine; placar: Placar }) 
           <p className="text-muted-foreground text-sm">
             {prato.loja.nome} · {prato.tempoMin} min
           </p>
-          <p className="text-primary text-2xl font-extrabold">
+          <p className="text-primary-text text-2xl font-extrabold">
             {prato.aPartirDe ? (
               <span className="text-muted-foreground text-sm font-normal">a partir de </span>
             ) : null}
@@ -258,7 +269,7 @@ function Ranking({ pratos, placar }: { pratos: PratoNaVitrine[]; placar: Placar 
                     {quem.join(', ')}
                   </span>
                 </span>
-                <span className="text-primary inline-flex items-center gap-1 font-bold">
+                <span className="text-primary-text inline-flex items-center gap-1 font-bold">
                   <Heart className="h-4 w-4 fill-current" aria-hidden />
                   {total}
                 </span>
@@ -291,9 +302,9 @@ function Entrar({ onEntrar }: { onEntrar: () => void }) {
       }}
       className="mt-8 space-y-4 text-center"
     >
-      <p className="text-5xl" aria-hidden>
-        🍽️
-      </p>
+      <span className="bg-accent text-primary-text mx-auto flex h-16 w-16 items-center justify-center rounded-full">
+        <UtensilsCrossed className="h-8 w-8" strokeWidth={1.5} aria-hidden />
+      </span>
       <h1 className="text-2xl font-extrabold">Te chamaram pra decidir o que comer!</h1>
       <p className="text-muted-foreground">
         Passe os pratos: ♥ quero, ✕ não. Quando todo mundo curtir o mesmo, dá match.
@@ -318,19 +329,17 @@ function Entrar({ onEntrar }: { onEntrar: () => void }) {
 }
 
 function Aviso({
-  emoji,
+  icone: Icone,
   titulo,
   children,
 }: {
-  emoji: string;
+  icone: LucideIcon;
   titulo: string;
   children?: React.ReactNode;
 }) {
   return (
     <div className="bg-card mt-10 rounded-3xl border p-8 text-center">
-      <p className="text-4xl" aria-hidden>
-        {emoji}
-      </p>
+      <Icone className="text-muted-foreground mx-auto h-9 w-9" strokeWidth={1.5} aria-hidden />
       <p className="mt-3 font-bold">{titulo}</p>
       {children}
     </div>

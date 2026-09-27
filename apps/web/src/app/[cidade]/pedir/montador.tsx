@@ -299,7 +299,7 @@ export function MontadorDePedido({
         <h1 className="mt-1 text-[1.65rem] font-extrabold leading-tight tracking-tight">
           Diga o que você precisa.
           <br />
-          <span className="text-primary">A gente acha e monta.</span>
+          <span className="text-primary-text">A gente acha e monta.</span>
         </h1>
         <p className="text-muted-foreground mt-2 text-[15px]">
           Escreva ou fale sua lista. Procuramos nas lojas abertas de {cidade.name} e montamos o
@@ -485,7 +485,7 @@ export function MontadorDePedido({
                     <span className="text-muted-foreground flex flex-wrap gap-x-3 text-xs">
                       {loja.avaliacoes > 0 ? (
                         <span className="flex items-center gap-0.5">
-                          <Star className="fill-primary text-primary h-3 w-3" aria-hidden />
+                          <Star className="fill-primary text-primary-text h-3 w-3" aria-hidden />
                           {loja.nota.toFixed(1)}
                         </span>
                       ) : null}

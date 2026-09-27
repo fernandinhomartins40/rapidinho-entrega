@@ -219,7 +219,7 @@ export default async function LojaPage({
               : {})}
           />
         ) : (
-          <div className="from-primary to-brand-deep h-full w-full bg-gradient-to-br" aria-hidden />
+          <div className="bg-brand-deep h-full w-full" aria-hidden />
         )}
 
         <Link

@@ -74,7 +74,7 @@ export function BarraInferior({ cidadeSlug }: { cidadeSlug: string | null }) {
   return (
     <nav
       aria-label="Navegação principal"
-      className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[#0c0c0e]/90 backdrop-blur-xl"
+      className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t bg-white/95 shadow-[0_-4px_16px_rgba(20,20,20,0.04)] backdrop-blur-xl"
     >
       <ul className="mx-auto flex max-w-lg items-end px-2">
         {esquerda.map(renderizar)}

@@ -52,7 +52,7 @@ test.describe('pedido do cliente', () => {
     // cardápio, e uma vitrine real também terá lojas recém-aprovadas. Amarrar
     // o fluxo de compra à ordem da vitrine seria falhar por motivo alheio ao
     // que este teste verifica.
-    const lojas = page.locator('section:has(#abertas) a[href^="/palmital-pr/"]');
+    const lojas = page.locator('section:has(#abertas) article > a[href^="/palmital-pr/"]');
     const total = await lojas.count();
     let produto = null;
 

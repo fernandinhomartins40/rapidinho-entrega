@@ -76,7 +76,7 @@ export function CartaoDoBaralho({
           setArrastando(false);
           setDeslocamento(0);
         }}
-        className="bg-card relative touch-pan-y select-none overflow-hidden rounded-3xl border shadow-[0_20px_50px_rgba(0,0,0,0.5)] outline-none focus-visible:ring-4 focus-visible:ring-[#FFB900]/60"
+        className="bg-card focus-visible:ring-primary/60 relative touch-pan-y select-none overflow-hidden rounded-3xl border shadow-[0_12px_32px_rgba(20,20,20,0.10)] outline-none focus-visible:ring-4"
         style={{
           transform: `translateX(${dx}px) rotate(${dx / 18}deg)`,
           transition: arrastando ? 'none' : 'transform 220ms ease-out',
@@ -99,8 +99,8 @@ export function CartaoDoBaralho({
             className={cn(
               'absolute top-5 rounded-xl border-4 px-3 py-1 text-2xl font-black uppercase tracking-wider',
               intencao === 'quero'
-                ? 'left-5 -rotate-12 border-emerald-400 text-emerald-300'
-                : 'right-5 rotate-12 border-rose-400 text-rose-300',
+                ? 'left-5 -rotate-12 border-emerald-600 bg-white/80 text-emerald-700'
+                : 'right-5 rotate-12 border-rose-600 bg-white/80 text-rose-700',
             )}
           >
             {intencao === 'quero' ? 'Quero' : 'Não'}
@@ -115,7 +115,7 @@ export function CartaoDoBaralho({
             </Selo>
           ) : prato.emAlta ? (
             <Selo>
-              <Flame className="h-3.5 w-3.5 text-orange-300" aria-hidden />
+              <Flame className="h-3.5 w-3.5 text-orange-600" aria-hidden />
               Muito pedido agora
             </Selo>
           ) : null}
@@ -146,9 +146,7 @@ export function CartaoDoBaralho({
               {prato.aPartirDe ? (
                 <span className="text-muted-foreground block text-xs">a partir de</span>
               ) : null}
-              <span className="text-primary text-2xl font-extrabold">
-                {formatCents(prato.precoCents)}
-              </span>
+              <span className="text-2xl font-extrabold">{formatCents(prato.precoCents)}</span>
             </p>
           </div>
         </div>
@@ -160,9 +158,9 @@ export function CartaoDoBaralho({
           onClick={() => decidir(false)}
           disabled={desabilitado}
           aria-label="Não quero este"
-          className="bg-card flex h-16 w-16 items-center justify-center rounded-full border-2 border-rose-400/60 text-rose-300 shadow-lg transition-transform active:scale-90"
+          className="bg-card text-foreground flex h-16 w-16 items-center justify-center rounded-full border shadow-[0_6px_16px_rgba(20,20,20,0.08)] transition-transform active:scale-90"
         >
-          <X className="h-8 w-8" strokeWidth={2.6} aria-hidden />
+          <X className="h-7 w-7" strokeWidth={2} aria-hidden />
         </button>
         <button
           type="button"
@@ -171,7 +169,7 @@ export function CartaoDoBaralho({
           aria-label="Quero este"
           className="botao-vidro flex h-20 w-20 items-center justify-center rounded-full text-[#141414] transition-transform active:scale-90"
         >
-          <Heart className="h-9 w-9 fill-current" aria-hidden />
+          <Heart className="h-8 w-8 fill-current" aria-hidden />
         </button>
       </div>
     </div>
@@ -180,7 +178,7 @@ export function CartaoDoBaralho({
 
 function Selo({ children }: { children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+    <span className="text-foreground inline-flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-xs font-semibold shadow-sm">
       {children}
     </span>
   );
