@@ -24,8 +24,8 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: 'portrait',
     lang: 'pt-BR',
     dir: 'ltr',
-    background_color: '#0d1f3c',
-    theme_color: '#0d1f3c',
+    background_color: '#0c0c0e',
+    theme_color: '#0c0c0e',
     categories: ['food', 'shopping', 'lifestyle'],
     icons: [
       { src: '/marca/icone-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

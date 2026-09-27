@@ -9,7 +9,13 @@ const nextConfig = {
   // Imagem final enxuta no Docker: só o necessário para rodar.
   output: 'standalone',
   // Os pacotes do monorepo são publicados como TypeScript, não como build.
-  transpilePackages: ['@rapidinho/ui', '@rapidinho/shared', '@rapidinho/auth', '@rapidinho/database', '@rapidinho/services'],
+  transpilePackages: [
+    '@rapidinho/ui',
+    '@rapidinho/shared',
+    '@rapidinho/auth',
+    '@rapidinho/database',
+    '@rapidinho/services',
+  ],
   poweredByHeader: false,
   images: {
     formats: ['image/avif', 'image/webp'],
@@ -32,9 +38,11 @@ const nextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          // Microfone só do próprio site: é o ditado do pedido por lista, e o
+          // áudio é transcrito pelo navegador, sem passar pelo servidor.
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(self), payment=()',
+            value: 'camera=(), microphone=(self), geolocation=(self), payment=()',
           },
         ],
       },

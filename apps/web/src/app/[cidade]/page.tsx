@@ -1,11 +1,16 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { MapPin, Search } from 'lucide-react';
+import { ChevronDown, ChevronRight, MapPin, Search, Sparkles } from 'lucide-react';
 import { prisma } from '@rapidinho/database';
+import { getCurrentUser } from '@rapidinho/auth';
 import { isStoreOpen } from '@rapidinho/shared';
+import { cn } from '@rapidinho/ui';
 import { Logotipo } from '@/components/marca/logo';
 import { CartaoDeLoja, type LojaNaVitrine } from '@/components/app/cartao-de-loja';
 import { LembrarCidade } from '@/components/app/lembrar-cidade';
+import { MEDIDAS_DA_LANDING } from '@/components/landing/medidas';
+import { GRUPOS_DE_CATEGORIA, pertenceAoGrupo } from '@/lib/grupos-de-categoria';
 import { imagemExibivel, SELECT_IMAGEM } from '@/lib/media';
 
 export const dynamic = 'force-dynamic';
@@ -42,15 +47,7 @@ async function carregarVitrine(citySlug: string) {
 
   const agora = new Date();
 
-  const [categorias, lojas, banners, impulsionadas] = await Promise.all([
-    prisma.storeCategory.findMany({
-      where: {
-        isActive: true,
-        stores: { some: { cityId: cidade.id, status: 'ACTIVE', deletedAt: null } },
-      },
-      orderBy: { sortOrder: 'asc' },
-      select: { id: true, name: true, slug: true, iconName: true },
-    }),
+  const [lojas, banners, impulsionadas] = await Promise.all([
     prisma.store.findMany({
       where: { cityId: cidade.id, status: 'ACTIVE', deletedAt: null },
       orderBy: [{ ratingAverage: 'desc' }, { orderCount: 'desc' }],
@@ -144,7 +141,6 @@ async function carregarVitrine(citySlug: string) {
 
   return {
     cidade,
-    categorias,
     banners: banners.map((banner) => ({
       id: banner.id,
       titulo: banner.title,
@@ -160,6 +156,21 @@ async function carregarVitrine(citySlug: string) {
   };
 }
 
+/** "Rua Principal, 123 - Centro": o endereço padrão do cliente nesta cidade. */
+async function enderecoDeEntrega(cityId: string) {
+  const user = await getCurrentUser();
+  if (!user) return null;
+
+  const endereco = await prisma.address.findFirst({
+    where: { userId: user.id, cityId, deletedAt: null },
+    orderBy: [{ isDefault: 'desc' }, { updatedAt: 'desc' }],
+    select: { street: true, number: true, neighborhood: true },
+  });
+
+  if (!endereco) return null;
+  return `${endereco.street}${endereco.number ? `, ${endereco.number}` : ''} - ${endereco.neighborhood}`;
+}
+
 export default async function CidadePage({
   params,
   searchParams,
@@ -173,74 +184,143 @@ export default async function CidadePage({
 
   if (!dados) notFound();
 
-  const lojas = filtro ? dados.lojas.filter((loja) => loja.categoriaSlug === filtro) : dados.lojas;
+  const endereco = await enderecoDeEntrega(dados.cidade.id);
+  const grupo = GRUPOS_DE_CATEGORIA.find((candidato) => candidato.chave === filtro);
+
+  const lojas = grupo
+    ? dados.lojas.filter((loja) => pertenceAoGrupo(grupo.chave, loja.categoriaSlug))
+    : dados.lojas;
 
   const abertas = lojas.filter((loja) => loja.aberta);
   const fechadas = lojas.filter((loja) => !loja.aberta);
 
   return (
-    <main>
+    <main className="mx-auto max-w-lg">
       <LembrarCidade slug={slug} />
-      <header className="bg-brand-deep relative overflow-hidden px-5 pb-6 pt-5">
-        <div className="bg-radial-glow absolute inset-0" aria-hidden />
-        <div className="relative mx-auto max-w-lg">
-          <div className="flex items-center justify-between gap-3">
-            <Logotipo className="h-8 w-auto" priority />
-            {/* Troca de cidade dentro do app: `/` seria a landing de apresentação. */}
-            <Link
-              href="/app?trocar=1"
-              className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-white"
-            >
-              <MapPin className="h-4 w-4" aria-hidden />
-              {dados.cidade.name}
-            </Link>
-          </div>
 
-          <Link
-            href={`/${slug}/busca`}
-            className="min-h-touch text-muted-foreground mt-4 flex items-center gap-3 rounded-xl bg-white px-4"
-          >
-            <Search className="h-5 w-5" aria-hidden />
-            Buscar loja ou produto
-          </Link>
+      <header className="px-5 pb-2 pt-[max(1rem,env(safe-area-inset-top))]">
+        <div className="flex justify-center">
+          <Logotipo className="h-11 w-auto" priority />
         </div>
+
+        {/* "Entregar em": com endereço salvo, é ele; sem, é a cidade — e o
+            toque leva a quem resolve (endereços ou troca de cidade). */}
+        <Link
+          href={endereco ? '/enderecos' : '/app?trocar=1'}
+          className="mt-4 flex items-center gap-2.5 rounded-xl py-1"
+        >
+          <MapPin className="text-primary h-7 w-7 shrink-0" strokeWidth={2.2} aria-hidden />
+          <span className="min-w-0 flex-1">
+            <span className="text-muted-foreground block text-xs leading-tight">Entregar em</span>
+            <span className="flex items-center gap-1 font-semibold leading-snug">
+              <span className="truncate">
+                {endereco ?? `${dados.cidade.name}/${dados.cidade.state}`}
+              </span>
+              <ChevronDown className="text-primary h-4 w-4 shrink-0" aria-hidden />
+            </span>
+          </span>
+        </Link>
+
+        <Link
+          href={`/${slug}/busca`}
+          className="mt-4 flex min-h-12 items-center gap-3 rounded-2xl bg-white px-4 text-[15px] text-neutral-500 shadow-[0_6px_20px_rgba(0,0,0,0.35)]"
+        >
+          <Search className="h-5 w-5 text-neutral-700" aria-hidden />O que você precisa hoje?
+        </Link>
       </header>
 
-      <div className="mx-auto max-w-lg space-y-6 px-5 py-6">
-        {dados.categorias.length > 0 ? (
-          <section aria-labelledby="categorias">
-            <h2 id="categorias" className="sr-only">
-              Categorias
-            </h2>
-            <ul className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
-              <li>
-                <Link
-                  href={`/${slug}`}
-                  aria-current={!filtro ? 'true' : undefined}
-                  className={`min-h-touch flex items-center whitespace-nowrap rounded-full border-2 px-4 text-sm font-semibold ${
-                    !filtro ? 'border-primary bg-primary text-primary-foreground' : 'border-input'
-                  }`}
-                >
-                  Tudo
-                </Link>
-              </li>
-              {dados.categorias.map((categoria) => (
-                <li key={categoria.id}>
+      <div className="space-y-7 px-5 pt-4">
+        <section aria-labelledby="categorias">
+          <h2 id="categorias" className="sr-only">
+            Categorias
+          </h2>
+          <ul className="grid grid-cols-3 gap-3">
+            {GRUPOS_DE_CATEGORIA.map((atalho) => {
+              const ativo = atalho.chave === grupo?.chave;
+              return (
+                <li key={atalho.chave}>
                   <Link
-                    href={`/${slug}?categoria=${categoria.slug}`}
-                    aria-current={filtro === categoria.slug ? 'true' : undefined}
-                    className={`min-h-touch flex items-center whitespace-nowrap rounded-full border-2 px-4 text-sm font-semibold ${
-                      filtro === categoria.slug
-                        ? 'border-primary bg-primary text-primary-foreground'
-                        : 'border-input'
-                    }`}
+                    // Tocar de novo no atalho ativo volta para "tudo".
+                    href={ativo ? `/${slug}` : `/${slug}?categoria=${atalho.chave}`}
+                    aria-current={ativo ? 'true' : undefined}
+                    scroll={false}
+                    className={cn(
+                      'flex aspect-[1/0.92] flex-col items-center justify-center gap-2 rounded-2xl bg-white px-1 text-center shadow-[0_6px_18px_rgba(0,0,0,0.35)] transition-transform active:scale-95',
+                      ativo && 'ring-primary ring-4',
+                    )}
                   >
-                    {categoria.name}
+                    <span className="flex h-12 items-center justify-center">
+                      <Image
+                        src={`/landing/${atalho.imagem}`}
+                        {...MEDIDAS_DA_LANDING[atalho.imagem]}
+                        alt=""
+                        className="max-h-12 w-auto"
+                      />
+                    </span>
+                    <span className="text-[13px] font-semibold text-neutral-900">
+                      {atalho.nome}
+                    </span>
                   </Link>
                 </li>
-              ))}
+              );
+            })}
+          </ul>
+        </section>
+
+        {/* Faixa da arte: é também a porta do pedido por lista. */}
+        <Link
+          href={`/${slug}/pedir`}
+          className="relative flex min-h-[8.5rem] items-center overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#141416] via-[#1a1a1d] to-[#2a2010] p-5"
+        >
+          <span className="relative z-10 max-w-[60%]">
+            <span className="block text-[17px] font-bold leading-snug">
+              Tudo o que você precisa, <span className="text-primary">a um toque</span> de
+              distância.
+            </span>
+            <span className="text-primary mt-2 inline-flex items-center gap-1 text-sm font-semibold">
+              <Sparkles className="h-4 w-4" aria-hidden />
+              Pedir por lista
+              <ChevronRight className="h-4 w-4" aria-hidden />
+            </span>
+          </span>
+          <Image
+            src="/landing/motoboy.webp"
+            {...MEDIDAS_DA_LANDING['motoboy.webp']}
+            alt=""
+            sizes="200px"
+            className="absolute -bottom-3 -right-4 h-auto w-[50%] drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]"
+          />
+        </Link>
+
+        {dados.banners.some((banner) => banner.imagem.url) ? (
+          <section aria-label="Destaques">
+            <ul className="no-scrollbar -mx-5 flex snap-x gap-3 overflow-x-auto px-5">
+              {dados.banners.map((banner) =>
+                banner.imagem.url ? (
+                  <li key={banner.id} className="w-[85%] shrink-0 snap-start">
+                    <Link href={banner.link ?? `/${slug}`} className="block">
+                      <Image
+                        src={banner.imagem.url}
+                        alt={banner.titulo}
+                        width={640}
+                        height={260}
+                        className="aspect-[64/26] w-full rounded-2xl object-cover"
+                      />
+                    </Link>
+                  </li>
+                ) : null,
+              )}
             </ul>
           </section>
+        ) : null}
+
+        {grupo ? (
+          <p className="text-muted-foreground -mb-3 text-sm">
+            Mostrando <strong className="text-foreground">{grupo.nome}</strong> ·{' '}
+            <Link href={`/${slug}`} scroll={false} className="text-primary-text font-semibold">
+              ver tudo
+            </Link>
+          </p>
         ) : null}
 
         {abertas.length > 0 ? (
@@ -257,9 +337,10 @@ export default async function CidadePage({
             </ul>
           </section>
         ) : (
-          <p className="text-muted-foreground rounded-xl border p-5 text-center">
-            Nenhuma loja aberta agora. As de baixo abrem em breve — dá para ver o cardápio e voltar
-            depois.
+          <p className="text-muted-foreground bg-card rounded-2xl border p-5 text-center">
+            {lojas.length === 0
+              ? 'Ainda não há lojas nesta categoria na sua cidade.'
+              : 'Nenhuma loja aberta agora. As de baixo abrem em breve — dá para ver o cardápio e voltar depois.'}
           </p>
         )}
 

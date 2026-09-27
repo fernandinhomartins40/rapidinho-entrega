@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black',
     title: APP_NAME,
   },
   formatDetection: { telephone: false },
@@ -56,7 +56,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0d1f3c',
+  themeColor: '#0c0c0e',
   width: 'device-width',
   initialScale: 1,
   // Bloquear zoom prejudica quem tem baixa visão; o layout já é responsivo.

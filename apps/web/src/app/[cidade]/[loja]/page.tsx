@@ -3,9 +3,11 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Bike, Clock, MessageCircle, Star } from 'lucide-react';
 import { prisma } from '@rapidinho/database';
+import { getCurrentUser } from '@rapidinho/auth';
 import { Badge } from '@rapidinho/ui';
 import { formatCents, isStoreOpen, whatsappLink } from '@rapidinho/shared';
 import { imagemExibivel, SELECT_IMAGEM } from '@/lib/media';
+import { BotaoFavorito } from '@/components/app/botao-favorito';
 import { Cardapio } from './cardapio';
 
 export const dynamic = 'force-dynamic';
@@ -195,6 +197,11 @@ export default async function LojaPage({
 
   const contato = loja.whatsapp ?? loja.phone;
 
+  const user = await getCurrentUser();
+  const favorita = user
+    ? (await prisma.favoriteStore.count({ where: { userId: user.id, storeId: loja.id } })) > 0
+    : false;
+
   return (
     <main>
       <div className="relative h-40 w-full sm:h-56">
@@ -221,6 +228,13 @@ export default async function LojaPage({
         >
           <ArrowLeft className="h-5 w-5" aria-hidden />
         </Link>
+
+        <BotaoFavorito
+          storeId={loja.id}
+          favorita={favorita}
+          logado={user != null}
+          className="absolute right-4 top-4"
+        />
       </div>
 
       <div className="mx-auto max-w-lg px-5">

@@ -7,3 +7,4 @@ export * from './order-status';
 export * from './product-import';
 export * from './pix';
 export * from './notification-segment';
+export * from './shopping-list';

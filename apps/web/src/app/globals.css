@@ -17,3 +17,92 @@
   font-family: var(--font-manuscrita), cursive;
   font-weight: 400;
 }
+
+/*
+ * Tema do aplicativo: preto com o amarelo da marca, como a arte do celular na
+ * landing. Fica aqui, e não no pacote de UI, porque o painel da loja continua
+ * claro — é tela de balcão, usada o dia inteiro sob luz de loja.
+ *
+ * Sem `@layer`: estas regras precisam vencer as do pacote, que moram na camada
+ * base. A landing não usa esses tokens (tem as cores da arte fixas), então ela
+ * segue igual.
+ */
+:root {
+  color-scheme: dark;
+
+  --background: 240 7% 5%;
+  --foreground: 0 0% 98%;
+
+  --card: 240 5% 10%;
+  --card-foreground: 0 0% 98%;
+
+  --popover: 240 5% 11%;
+  --popover-foreground: 0 0% 98%;
+
+  /* Amarelo da arte (#FFB900). Sobre ele o texto é preto: 11:1. */
+  --primary: 44 100% 50%;
+  --primary-foreground: 240 10% 6%;
+  /* Sobre o fundo preto o amarelo já passa folgado como texto (11:1). */
+  --primary-text: 44 100% 55%;
+
+  --secondary: 240 5% 15%;
+  --secondary-foreground: 0 0% 96%;
+
+  --muted: 240 5% 14%;
+  --muted-foreground: 240 5% 68%;
+
+  --accent: 44 45% 14%;
+  --accent-foreground: 44 100% 70%;
+
+  --destructive: 0 78% 56%;
+  --destructive-foreground: 0 0% 100%;
+
+  --success: 145 58% 44%;
+  --success-foreground: 240 10% 6%;
+
+  --warning: 44 100% 50%;
+  --warning-foreground: 240 10% 6%;
+  --warning-text: 44 100% 60%;
+
+  --border: 240 5% 19%;
+  --input: 240 5% 24%;
+  --ring: 44 100% 50%;
+
+  --brand-deep: 240 7% 5%;
+  --brand-deeper: 0 0% 0%;
+  --brand-tint: 44 100% 64%;
+  --brand-amber: 44 100% 50%;
+  --brand-flame: 24 100% 52%;
+
+  --radius: 1rem;
+}
+
+/* Botão "Pedir" da barra: vidro amarelo, com o brilho da borda de cima. */
+.botao-vidro {
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 45%),
+    linear-gradient(160deg, rgba(255, 205, 60, 0.92), rgba(255, 170, 0, 0.82));
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.7),
+    inset 0 -6px 14px rgba(180, 100, 0, 0.35),
+    0 10px 28px rgba(255, 185, 0, 0.45),
+    0 0 0 6px rgba(12, 12, 14, 0.9);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  backdrop-filter: blur(14px) saturate(160%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .botao-vidro-pulso {
+    animation: pulso-vidro 2.8s ease-in-out infinite;
+  }
+}
+
+@keyframes pulso-vidro {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}

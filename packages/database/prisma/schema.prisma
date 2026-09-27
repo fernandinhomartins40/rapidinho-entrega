@@ -271,26 +271,26 @@ enum DataRequestStatus {
 // =============================================================================
 
 model City {
-  id        String  @id @default(cuid())
-  name      String
-  slug      String  @unique
-  state     String  @db.Char(2)
-  ibgeCode  String? @unique
-  isActive  Boolean @default(false)
+  id       String  @id @default(cuid())
+  name     String
+  slug     String  @unique
+  state    String  @db.Char(2)
+  ibgeCode String? @unique
+  isActive Boolean @default(false)
 
   /// Coordenadas do centro da cidade, usadas para detecção automática e para
   /// o cálculo de distância quando a loja cobra por km.
-  latitude  Float?
-  longitude Float?
+  latitude            Float?
+  longitude           Float?
   /// Raio de atendimento padrão da cidade em metros.
-  serviceRadiusMeters Int @default(15000)
+  serviceRadiusMeters Int    @default(15000)
 
   /// Comissão padrão da cidade quando a loja não tem plano com valor próprio.
-  defaultCommissionRate Decimal @default(10.00) @db.Decimal(5, 2)
+  defaultCommissionRate   Decimal @default(10.00) @db.Decimal(5, 2)
   /// Taxa de entrega sugerida para lojas novas (centavos).
-  defaultDeliveryFeeCents Int @default(500)
+  defaultDeliveryFeeCents Int     @default(500)
   /// Preço por km quando a loja usa cobrança por distância (centavos).
-  defaultPricePerKmCents Int @default(150)
+  defaultPricePerKmCents  Int     @default(150)
 
   launchedAt DateTime?
   createdAt  DateTime  @default(now())
@@ -320,8 +320,8 @@ model Neighborhood {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  addresses      Address[]
-  deliveryZones  DeliveryZone[]
+  addresses     Address[]
+  deliveryZones DeliveryZone[]
 
   @@unique([cityId, slug])
   @@index([cityId])
@@ -333,20 +333,20 @@ model Neighborhood {
 // =============================================================================
 
 model User {
-  id            String     @id @default(cuid())
+  id            String        @id @default(cuid())
   /// Telefone é o identificador principal (login por OTP). E164 sem máscara.
-  phone         String?    @unique
+  phone         String?       @unique
   phoneVerified DateTime?
-  email         String?    @unique
+  email         String?       @unique
   emailVerified DateTime?
   name          String?
   document      String?
   documentType  DocumentType?
-  role          UserRole   @default(CUSTOMER)
-  status        UserStatus @default(ACTIVE)
+  role          UserRole      @default(CUSTOMER)
+  status        UserStatus    @default(ACTIVE)
 
-  avatarId String?      @unique
-  avatar   MediaAsset?  @relation("UserAvatar", fields: [avatarId], references: [id], onDelete: SetNull)
+  avatarId String?     @unique
+  avatar   MediaAsset? @relation("UserAvatar", fields: [avatarId], references: [id], onDelete: SetNull)
 
   /// LGPD: consentimento explícito e data.
   acceptedTermsAt   DateTime?
@@ -369,11 +369,12 @@ model User {
   pushSubscriptions PushSubscription[]
   notifications     NotificationLog[]
   couponRedemptions CouponRedemption[]
-  auditLogs         AuditLog[]           @relation("AuditActor")
-  impersonations    ImpersonationLog[]   @relation("Impersonator")
-  impersonatedBy    ImpersonationLog[]   @relation("Impersonated")
+  auditLogs         AuditLog[]         @relation("AuditActor")
+  impersonations    ImpersonationLog[] @relation("Impersonator")
+  impersonatedBy    ImpersonationLog[] @relation("Impersonated")
   dataRequests      DataRequest[]
   consents          ConsentRecord[]
+  favoriteStores    FavoriteStore[]
 
   @@index([role, status])
   @@index([phone])
@@ -426,14 +427,14 @@ model VerificationToken {
 
 /// Código OTP enviado por WhatsApp/SMS. Guarda apenas o HASH do código.
 model OtpCode {
-  id          String    @id @default(cuid())
-  phone       String
-  codeHash    String
-  attempts    Int       @default(0)
-  consumedAt  DateTime?
-  expiresAt   DateTime
-  requestIp   String?
-  createdAt   DateTime  @default(now())
+  id         String    @id @default(cuid())
+  phone      String
+  codeHash   String
+  attempts   Int       @default(0)
+  consumedAt DateTime?
+  expiresAt  DateTime
+  requestIp  String?
+  createdAt  DateTime  @default(now())
 
   @@index([phone, expiresAt])
   @@map("otp_codes")
@@ -458,12 +459,12 @@ model MediaAsset {
   /// data URI minúsculo para carregamento progressivo.
   blurDataUrl String? @db.Text
 
-  mimeType String
-  width    Int?
-  height   Int?
+  mimeType  String
+  width     Int?
+  height    Int?
   sizeBytes Int?
   /// Hash do conteúdo, usado no nome do arquivo e para deduplicação.
-  checksum String?
+  checksum  String?
 
   /// false enquanto a fila de processamento ainda não gerou as variantes.
   isProcessed Boolean @default(false)
@@ -472,16 +473,16 @@ model MediaAsset {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  userAvatar        User?             @relation("UserAvatar")
-  storeLogo         Store?            @relation("StoreLogo")
-  storeCover        Store?            @relation("StoreCover")
-  products          Product[]
-  pizzaFlavors      PizzaFlavor[]
-  menuCategories    MenuCategory[]
-  banners           Banner[]
-  storeCategories   StoreCategory[]
-  courierDocuments  CourierDocument[]
-  storeDocuments    StoreDocument[]
+  userAvatar       User?             @relation("UserAvatar")
+  storeLogo        Store?            @relation("StoreLogo")
+  storeCover       Store?            @relation("StoreCover")
+  products         Product[]
+  pizzaFlavors     PizzaFlavor[]
+  menuCategories   MenuCategory[]
+  banners          Banner[]
+  storeCategories  StoreCategory[]
+  courierDocuments CourierDocument[]
+  storeDocuments   StoreDocument[]
 
   @@index([context])
   @@index([checksum])
@@ -495,16 +496,16 @@ model MediaAsset {
 /// Categoria de loja no marketplace (supermercado, farmácia, pizzaria...).
 /// É DADO, não código: novas categorias entram pelo painel do super admin.
 model StoreCategory {
-  id       String       @id @default(cuid())
-  name     String
-  slug     String       @unique
-  segment  StoreSegment @default(OTHER)
-  iconId   String?
-  icon     MediaAsset?  @relation(fields: [iconId], references: [id], onDelete: SetNull)
+  id        String       @id @default(cuid())
+  name      String
+  slug      String       @unique
+  segment   StoreSegment @default(OTHER)
+  iconId    String?
+  icon      MediaAsset?  @relation(fields: [iconId], references: [id], onDelete: SetNull)
   /// Emoji ou nome de ícone lucide, para não depender de upload.
-  iconName String?
-  sortOrder Int         @default(0)
-  isActive Boolean      @default(true)
+  iconName  String?
+  sortOrder Int          @default(0)
+  isActive  Boolean      @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -524,7 +525,7 @@ model Store {
   status      StoreStatus  @default(PENDING_APPROVAL)
 
   cityId     String
-  city       City          @relation(fields: [cityId], references: [id])
+  city       City           @relation(fields: [cityId], references: [id])
   categoryId String?
   category   StoreCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
@@ -551,15 +552,15 @@ model Store {
   longitude      Float?
 
   // --- Regras de entrega -----------------------------------------------
-  deliveryFeeMode     DeliveryFeeMode @default(FIXED)
-  deliveryFeeCents    Int             @default(500)
-  pricePerKmCents     Int             @default(150)
+  deliveryFeeMode        DeliveryFeeMode @default(FIXED)
+  deliveryFeeCents       Int             @default(500)
+  pricePerKmCents        Int             @default(150)
   freeDeliveryAboveCents Int?
-  deliveryRadiusMeters   Int          @default(8000)
-  minOrderCents          Int          @default(0)
-  avgPrepTimeMinutes     Int          @default(30)
-  avgDeliveryTimeMinutes Int          @default(20)
-  acceptsPickup          Boolean      @default(true)
+  deliveryRadiusMeters   Int             @default(8000)
+  minOrderCents          Int             @default(0)
+  avgPrepTimeMinutes     Int             @default(30)
+  avgDeliveryTimeMinutes Int             @default(20)
+  acceptsPickup          Boolean         @default(true)
 
   // --- Pagamento --------------------------------------------------------
   acceptsPix            Boolean        @default(true)
@@ -574,12 +575,12 @@ model Store {
 
   // --- Operação ---------------------------------------------------------
   /// Pausa de emergência ("fechar agora"), independente do horário cadastrado.
-  isPausedUntil DateTime?
-  pauseReason   String?
+  isPausedUntil     DateTime?
+  pauseReason       String?
   /// Alerta sonoro na tela de pedidos.
-  soundAlertEnabled Boolean @default(true)
+  soundAlertEnabled Boolean   @default(true)
   /// Aceite automático de pedidos (loja com fluxo simples).
-  autoAcceptOrders  Boolean @default(false)
+  autoAcceptOrders  Boolean   @default(false)
 
   // --- Métricas cacheadas (recalculadas por job) ------------------------
   ratingAverage Decimal @default(0) @db.Decimal(3, 2)
@@ -592,27 +593,28 @@ model Store {
   updatedAt    DateTime  @updatedAt
   deletedAt    DateTime?
 
-  staff          StoreStaff[]
-  hours          StoreHour[]
-  closures       StoreClosure[]
-  deliveryZones  DeliveryZone[]
-  menuCategories MenuCategory[]
-  products       Product[]
+  staff            StoreStaff[]
+  hours            StoreHour[]
+  closures         StoreClosure[]
+  deliveryZones    DeliveryZone[]
+  menuCategories   MenuCategory[]
+  products         Product[]
   complementGroups ComplementGroup[]
-  pizzaSizes     PizzaSize[]
-  pizzaFlavors   PizzaFlavor[]
-  pizzaExtras    PizzaExtra[]
-  orders         Order[]
-  carts          Cart[]
-  coupons        Coupon[]
-  couriers       Courier[]
-  reviews        Review[]
-  subscription   StoreSubscription?
-  invoices       PlanInvoice[]
-  boosts         StoreBoost[]
-  payouts        Payout[]
-  documents      StoreDocument[]
-  banners        Banner[]
+  pizzaSizes       PizzaSize[]
+  pizzaFlavors     PizzaFlavor[]
+  pizzaExtras      PizzaExtra[]
+  orders           Order[]
+  carts            Cart[]
+  coupons          Coupon[]
+  couriers         Courier[]
+  reviews          Review[]
+  subscription     StoreSubscription?
+  invoices         PlanInvoice[]
+  boosts           StoreBoost[]
+  payouts          Payout[]
+  documents        StoreDocument[]
+  banners          Banner[]
+  favoritedBy      FavoriteStore[]
 
   @@index([cityId, status])
   @@index([categoryId])
@@ -626,9 +628,9 @@ model StoreDocument {
   storeId String
   store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
-  label   String
-  fileId  String
-  file    MediaAsset @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  label  String
+  fileId String
+  file   MediaAsset @relation(fields: [fileId], references: [id], onDelete: Cascade)
 
   reviewedAt   DateTime?
   reviewedById String?
@@ -644,13 +646,13 @@ model StoreDocument {
 /// Vínculo usuário ↔ loja. É a base do isolamento multi-tenant: nenhuma query
 /// de loja pode confiar em storeId vindo da URL sem checar este vínculo.
 model StoreStaff {
-  id      String         @id @default(cuid())
-  storeId String
-  store   Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  userId  String
-  user    User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role    StoreStaffRole @default(OPERATOR)
-  isActive Boolean       @default(true)
+  id       String         @id @default(cuid())
+  storeId  String
+  store    Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     StoreStaffRole @default(OPERATOR)
+  isActive Boolean        @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -663,15 +665,15 @@ model StoreStaff {
 /// Horário de funcionamento por dia da semana (0 = domingo).
 /// Vários registros no mesmo dia permitem intervalo (almoço/janta).
 model StoreHour {
-  id        String @id @default(cuid())
-  storeId   String
-  store     Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  weekday   Int
+  id       String  @id @default(cuid())
+  storeId  String
+  store    Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  weekday  Int
   /// Minutos desde a meia-noite. 1080 = 18:00. Fechamento pode passar da
   /// meia-noite (ex.: abre 18:00 fecha 02:00 → closesAt 1560).
-  opensAt   Int
-  closesAt  Int
-  isActive  Boolean @default(true)
+  opensAt  Int
+  closesAt Int
+  isActive Boolean @default(true)
 
   @@index([storeId, weekday])
   @@map("store_hours")
@@ -679,12 +681,12 @@ model StoreHour {
 
 /// Feriado ou fechamento programado.
 model StoreClosure {
-  id        String   @id @default(cuid())
-  storeId   String
-  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  startsAt  DateTime
-  endsAt    DateTime
-  reason    String?
+  id       String   @id @default(cuid())
+  storeId  String
+  store    Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  startsAt DateTime
+  endsAt   DateTime
+  reason   String?
 
   createdAt DateTime @default(now())
 
@@ -694,17 +696,17 @@ model StoreClosure {
 
 /// Taxa de entrega por bairro/zona (DeliveryFeeMode.BY_ZONE).
 model DeliveryZone {
-  id             String  @id @default(cuid())
-  storeId        String
-  store          Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  neighborhoodId String?
-  neighborhood   Neighborhood? @relation(fields: [neighborhoodId], references: [id], onDelete: SetNull)
+  id               String        @id @default(cuid())
+  storeId          String
+  store            Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  neighborhoodId   String?
+  neighborhood     Neighborhood? @relation(fields: [neighborhoodId], references: [id], onDelete: SetNull)
   /// Nome livre, para zonas que não são um bairro cadastrado.
-  name           String
-  feeCents       Int
-  minOrderCents  Int?
+  name             String
+  feeCents         Int
+  minOrderCents    Int?
   estimatedMinutes Int?
-  isActive       Boolean @default(true)
+  isActive         Boolean       @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -719,15 +721,15 @@ model DeliveryZone {
 
 /// Categoria do cardápio dentro da loja (Bebidas, Pizzas, Hortifruti...).
 model MenuCategory {
-  id          String  @id @default(cuid())
+  id          String      @id @default(cuid())
   storeId     String
-  store       Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store       Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name        String
   description String?
   imageId     String?
   image       MediaAsset? @relation(fields: [imageId], references: [id], onDelete: SetNull)
-  sortOrder   Int     @default(0)
-  isActive    Boolean @default(true)
+  sortOrder   Int         @default(0)
+  isActive    Boolean     @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -740,11 +742,11 @@ model MenuCategory {
 }
 
 model Product {
-  id          String      @id @default(cuid())
-  storeId     String
-  store       Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  categoryId  String?
-  category    MenuCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  id         String        @id @default(cuid())
+  storeId    String
+  store      Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  categoryId String?
+  category   MenuCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   name        String
   description String?     @db.Text
@@ -754,22 +756,22 @@ model Product {
   productType ProductType @default(SIMPLE)
 
   /// Preço de venda. Para venda por peso, é o preço do quilo.
-  priceCents         Int
+  priceCents          Int
   /// Preço "de", riscado. Sempre maior que priceCents quando presente.
   compareAtPriceCents Int?
 
-  sellingUnit      SellingUnit @default(UNIT)
+  sellingUnit     SellingUnit @default(UNIT)
   /// Incremento de peso permitido, em gramas (ex.: 100 = de 100 em 100 g).
-  weightStepGrams  Int?
-  minWeightGrams   Int?
+  weightStepGrams Int?
+  minWeightGrams  Int?
 
   /// Código interno/EAN, usado na importação de planilha.
-  sku      String?
-  barcode  String?
+  sku     String?
+  barcode String?
 
-  isAvailable Boolean @default(true)
+  isAvailable   Boolean   @default(true)
   /// Pausa temporária de um clique, sem apagar o produto.
-  pausedUntil DateTime?
+  pausedUntil   DateTime?
   /// Controle de estoque simples: null = não controla.
   stockQuantity Int?
 
@@ -822,14 +824,14 @@ model ComplementGroup {
 }
 
 model ComplementOption {
-  id          String  @id @default(cuid())
+  id          String          @id @default(cuid())
   groupId     String
   group       ComplementGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   name        String
   description String?
-  priceCents  Int     @default(0)
-  isAvailable Boolean @default(true)
-  sortOrder   Int     @default(0)
+  priceCents  Int             @default(0)
+  isAvailable Boolean         @default(true)
+  sortOrder   Int             @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -843,12 +845,12 @@ model ComplementOption {
 
 /// Relação N-N produto ↔ grupo de complementos, com ordenação por produto.
 model ProductComplementGroup {
-  id        String @id @default(cuid())
+  id        String          @id @default(cuid())
   productId String
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
   groupId   String
   group     ComplementGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  sortOrder Int    @default(0)
+  sortOrder Int             @default(0)
 
   @@unique([productId, groupId])
   @@index([productId, sortOrder])
@@ -860,16 +862,16 @@ model ProductComplementGroup {
 // =============================================================================
 
 model PizzaSize {
-  id         String @id @default(cuid())
-  storeId    String
-  store      Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  name       String
+  id          String  @id @default(cuid())
+  storeId     String
+  store       Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name        String
   description String?
   /// Quantos sabores cabem neste tamanho.
-  maxFlavors Int    @default(1)
-  slices     Int?
-  sortOrder  Int    @default(0)
-  isActive   Boolean @default(true)
+  maxFlavors  Int     @default(1)
+  slices      Int?
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -884,17 +886,17 @@ model PizzaSize {
 }
 
 model PizzaFlavor {
-  id          String  @id @default(cuid())
+  id          String      @id @default(cuid())
   storeId     String
-  store       Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store       Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
   name        String
-  description String? @db.Text
+  description String?     @db.Text
   imageId     String?
   image       MediaAsset? @relation(fields: [imageId], references: [id], onDelete: SetNull)
   /// Agrupamento visual (Tradicionais, Especiais, Doces).
   groupName   String?
-  isAvailable Boolean @default(true)
-  sortOrder   Int     @default(0)
+  isAvailable Boolean     @default(true)
+  sortOrder   Int         @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -910,7 +912,7 @@ model PizzaFlavor {
 
 /// Preço de um sabor em cada tamanho.
 model PizzaFlavorPrice {
-  id         String @id @default(cuid())
+  id         String      @id @default(cuid())
   flavorId   String
   flavor     PizzaFlavor @relation(fields: [flavorId], references: [id], onDelete: Cascade)
   sizeId     String
@@ -923,15 +925,15 @@ model PizzaFlavorPrice {
 
 /// Borda recheada, massa e outros extras de pizza.
 model PizzaExtra {
-  id         String @id @default(cuid())
-  storeId    String
-  store      Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  name       String
+  id          String  @id @default(cuid())
+  storeId     String
+  store       Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name        String
   /// "CRUST" (massa) ou "EDGE" (borda). String livre para não travar o lojista.
-  kind       String @default("EDGE")
-  priceCents Int    @default(0)
+  kind        String  @default("EDGE")
+  priceCents  Int     @default(0)
   isAvailable Boolean @default(true)
-  sortOrder  Int    @default(0)
+  sortOrder   Int     @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -948,22 +950,22 @@ model PizzaExtra {
 // =============================================================================
 
 model Address {
-  id     String @id @default(cuid())
+  id     String  @id @default(cuid())
   userId String?
-  user   User?  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  label          String?
-  street         String
+  label           String?
+  street          String
   /// Opcional de propósito: "casa da esquina", "sem número".
-  number         String?
-  complement     String?
-  neighborhoodId String?
+  number          String?
+  complement      String?
+  neighborhoodId  String?
   neighborhoodRef Neighborhood? @relation(fields: [neighborhoodId], references: [id], onDelete: SetNull)
   /// Texto livre, porque nem todo bairro está cadastrado.
-  neighborhood   String
+  neighborhood    String
   /// Ponto de referência: obrigatório na experiência, o que salva a entrega.
-  referencePoint String?
-  zipCode        String?
+  referencePoint  String?
+  zipCode         String?
 
   cityId String
   city   City   @relation(fields: [cityId], references: [id])
@@ -971,9 +973,9 @@ model Address {
   latitude  Float?
   longitude Float?
 
-  isDefault Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  isDefault Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
   orders Order[]
@@ -1020,13 +1022,13 @@ model CartItem {
   productId String?
   product   Product? @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  quantity Int @default(1)
+  quantity    Int  @default(1)
   /// Para venda por peso: quantidade em gramas escolhida pelo cliente.
   weightGrams Int?
 
   // Pizza
-  pizzaSizeId String?
-  pizzaSize   PizzaSize? @relation(fields: [pizzaSizeId], references: [id], onDelete: Cascade)
+  pizzaSizeId  String?
+  pizzaSize    PizzaSize?  @relation(fields: [pizzaSizeId], references: [id], onDelete: Cascade)
   pizzaExtraId String?
   pizzaExtra   PizzaExtra? @relation(fields: [pizzaExtraId], references: [id], onDelete: SetNull)
 
@@ -1043,21 +1045,21 @@ model CartItem {
 }
 
 model CartItemComplement {
-  id         String @id @default(cuid())
+  id         String           @id @default(cuid())
   cartItemId String
-  cartItem   CartItem @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
+  cartItem   CartItem         @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
   optionId   String
   option     ComplementOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
-  quantity   Int @default(1)
+  quantity   Int              @default(1)
 
   @@index([cartItemId])
   @@map("cart_item_complements")
 }
 
 model CartItemPizzaFlavor {
-  id         String @id @default(cuid())
+  id         String      @id @default(cuid())
   cartItemId String
-  cartItem   CartItem @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
+  cartItem   CartItem    @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
   flavorId   String
   flavor     PizzaFlavor @relation(fields: [flavorId], references: [id], onDelete: Cascade)
 
@@ -1075,32 +1077,32 @@ model Order {
   number String @unique
 
   cityId  String
-  city    City   @relation(fields: [cityId], references: [id])
+  city    City    @relation(fields: [cityId], references: [id])
   storeId String
-  store   Store  @relation(fields: [storeId], references: [id])
+  store   Store   @relation(fields: [storeId], references: [id])
   userId  String?
-  user    User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   type   OrderType   @default(DELIVERY)
   status OrderStatus @default(RECEIVED)
 
   // --- Snapshot do cliente e do endereço --------------------------------
-  customerName  String
-  customerPhone String
-  addressId     String?
-  address       Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
+  customerName    String
+  customerPhone   String
+  addressId       String?
+  address         Address? @relation(fields: [addressId], references: [id], onDelete: SetNull)
   /// Cópia do endereço no momento do pedido: o cliente pode editar depois.
   addressSnapshot Json?
 
   // --- Valores (centavos) ------------------------------------------------
   subtotalCents    Int
-  deliveryFeeCents Int @default(0)
-  discountCents    Int @default(0)
+  deliveryFeeCents Int     @default(0)
+  discountCents    Int     @default(0)
   /// Acréscimo eventual (taxa de serviço, embalagem).
-  surchargeCents   Int @default(0)
+  surchargeCents   Int     @default(0)
   totalCents       Int
   /// Comissão retida pela plataforma neste pedido.
-  commissionCents  Int @default(0)
+  commissionCents  Int     @default(0)
   commissionRate   Decimal @default(0) @db.Decimal(5, 2)
 
   couponId String?
@@ -1123,11 +1125,11 @@ model Order {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  items         OrderItem[]
-  payment       Payment?
-  delivery      Delivery?
-  statusHistory OrderStatusHistory[]
-  reviews       Review[]
+  items            OrderItem[]
+  payment          Payment?
+  delivery         Delivery?
+  statusHistory    OrderStatusHistory[]
+  reviews          Review[]
   couponRedemption CouponRedemption?
 
   @@index([storeId, status, createdAt])
@@ -1149,20 +1151,20 @@ model OrderItem {
   productName String
   productType ProductType @default(SIMPLE)
 
-  quantity    Int @default(1)
-  weightGrams Int?
+  quantity       Int  @default(1)
+  weightGrams    Int?
   /// Preço unitário no momento do pedido (ou preço do kg, se por peso).
   unitPriceCents Int
   /// unitPrice * quantidade + complementos + extras.
   totalCents     Int
 
   // Pizza
-  pizzaSizeId   String?
-  pizzaSize     PizzaSize? @relation(fields: [pizzaSizeId], references: [id], onDelete: SetNull)
-  pizzaSizeName String?
-  pizzaExtraId  String?
-  pizzaExtra    PizzaExtra? @relation(fields: [pizzaExtraId], references: [id], onDelete: SetNull)
-  pizzaExtraName String?
+  pizzaSizeId          String?
+  pizzaSize            PizzaSize?  @relation(fields: [pizzaSizeId], references: [id], onDelete: SetNull)
+  pizzaSizeName        String?
+  pizzaExtraId         String?
+  pizzaExtra           PizzaExtra? @relation(fields: [pizzaExtraId], references: [id], onDelete: SetNull)
+  pizzaExtraName       String?
   pizzaExtraPriceCents Int?
 
   notes String?
@@ -1175,25 +1177,25 @@ model OrderItem {
 }
 
 model OrderItemComplement {
-  id          String @id @default(cuid())
+  id          String            @id @default(cuid())
   orderItemId String
-  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  orderItem   OrderItem         @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
   optionId    String?
   option      ComplementOption? @relation(fields: [optionId], references: [id], onDelete: SetNull)
 
   groupName  String
   optionName String
   priceCents Int
-  quantity   Int @default(1)
+  quantity   Int    @default(1)
 
   @@index([orderItemId])
   @@map("order_item_complements")
 }
 
 model OrderItemPizzaFlavor {
-  id          String @id @default(cuid())
+  id          String       @id @default(cuid())
   orderItemId String
-  orderItem   OrderItem @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+  orderItem   OrderItem    @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
   flavorId    String?
   flavor      PizzaFlavor? @relation(fields: [flavorId], references: [id], onDelete: SetNull)
 
@@ -1206,13 +1208,13 @@ model OrderItemPizzaFlavor {
 }
 
 model OrderStatusHistory {
-  id        String      @id @default(cuid())
-  orderId   String
-  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  status    OrderStatus
-  note      String?
+  id          String      @id @default(cuid())
+  orderId     String
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status      OrderStatus
+  note        String?
   changedById String?
-  createdAt DateTime    @default(now())
+  createdAt   DateTime    @default(now())
 
   @@index([orderId, createdAt])
   @@map("order_status_history")
@@ -1231,15 +1233,15 @@ model Payment {
   status   PaymentStatus   @default(PENDING)
   provider PaymentProvider @default(OFFLINE)
 
-  amountCents Int
+  amountCents    Int
   /// "Troco para quanto?" — pagamento em dinheiro na entrega.
   changeForCents Int?
 
   /// Identificador do pagamento no gateway.
-  externalId String?
+  externalId     String?
   /// Payload do Pix copia-e-cola e imagem do QR Code.
-  pixQrCode      String? @db.Text
-  pixQrCodeImage String? @db.Text
+  pixQrCode      String?   @db.Text
+  pixQrCodeImage String?   @db.Text
   pixExpiresAt   DateTime?
 
   /// Split: quanto fica com a plataforma neste pagamento.
@@ -1262,7 +1264,7 @@ model Payment {
 
 /// Log bruto de webhooks do gateway — indispensável para conciliar.
 model PaymentEvent {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
   paymentId String?
   payment   Payment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
 
@@ -1271,7 +1273,7 @@ model PaymentEvent {
   externalId String?
   payload    Json
   /// Impede reprocessar o mesmo webhook duas vezes.
-  dedupeKey  String? @unique
+  dedupeKey  String?         @unique
 
   processedAt DateTime?
   createdAt   DateTime  @default(now())
@@ -1289,8 +1291,8 @@ model Courier {
   userId String @unique
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  cityId String
-  city   City   @relation(fields: [cityId], references: [id])
+  cityId  String
+  city    City    @relation(fields: [cityId], references: [id])
   /// Preenchido quando o entregador é da própria loja.
   storeId String?
   store   Store?  @relation(fields: [storeId], references: [id], onDelete: SetNull)
@@ -1305,10 +1307,10 @@ model Courier {
 
   pixKey String?
 
-  isOnline    Boolean   @default(false)
-  lastSeenAt  DateTime?
-  latitude    Float?
-  longitude   Float?
+  isOnline   Boolean   @default(false)
+  lastSeenAt DateTime?
+  latitude   Float?
+  longitude  Float?
 
   ratingAverage Decimal @default(0) @db.Decimal(3, 2)
   ratingCount   Int     @default(0)
@@ -1330,7 +1332,7 @@ model Courier {
 }
 
 model CourierDocument {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   courierId String
   courier   Courier @relation(fields: [courierId], references: [id], onDelete: Cascade)
 
@@ -1360,14 +1362,14 @@ model Delivery {
   status DeliveryStatus @default(PENDING)
 
   /// Quanto o entregador ganha nesta corrida.
-  earningCents  Int  @default(0)
+  earningCents   Int  @default(0)
   distanceMeters Int?
 
-  assignedAt DateTime?
-  acceptedAt DateTime?
-  pickedUpAt DateTime?
-  deliveredAt DateTime?
-  cancelledAt DateTime?
+  assignedAt   DateTime?
+  acceptedAt   DateTime?
+  pickedUpAt   DateTime?
+  deliveredAt  DateTime?
+  cancelledAt  DateTime?
   refuseReason String?
 
   createdAt DateTime @default(now())
@@ -1444,10 +1446,10 @@ model PlanInvoice {
   planId  String
   plan    Plan   @relation(fields: [planId], references: [id])
 
-  status      InvoiceStatus @default(OPEN)
-  amountCents Int
+  status          InvoiceStatus @default(OPEN)
+  amountCents     Int
   /// Comissão acumulada do período, cobrada junto da mensalidade.
-  commissionCents Int @default(0)
+  commissionCents Int           @default(0)
 
   periodStart DateTime
   periodEnd   DateTime
@@ -1470,15 +1472,15 @@ model PlanInvoice {
 // =============================================================================
 
 model BoostPackage {
-  id          String         @id @default(cuid())
-  name        String
-  description String?
-  placement   BoostPlacement
-  priceCents  Int
+  id           String         @id @default(cuid())
+  name         String
+  description  String?
+  placement    BoostPlacement
+  priceCents   Int
   durationDays Int
   /// Peso na ordenação: maior valor aparece antes.
-  priority    Int            @default(0)
-  isActive    Boolean        @default(true)
+  priority     Int            @default(0)
+  isActive     Boolean        @default(true)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1490,9 +1492,9 @@ model BoostPackage {
 }
 
 model StoreBoost {
-  id        String @id @default(cuid())
+  id        String       @id @default(cuid())
   storeId   String
-  store     Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  store     Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
   packageId String
   package   BoostPackage @relation(fields: [packageId], references: [id])
 
@@ -1515,7 +1517,7 @@ model StoreBoost {
 }
 
 model Banner {
-  id      String @id @default(cuid())
+  id      String     @id @default(cuid())
   title   String
   imageId String
   image   MediaAsset @relation(fields: [imageId], references: [id], onDelete: Cascade)
@@ -1562,16 +1564,16 @@ model Coupon {
   cityId  String?
   city    City?   @relation(fields: [cityId], references: [id], onDelete: Cascade)
 
-  discountType  DiscountType
+  discountType     DiscountType
   /// Percentual (0-100) ou valor em centavos, conforme discountType.
-  discountValue Int
+  discountValue    Int
   maxDiscountCents Int?
-  minOrderCents    Int @default(0)
+  minOrderCents    Int          @default(0)
 
   /// null = ilimitado.
-  usageLimit     Int?
-  usagePerUser   Int? @default(1)
-  usageCount     Int  @default(0)
+  usageLimit   Int?
+  usagePerUser Int? @default(1)
+  usageCount   Int  @default(0)
 
   /// Restringe a clientes que nunca pediram.
   firstOrderOnly Boolean @default(false)
@@ -1620,8 +1622,8 @@ model Review {
   userId  String
   user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  storeId String?
-  store   Store?  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  storeId   String?
+  store     Store?   @relation(fields: [storeId], references: [id], onDelete: Cascade)
   courierId String?
   courier   Courier? @relation(fields: [courierId], references: [id], onDelete: Cascade)
 
@@ -1630,7 +1632,7 @@ model Review {
   comment String? @db.Text
 
   /// Resposta do lojista.
-  replyText String?  @db.Text
+  replyText String?   @db.Text
   repliedAt DateTime?
 
   createdAt DateTime @default(now())
@@ -1652,9 +1654,9 @@ model PushSubscription {
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  endpoint String @unique @db.Text
-  p256dh   String
-  auth     String
+  endpoint  String  @unique @db.Text
+  p256dh    String
+  auth      String
   userAgent String?
 
   createdAt  DateTime  @default(now())
@@ -1665,9 +1667,9 @@ model PushSubscription {
 }
 
 model NotificationCampaign {
-  id      String @id @default(cuid())
+  id      String  @id @default(cuid())
   title   String
-  body    String @db.Text
+  body    String  @db.Text
   linkUrl String?
 
   channel NotificationChannel @default(PUSH)
@@ -1675,10 +1677,10 @@ model NotificationCampaign {
   /// Segmentação: { "publico": "CUSTOMERS", "cityIds": [...], "inativoHaDias": 30, "apenasComPedido": false }
   segment Json @default("{}")
 
-  scheduledFor DateTime?
-  sentAt       DateTime?
-  recipientCount Int @default(0)
-  deliveredCount Int @default(0)
+  scheduledFor   DateTime?
+  sentAt         DateTime?
+  recipientCount Int       @default(0)
+  deliveredCount Int       @default(0)
 
   createdById String?
   createdAt   DateTime @default(now())
@@ -1691,17 +1693,17 @@ model NotificationCampaign {
 }
 
 model NotificationLog {
-  id     String @id @default(cuid())
+  id     String  @id @default(cuid())
   userId String?
-  user   User?  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   campaignId String?
   campaign   NotificationCampaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
 
-  channel NotificationChannel
-  status  NotificationStatus  @default(QUEUED)
-  title   String
-  body    String              @db.Text
+  channel    NotificationChannel
+  status     NotificationStatus  @default(QUEUED)
+  title      String
+  body       String              @db.Text
   /// Referência ao pedido/loja que originou a notificação.
   entityType String?
   entityId   String?
@@ -1722,9 +1724,9 @@ model NotificationLog {
 
 /// Repasse do que a plataforma coletou para o lojista ou o entregador.
 model Payout {
-  id      String @id @default(cuid())
-  storeId String?
-  store   Store? @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  storeId   String?
+  store     Store?   @relation(fields: [storeId], references: [id], onDelete: Cascade)
   courierId String?
   courier   Courier? @relation(fields: [courierId], references: [id], onDelete: Cascade)
 
@@ -1750,16 +1752,16 @@ model Payout {
 // =============================================================================
 
 model AuditLog {
-  id      String @id @default(cuid())
+  id      String  @id @default(cuid())
   actorId String?
-  actor   User?  @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  actor   User?   @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   action     String
   entityType String
   entityId   String?
   /// Estado antes e depois, para reconstruir o que mudou.
-  before Json?
-  after  Json?
+  before     Json?
+  after      Json?
 
   ipAddress String?
   userAgent String?
@@ -1773,11 +1775,11 @@ model AuditLog {
 /// Registro de "entrar como lojista". Exigido pelo plano: impersonation sempre
 /// com trilha de auditoria.
 model ImpersonationLog {
-  id             String @id @default(cuid())
+  id             String  @id @default(cuid())
   impersonatorId String
-  impersonator   User   @relation("Impersonator", fields: [impersonatorId], references: [id], onDelete: Cascade)
+  impersonator   User    @relation("Impersonator", fields: [impersonatorId], references: [id], onDelete: Cascade)
   impersonatedId String
-  impersonated   User   @relation("Impersonated", fields: [impersonatedId], references: [id], onDelete: Cascade)
+  impersonated   User    @relation("Impersonated", fields: [impersonatedId], references: [id], onDelete: Cascade)
   storeId        String?
 
   reason    String?
@@ -1833,10 +1835,24 @@ model DataRequest {
 
 /// Configurações globais editáveis pelo super admin (sem redeploy).
 model PlatformSetting {
-  key       String   @id
-  value     Json
-  updatedAt DateTime @updatedAt
+  key         String   @id
+  value       Json
+  updatedAt   DateTime @updatedAt
   updatedById String?
 
   @@map("platform_settings")
+}
+
+/// Lojas que o cliente marcou com o coração. Sem id próprio: a dupla já é a
+/// identidade, e marcar de novo não pode duplicar.
+model FavoriteStore {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, storeId])
+  @@index([storeId])
+  @@map("favorite_stores")
 }

@@ -139,6 +139,42 @@ export async function adicionarAoCarrinho(entrada: unknown): Promise<ActionResul
       select: { id: true },
     });
 
+    // Item simples igual ao que já está no carrinho soma na mesma linha: pedir
+    // a mesma lista duas vezes não pode virar "Arroz" repetido três vezes.
+    // Com complemento, sabor ou observação, é outro item — cada um é montado.
+    const simples =
+      item.productId != null &&
+      item.complements.length === 0 &&
+      item.flavorIds.length === 0 &&
+      item.pizzaSizeId == null &&
+      !item.notes;
+
+    if (simples) {
+      const igual = await prisma.cartItem.findFirst({
+        where: {
+          cartId: carrinho.id,
+          productId: item.productId,
+          weightGrams: item.weightGrams ?? null,
+          notes: null,
+          pizzaSizeId: null,
+          complements: { none: {} },
+          flavors: { none: {} },
+        },
+        select: { id: true, quantity: true },
+      });
+
+      if (igual) {
+        await prisma.cartItem.update({
+          where: { id: igual.id },
+          data: { quantity: Math.min(99, igual.quantity + item.quantity) },
+        });
+
+        revalidatePath('/carrinho');
+        revalidatePath(`/loja/${loja.slug}`);
+        return { ok: true, message: 'Adicionado ao carrinho.' };
+      }
+    }
+
     await prisma.cartItem.create({
       data: {
         cartId: carrinho.id,
