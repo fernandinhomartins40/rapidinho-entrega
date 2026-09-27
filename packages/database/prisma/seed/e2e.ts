@@ -44,7 +44,7 @@ async function main() {
       prisma.store.updateMany({ data: { isPausedUntil: null } }),
     ]);
 
-    console.log(`✔ ${lojas.length} lojas abertas 24h para o e2e`);
+    console.warn(`✔ ${lojas.length} lojas abertas 24h para o e2e`);
   } finally {
     await prisma.$disconnect();
   }

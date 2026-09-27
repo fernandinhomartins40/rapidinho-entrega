@@ -3,7 +3,13 @@
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@rapidinho/database';
-import { capturarErro, getPaymentGateway, publishRealtime } from '@rapidinho/services';
+import {
+  agendarExpiracaoDePedido,
+  agendarLembreteDaLoja,
+  capturarErro,
+  getPaymentGateway,
+  publishRealtime,
+} from '@rapidinho/services';
 import {
   buildPixBrCode,
   checkoutSchema,
@@ -159,7 +165,14 @@ export async function finalizarPedido(
     const endereco =
       dados.type === 'DELIVERY' && dados.addressId
         ? await prisma.address.findFirst({
-            where: { id: dados.addressId, userId: user.id },
+            // Mesma cidade da loja e não excluído: o cálculo já barra, mas a
+            // ação não confia no que a tela mandou.
+            where: {
+              id: dados.addressId,
+              userId: user.id,
+              cityId: loja.cityId,
+              deletedAt: null,
+            },
             select: {
               id: true,
               street: true,
@@ -333,6 +346,17 @@ export async function finalizarPedido(
       });
     }
 
+    await agendarAcompanhamento({
+      orderId: pedido.id,
+      status: statusInicial,
+      // Pix direto na chave da loja é confirmado à mão pelo lojista: cancelar
+      // sozinho poderia derrubar um pedido já pago. Só o gateway, que avisa
+      // pelo webhook, tem prazo automático.
+      expiraSozinho:
+        statusInicial === 'PENDING_PAYMENT' &&
+        !(dados.paymentMethod === 'PIX' && loja.settlementMode === 'STORE_COLLECTS' && loja.pixKey),
+    });
+
     revalidatePath('/carrinho');
     revalidatePath('/pedidos');
 
@@ -345,6 +369,33 @@ export async function finalizarPedido(
   if (destino) redirect(destino);
 
   return resultado;
+}
+
+/**
+ * O que precisa ser conferido depois que o pedido existe:
+ *
+ * - pagamento online não confirmado em 35 min (30 da cobrança + folga) é
+ *   cancelado e devolve o cupom — o job existia, mas nunca era agendado;
+ * - pedido que entrou para a loja e não foi aceito em alguns minutos vira
+ *   lembrete para a equipe dela.
+ *
+ * Falha na fila não derruba o pedido, que já está gravado.
+ */
+async function agendarAcompanhamento(entrada: {
+  orderId: string;
+  status: string;
+  expiraSozinho: boolean;
+}): Promise<void> {
+  try {
+    if (entrada.expiraSozinho) {
+      await agendarExpiracaoDePedido({ orderId: entrada.orderId }, 35 * 60);
+    }
+    if (entrada.status === 'RECEIVED') {
+      await agendarLembreteDaLoja({ orderId: entrada.orderId });
+    }
+  } catch (error) {
+    void capturarErro(error, { origem: 'checkout-agendamento', orderId: entrada.orderId });
+  }
 }
 
 /**

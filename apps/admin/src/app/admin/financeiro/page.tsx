@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { prisma } from '@rapidinho/database';
-import { formatCents } from '@rapidinho/shared';
+import { formatCents, inicioDoMes as inicioDoMesEmBrasilia } from '@rapidinho/shared';
 import {
   Badge,
   Card,
@@ -26,9 +26,8 @@ export const metadata = { title: 'Financeiro' };
  * ainda não viraram fatura; inadimplência é fatura vencida e não paga.
  */
 async function carregar() {
-  const inicioDoMes = new Date();
-  inicioDoMes.setDate(1);
-  inicioDoMes.setHours(0, 0, 0, 0);
+  // Mês de Brasília: o servidor roda em UTC.
+  const inicioDoMes = inicioDoMesEmBrasilia();
 
   const agora = new Date();
 

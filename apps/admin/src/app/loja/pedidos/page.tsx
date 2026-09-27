@@ -1,4 +1,5 @@
 import { prisma } from '@rapidinho/database';
+import { inicioDoDia as inicioDoDiaEmBrasilia } from '@rapidinho/shared';
 import { PainelDePedidos } from './painel-de-pedidos';
 import { getStoreContext, STATUS_EM_ABERTO } from '@/lib/store-context';
 import { storeRealtime } from '@/lib/realtime';
@@ -14,8 +15,8 @@ export const metadata = { title: 'Pedidos' };
  * numa tela que precisa continuar leve depois de 12 horas ligada.
  */
 async function carregarPedidos(storeId: string) {
-  const inicioDoDia = new Date();
-  inicioDoDia.setHours(0, 0, 0, 0);
+  // Dia de Brasília: o servidor roda em UTC, e às 21h o "hoje" virava amanhã.
+  const inicioDoDia = inicioDoDiaEmBrasilia();
 
   return prisma.order.findMany({
     where: {
@@ -29,6 +30,7 @@ async function carregarPedidos(storeId: string) {
       number: true,
       status: true,
       type: true,
+      userId: true,
       customerName: true,
       customerPhone: true,
       subtotalCents: true,
@@ -70,10 +72,27 @@ export default async function PedidosPage() {
     Promise.resolve(storeRealtime(store.id, access.user.id)),
   ]);
 
+  // Quantos pedidos cada cliente já recebeu desta loja: o primeiro pedido
+  // merece atenção extra (é quando se ganha ou se perde o cliente).
+  const clientes = [...new Set(pedidos.map((pedido) => pedido.userId).filter(Boolean))] as string[];
+  const entregues = clientes.length
+    ? await prisma.order.groupBy({
+        by: ['userId'],
+        where: { storeId: store.id, status: 'DELIVERED', userId: { in: clientes } },
+        _count: { _all: true },
+      })
+    : [];
+  const entreguesPorCliente = new Map(
+    entregues.map((linha) => [linha.userId, linha._count._all] as const),
+  );
+
   return (
     <PainelDePedidos
-      pedidos={pedidos.map((pedido) => ({
+      pedidos={pedidos.map(({ userId, ...pedido }) => ({
         ...pedido,
+        primeiroPedido:
+          userId != null &&
+          (entreguesPorCliente.get(userId) ?? 0) - (pedido.status === 'DELIVERED' ? 1 : 0) === 0,
         createdAt: pedido.createdAt.toISOString(),
         acceptedAt: pedido.acceptedAt?.toISOString() ?? null,
         estimatedReadyAt: pedido.estimatedReadyAt?.toISOString() ?? null,

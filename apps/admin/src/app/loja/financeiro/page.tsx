@@ -17,6 +17,7 @@ import {
   ORDER_STATUS_LABEL,
   PAYMENT_METHOD_LABEL,
   type OrderStatus,
+  inicioDoMes,
 } from '@rapidinho/shared';
 import { TrendingUp, Wallet } from 'lucide-react';
 import { Indicador } from '@/components/indicador';
@@ -33,9 +34,8 @@ export const metadata = { title: 'Financeiro' };
  * marketplace e lojista.
  */
 async function carregar(storeId: string, mesesAtras: number) {
-  const inicio = new Date();
-  inicio.setMonth(inicio.getMonth() - mesesAtras, 1);
-  inicio.setHours(0, 0, 0, 0);
+  // Mês de Brasília: o servidor roda em UTC.
+  const inicio = inicioDoMes(new Date(), mesesAtras);
 
   const [resumo, pedidos, repasses] = await Promise.all([
     prisma.order.aggregate({

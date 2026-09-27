@@ -7,6 +7,7 @@ import { Badge, Button, Card, CardContent, cn } from '@rapidinho/ui';
 import { useRealtime } from '@rapidinho/ui/hooks/use-realtime';
 import {
   formatCents,
+  formatPhoneBR,
   isActiveStatus,
   nextStatuses,
   ORDER_STATUS_LABEL,
@@ -28,6 +29,32 @@ interface Props {
 
 /** Tempos de preparo oferecidos no aceite — um toque, sem digitar. */
 const TEMPOS_DE_PREPARO = [15, 20, 30, 45, 60] as const;
+
+/** Motivos que mais se repetem: um toque, e o texto continua editável. */
+const MOTIVOS_PRONTOS = [
+  'Produto esgotado',
+  'Loja fechando agora',
+  'Muito movimento no momento',
+  'Endereço fora da nossa área',
+] as const;
+
+/** Minutos sem aceite a partir dos quais o pedido novo fica em vermelho. */
+const MINUTOS_PARA_ALERTA_DE_ACEITE = 3;
+
+/**
+ * Relógio da tela, de 30 em 30 segundos. Começa em `null` e só liga depois de
+ * montar: o servidor e o navegador calculariam "há X min" em instantes
+ * diferentes, e o React reclamaria da diferença.
+ */
+function useAgora(): number | null {
+  const [agora, setAgora] = useState<number | null>(null);
+  useEffect(() => {
+    setAgora(Date.now());
+    const intervalo = setInterval(() => setAgora(Date.now()), 30_000);
+    return () => clearInterval(intervalo);
+  }, []);
+  return agora;
+}
 
 export function PainelDePedidos({ pedidos, loja, realtime }: Props) {
   const router = useRouter();
@@ -226,6 +253,18 @@ function CartaoDePedido({
   const [pendente, iniciarTransicao] = useTransition();
   const [erro, setErro] = useState<string | null>(null);
   const endereco = lerEndereco(pedido.addressSnapshot);
+  const agora = useAgora();
+
+  // Quanto tempo passou e se já está atrasado — a conta que o lojista fazia de
+  // cabeça olhando a hora do pedido.
+  const minutosDesdeOPedido =
+    agora == null ? null : Math.floor((agora - new Date(pedido.createdAt).getTime()) / 60_000);
+  const minutosDeAtraso =
+    agora != null &&
+    pedido.estimatedReadyAt != null &&
+    (pedido.status === 'ACCEPTED' || pedido.status === 'PREPARING')
+      ? Math.floor((agora - new Date(pedido.estimatedReadyAt).getTime()) / 60_000)
+      : null;
 
   function executar(acao: () => Promise<{ ok: boolean; message?: string }>) {
     onAgir?.();
@@ -253,16 +292,26 @@ function CartaoDePedido({
                   hour: '2-digit',
                   minute: '2-digit',
                 })}
+                {minutosDesdeOPedido != null && isActiveStatus(pedido.status)
+                  ? ` · há ${minutosDesdeOPedido < 1 ? 'menos de 1' : minutosDesdeOPedido} min`
+                  : ''}
               </span>
             </p>
-            <p className="truncate font-medium">{pedido.customerName}</p>
+            <p className="flex items-center gap-2 font-medium">
+              <span className="truncate">{pedido.customerName}</span>
+              {pedido.primeiroPedido ? (
+                <Badge variant="warning" className="shrink-0 text-[11px]">
+                  1º pedido
+                </Badge>
+              ) : null}
+            </p>
             <a
               href={whatsappLink(pedido.customerPhone)}
               target="_blank"
               rel="noreferrer"
               className="text-muted-foreground text-sm underline"
             >
-              {pedido.customerPhone}
+              {formatPhoneBR(pedido.customerPhone)}
             </a>
           </div>
 
@@ -271,6 +320,16 @@ function CartaoDePedido({
               {ORDER_STATUS_LABEL[pedido.status]}
             </Badge>
             <Badge variant="outline">{pedido.type === 'PICKUP' ? 'Retirada' : 'Entrega'}</Badge>
+            {pedido.status === 'RECEIVED' &&
+            minutosDesdeOPedido != null &&
+            minutosDesdeOPedido >= MINUTOS_PARA_ALERTA_DE_ACEITE ? (
+              <Badge variant="destructive" className="animate-pulse-alert">
+                Esperando há {minutosDesdeOPedido} min
+              </Badge>
+            ) : null}
+            {minutosDeAtraso != null && minutosDeAtraso > 0 ? (
+              <Badge variant="destructive">Atrasado {minutosDeAtraso} min</Badge>
+            ) : null}
           </div>
         </div>
 
@@ -438,6 +497,22 @@ function BotaoRecusar({
       <label className="block text-sm font-semibold" htmlFor={`motivo-${pedido.id}`}>
         Por quê? O cliente vai ver esta mensagem.
       </label>
+      <div className="flex flex-wrap gap-1.5">
+        {MOTIVOS_PRONTOS.map((pronto) => (
+          <button
+            key={pronto}
+            type="button"
+            onClick={() => setMotivo(pronto)}
+            aria-pressed={motivo === pronto}
+            className={cn(
+              'rounded-full border px-3 py-1.5 text-xs font-medium',
+              motivo === pronto ? 'border-primary bg-accent' : 'border-input',
+            )}
+          >
+            {pronto}
+          </button>
+        ))}
+      </div>
       <input
         id={`motivo-${pedido.id}`}
         value={motivo}

@@ -9,6 +9,7 @@ import { cn } from '@rapidinho/ui';
 import { Logotipo } from '@/components/marca/logo';
 import { CartaoDeLoja, type LojaNaVitrine } from '@/components/app/cartao-de-loja';
 import { LembrarCidade } from '@/components/app/lembrar-cidade';
+import { PecaDeNovo, type PedidoParaRepetir } from '@/components/app/peca-de-novo';
 import { MEDIDAS_DA_LANDING } from '@/components/landing/medidas';
 import { GRUPOS_DE_CATEGORIA, pertenceAoGrupo } from '@/lib/grupos-de-categoria';
 import { imagemExibivel, SELECT_IMAGEM } from '@/lib/media';
@@ -156,13 +157,56 @@ async function carregarVitrine(citySlug: string) {
   };
 }
 
-/** "Rua Principal, 123 - Centro": o endereço padrão do cliente nesta cidade. */
-async function enderecoDeEntrega(cityId: string) {
+/**
+ * O que a vitrine sabe do cliente logado: o endereço padrão nesta cidade
+ * ("Rua Principal, 123 - Centro") e os últimos pedidos para repetir.
+ */
+async function contextoDoCliente(cityId: string) {
   const user = await getCurrentUser();
-  if (!user) return null;
+  if (!user) return { endereco: null, paraRepetir: [] };
 
+  const [endereco, ultimos] = await Promise.all([
+    enderecoDeEntrega(user.id, cityId),
+    prisma.order.findMany({
+      where: {
+        userId: user.id,
+        cityId,
+        status: 'DELIVERED',
+        store: { status: 'ACTIVE', deletedAt: null },
+      },
+      orderBy: { deliveredAt: 'desc' },
+      take: 12,
+      select: {
+        id: true,
+        storeId: true,
+        totalCents: true,
+        store: { select: { name: true, logo: { select: SELECT_IMAGEM } } },
+        items: { select: { productName: true, quantity: true }, take: 4 },
+      },
+    }),
+  ]);
+
+  // Um cartão por loja, o pedido mais recente dela.
+  const vistas = new Set<string>();
+  const paraRepetir: PedidoParaRepetir[] = [];
+  for (const pedido of ultimos) {
+    if (vistas.has(pedido.storeId) || paraRepetir.length >= 4) continue;
+    vistas.add(pedido.storeId);
+    paraRepetir.push({
+      id: pedido.id,
+      loja: pedido.store.name,
+      imagem: imagemExibivel(pedido.store.logo).url,
+      resumo: pedido.items.map((item) => `${item.quantity}× ${item.productName}`).join(', '),
+      totalCents: pedido.totalCents,
+    });
+  }
+
+  return { endereco, paraRepetir };
+}
+
+async function enderecoDeEntrega(userId: string, cityId: string) {
   const endereco = await prisma.address.findFirst({
-    where: { userId: user.id, cityId, deletedAt: null },
+    where: { userId, cityId, deletedAt: null },
     orderBy: [{ isDefault: 'desc' }, { updatedAt: 'desc' }],
     select: { street: true, number: true, neighborhood: true },
   });
@@ -184,7 +228,7 @@ export default async function CidadePage({
 
   if (!dados) notFound();
 
-  const endereco = await enderecoDeEntrega(dados.cidade.id);
+  const { endereco, paraRepetir } = await contextoDoCliente(dados.cidade.id);
   const grupo = GRUPOS_DE_CATEGORIA.find((candidato) => candidato.chave === filtro);
 
   const lojas = grupo
@@ -291,6 +335,8 @@ export default async function CidadePage({
             className="absolute -bottom-3 -right-4 h-auto w-[50%] drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]"
           />
         </Link>
+
+        {paraRepetir.length > 0 ? <PecaDeNovo pedidos={paraRepetir} /> : null}
 
         {dados.banners.some((banner) => banner.imagem.url) ? (
           <section aria-label="Destaques">

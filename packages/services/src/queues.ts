@@ -64,6 +64,17 @@ export interface JobDeCampanha {
   campaignId: string;
 }
 
+/**
+ * Id fixo de job, para o BullMQ recusar duplicata.
+ *
+ * O separador é hífen porque o BullMQ 6 rejeita `:` em id próprio ("Custom Id
+ * cannot contain :") — e rejeita lançando erro no `add`. Com dois-pontos, toda
+ * campanha falhava ao entrar na fila e a expiração de Pix nunca era agendada.
+ */
+export function idDeJob(tipo: string, id: string): string {
+  return `${tipo}-${id}`.replaceAll(':', '-');
+}
+
 export async function enfileirarNotificacao(dados: JobDeNotificacao): Promise<void> {
   await getQueue(QUEUES.notifications).add('enviar', dados, PADRAO);
 }
@@ -81,7 +92,7 @@ export async function enfileirarProcessamentoDeImagem(dados: JobDeImagem): Promi
 export async function enfileirarCampanha(dados: JobDeCampanha): Promise<void> {
   await getQueue(QUEUES.campaigns).add('despachar', dados, {
     ...PADRAO,
-    jobId: `campanha:${dados.campaignId}`,
+    jobId: idDeJob('campanha', dados.campaignId),
   });
 }
 
@@ -100,7 +111,26 @@ export async function agendarExpiracaoDePedido(
     delay: emSegundos * 1000,
     // O id fixo evita agendar duas expirações para o mesmo pedido se a ação
     // for chamada de novo.
-    jobId: `expirar:${dados.orderId}`,
+    jobId: idDeJob('expirar', dados.orderId),
+  });
+}
+
+/** Minutos que um pedido novo espera antes de a loja ser lembrada dele. */
+export const MINUTOS_PARA_LEMBRAR_A_LOJA = 3;
+
+/**
+ * Agenda o lembrete para a loja de um pedido que ainda não foi aceito.
+ *
+ * O painel avisa com som, mas só se estiver aberto. Lojista no balcão, com o
+ * computador longe, não vê — e o cliente fica esperando sem resposta. Vai na
+ * mesma fila da expiração (o worker separa pelo nome do job): as duas são
+ * "algo a conferir no pedido daqui a pouco".
+ */
+export async function agendarLembreteDaLoja(dados: JobDeExpiracaoDePedido): Promise<void> {
+  await getQueue(QUEUES.orderTimeout).add('lembrar-loja', dados, {
+    ...PADRAO,
+    delay: MINUTOS_PARA_LEMBRAR_A_LOJA * 60_000,
+    jobId: idDeJob('lembrar-loja', dados.orderId),
   });
 }
 

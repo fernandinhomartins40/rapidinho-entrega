@@ -3,7 +3,7 @@ import { Indicador } from '@/components/indicador';
 import { Building2, Clock, ShoppingBag, TrendingUp, Users, XCircle } from 'lucide-react';
 import { prisma } from '@rapidinho/database';
 import { Badge, Card, CardContent, CardHeader, CardTitle } from '@rapidinho/ui';
-import { formatCents } from '@rapidinho/shared';
+import { formatCents, inicioDoMes as inicioDoMesEmBrasilia } from '@rapidinho/shared';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Visão geral' };
@@ -15,9 +15,8 @@ export const metadata = { title: 'Visão geral' };
  * (quanto entrou, o que precisa de aprovação, onde está vendendo).
  */
 async function carregarIndicadores() {
-  const inicioDoMes = new Date();
-  inicioDoMes.setDate(1);
-  inicioDoMes.setHours(0, 0, 0, 0);
+  // Mês de Brasília: o servidor roda em UTC.
+  const inicioDoMes = inicioDoMesEmBrasilia();
 
   const [
     cidadesAtivas,

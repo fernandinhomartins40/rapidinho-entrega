@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { AlertTriangle, Clock, Package, ShoppingBag, TrendingUp } from 'lucide-react';
 import { prisma } from '@rapidinho/database';
 import { Badge, Card, CardContent, CardHeader, CardTitle } from '@rapidinho/ui';
-import { formatCents } from '@rapidinho/shared';
+import { formatCents, inicioDoDia as inicioDoDiaEmBrasilia } from '@rapidinho/shared';
 import { Indicador } from '@/components/indicador';
 import { getStoreContext, STATUS_EM_ABERTO } from '@/lib/store-context';
 
@@ -17,8 +17,8 @@ export const metadata = { title: 'Visão geral' };
  */
 async function carregarResumo(storeId: string) {
   // "Hoje" é do ponto de vista de quem opera a loja, não UTC.
-  const inicioDoDia = new Date();
-  inicioDoDia.setHours(0, 0, 0, 0);
+  // Dia de Brasília: o servidor roda em UTC, e às 21h o "hoje" virava amanhã.
+  const inicioDoDia = inicioDoDiaEmBrasilia();
 
   const [emAberto, doDia, faturado, maisVendidos, produtosPausados, semEstoque] = await Promise.all(
     [

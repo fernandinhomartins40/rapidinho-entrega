@@ -88,6 +88,35 @@ export async function pedirNovamente(orderId: string): Promise<ActionResult> {
     });
 
     for (const item of itens) {
+      const complementos = item.complements.filter(
+        (complemento) => complemento.optionId && opcaoOk.has(complemento.optionId),
+      );
+
+      // Item simples que já está no carrinho soma na mesma linha (mesma regra
+      // de `adicionarAoCarrinho`): repetir o pedido duas vezes não duplica.
+      if (complementos.length === 0 && !item.notes) {
+        const igual = await prisma.cartItem.findFirst({
+          where: {
+            cartId: carrinho.id,
+            productId: item.productId,
+            weightGrams: item.weightGrams,
+            notes: null,
+            pizzaSizeId: null,
+            complements: { none: {} },
+            flavors: { none: {} },
+          },
+          select: { id: true, quantity: true },
+        });
+
+        if (igual) {
+          await prisma.cartItem.update({
+            where: { id: igual.id },
+            data: { quantity: Math.min(99, igual.quantity + item.quantity) },
+          });
+          continue;
+        }
+      }
+
       await prisma.cartItem.create({
         data: {
           cartId: carrinho.id,
@@ -96,12 +125,10 @@ export async function pedirNovamente(orderId: string): Promise<ActionResult> {
           weightGrams: item.weightGrams,
           notes: item.notes,
           complements: {
-            create: item.complements
-              .filter((complemento) => complemento.optionId && opcaoOk.has(complemento.optionId))
-              .map((complemento) => ({
-                optionId: complemento.optionId!,
-                quantity: complemento.quantity,
-              })),
+            create: complementos.map((complemento) => ({
+              optionId: complemento.optionId!,
+              quantity: complemento.quantity,
+            })),
           },
         },
       });

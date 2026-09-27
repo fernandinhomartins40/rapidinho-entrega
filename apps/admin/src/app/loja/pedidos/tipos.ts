@@ -52,6 +52,8 @@ export interface PedidoNaTela {
     changeForCents: number | null;
   } | null;
   items: ItemDoPedido[];
+  /** Nenhum pedido entregue antes por esta loja para este cliente. */
+  primeiroPedido: boolean;
 }
 
 /** Endereço guardado como snapshot no pedido, já em formato de exibição. */

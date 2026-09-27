@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@rapidinho/database';
-import { getPaymentGateway, logger, publishRealtimeMany } from '@rapidinho/services';
+import {
+  agendarLembreteDaLoja,
+  capturarErro,
+  getPaymentGateway,
+  logger,
+  publishRealtimeMany,
+} from '@rapidinho/services';
 import { REALTIME_CHANNELS, REALTIME_EVENTS } from '@rapidinho/shared';
 
 export const runtime = 'nodejs';
@@ -103,6 +109,11 @@ export async function POST(request: Request) {
       ],
       REALTIME_EVENTS.orderCreated,
       { orderId: pagamento.orderId, number: pagamento.order.number },
+    );
+
+    // Pago é pedido novo para a loja: se ninguém aceitar, ela é lembrada.
+    await agendarLembreteDaLoja({ orderId: pagamento.orderId }).catch((erro: unknown) =>
+      capturarErro(erro, { origem: 'webhook-agendamento', orderId: pagamento.orderId }),
     );
   } else {
     await publishRealtimeMany(

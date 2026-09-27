@@ -40,6 +40,7 @@ export function FormularioDeCheckout({
   enderecoEscolhido,
   cupom,
   cliente,
+  pagamentoSugerido,
 }: {
   carrinho: CarrinhoResolvido;
   loja: {
@@ -58,16 +59,23 @@ export function FormularioDeCheckout({
   enderecoEscolhido: string | null;
   cupom: string;
   cliente: { nome: string | null; telefone: string | null };
+  /** Forma usada no último pedido; só vale se esta loja aceitar. */
+  pagamentoSugerido: string | null;
 }) {
   const router = useRouter();
   const [estado, acao, pendente] = useActionState(finalizarPedido, ACTION_IDLE);
-  const [pagamento, setPagamento] = useState<Pagamento | null>(null);
-  const [troco, setTroco] = useState('');
-  const [codigoDoCupom, setCodigoDoCupom] = useState(cupom);
-
   const disponiveis = (Object.keys(loja.pagamentos) as Pagamento[]).filter(
     (metodo) => loja.pagamentos[metodo],
   );
+
+  const [pagamento, setPagamento] = useState<Pagamento | null>(() => {
+    const sugerido = disponiveis.find((metodo) => metodo === pagamentoSugerido);
+    // Loja com uma forma só: não há o que escolher.
+    return sugerido ?? (disponiveis.length === 1 ? disponiveis[0]! : null);
+  });
+  const [troco, setTroco] = useState('');
+  const [codigoDoCupom, setCodigoDoCupom] = useState(cupom);
+  const atalhosDeTroco = sugerirTroco(resumo.totalCents);
 
   /** Recarrega a página com a escolha na URL: o servidor recalcula tudo. */
   function atualizarBusca(campo: string, valor: string) {
@@ -234,6 +242,25 @@ export function FormularioDeCheckout({
                   placeholder="Deixe vazio se tiver o valor certo"
                   error={estado.fieldErrors?.changeForCents}
                 />
+                {/* As notas que a pessoa provavelmente tem na mão, acima do
+                    total: um toque em vez de digitar com vírgula. */}
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <AtalhoDeTroco ativo={troco === ''} onClick={() => setTroco('')}>
+                    Não preciso
+                  </AtalhoDeTroco>
+                  {atalhosDeTroco.map((centavos) => {
+                    const valor = String(centavos / 100);
+                    return (
+                      <AtalhoDeTroco
+                        key={centavos}
+                        ativo={troco === valor}
+                        onClick={() => setTroco(valor)}
+                      >
+                        {formatCents(centavos)}
+                      </AtalhoDeTroco>
+                    );
+                  })}
+                </div>
               </div>
             ) : null}
           </CardContent>
@@ -342,5 +369,40 @@ export function FormularioDeCheckout({
         </div>
       </form>
     </main>
+  );
+}
+
+/** Valores redondos logo acima do total: 37,90 → 40, 50, 100; 50,00 → 100, 200. */
+function sugerirTroco(totalCents: number): number[] {
+  const notas = [1000, 2000, 5000, 10000, 20000];
+  const acima = notas.filter((nota) => nota > totalCents);
+  const arredondado = Math.ceil(totalCents / 1000) * 1000;
+  const opcoes = new Set<number>();
+  if (arredondado > totalCents && !acima.includes(arredondado)) opcoes.add(arredondado);
+  for (const nota of acima) opcoes.add(nota);
+  return [...opcoes].sort((a, b) => a - b).slice(0, 3);
+}
+
+function AtalhoDeTroco({
+  ativo,
+  onClick,
+  children,
+}: {
+  ativo: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={ativo}
+      className={cn(
+        'min-h-touch rounded-full border-2 px-4 text-sm font-semibold',
+        ativo ? 'border-primary bg-accent' : 'border-input',
+      )}
+    >
+      {children}
+    </button>
   );
 }

@@ -7,6 +7,7 @@ import {
   ORDER_STATUS_LABEL,
   PAYMENT_METHOD_LABEL,
   type OrderStatus,
+  inicioDoDia,
 } from '@rapidinho/shared';
 import {
   Badge,
@@ -51,11 +52,9 @@ const PERIODOS = [
 ] as const;
 type Periodo = (typeof PERIODOS)[number]['valor'];
 
-/** Meia-noite de hoje em Brasília (UTC-3, sem horário de verão). */
+/** Meia-noite de hoje em Brasília. */
 function inicioDeHoje(): Date {
-  const agoraLocal = new Date(Date.now() - 3 * 3_600_000);
-  agoraLocal.setUTCHours(0, 0, 0, 0);
-  return new Date(agoraLocal.getTime() + 3 * 3_600_000);
+  return inicioDoDia();
 }
 
 function inicioDoPeriodo(periodo: Periodo): Date | null {

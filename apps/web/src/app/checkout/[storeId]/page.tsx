@@ -21,7 +21,7 @@ export default async function CheckoutPage({
   const user = await getCurrentUser();
   if (!user) redirect(`/entrar?destino=/checkout/${storeId}`);
 
-  const [carrinho, loja, enderecos] = await Promise.all([
+  const [carrinho, loja, enderecos, ultimoPagamento] = await Promise.all([
     carregarCarrinho(user.id, storeId),
     prisma.store.findFirst({
       where: { id: storeId, status: 'ACTIVE', deletedAt: null },
@@ -41,7 +41,9 @@ export default async function CheckoutPage({
       },
     }),
     prisma.address.findMany({
-      where: { userId: user.id, deletedAt: null },
+      // Só endereços da cidade da loja: os de outra cidade não servem para
+      // esta entrega e só confundem a escolha.
+      where: { userId: user.id, deletedAt: null, city: { stores: { some: { id: storeId } } } },
       orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
       select: {
         id: true,
@@ -53,6 +55,13 @@ export default async function CheckoutPage({
         referencePoint: true,
         isDefault: true,
       },
+    }),
+    // A forma do último pedido quase sempre é a deste: vem marcada, e o
+    // cliente só troca se quiser.
+    prisma.payment.findFirst({
+      where: { order: { userId: user.id } },
+      orderBy: { createdAt: 'desc' },
+      select: { method: true },
     }),
   ]);
 
@@ -99,6 +108,7 @@ export default async function CheckoutPage({
       enderecoEscolhido={enderecoEscolhido}
       cupom={busca.cupom ?? ''}
       cliente={{ nome: user.name, telefone: user.phone }}
+      pagamentoSugerido={ultimoPagamento?.method ?? null}
     />
   );
 }

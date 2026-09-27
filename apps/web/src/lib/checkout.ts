@@ -1,5 +1,5 @@
 import { prisma } from '@rapidinho/database';
-import { applyCoupon, calculateDeliveryFee } from '@rapidinho/shared';
+import { applyCoupon, calculateDeliveryFee, isStoreOpen } from '@rapidinho/shared';
 import { totaisDoCarrinho, type CarrinhoResolvido } from './cart';
 
 /**
@@ -44,6 +44,13 @@ export async function calcularCheckout({
   const loja = await prisma.store.findUniqueOrThrow({
     where: { id: carrinho.storeId },
     select: {
+      isPausedUntil: true,
+      pauseReason: true,
+      hours: { select: { weekday: true, opensAt: true, closesAt: true, isActive: true } },
+      closures: {
+        where: { endsAt: { gte: new Date() } },
+        select: { startsAt: true, endsAt: true, reason: true },
+      },
       deliveryFeeMode: true,
       deliveryFeeCents: true,
       pricePerKmCents: true,
@@ -70,7 +77,7 @@ export async function calcularCheckout({
     tipo === 'DELIVERY' && addressId
       ? await prisma.address.findFirst({
           where: { id: addressId, userId, deletedAt: null },
-          select: { neighborhoodId: true, latitude: true, longitude: true },
+          select: { cityId: true, neighborhoodId: true, latitude: true, longitude: true },
         })
       : null;
 
@@ -81,6 +88,10 @@ export async function calcularCheckout({
   if (tipo === 'DELIVERY') {
     if (!endereco) {
       bloqueioDeEntrega = 'Escolha um endereço de entrega.';
+    } else if (endereco.cityId !== cityId) {
+      // A loja entrega na cidade dela. Com taxa fixa o cálculo passaria, e a
+      // loja receberia uma entrega em outra cidade.
+      bloqueioDeEntrega = 'Este endereço é de outra cidade. Escolha um endereço desta cidade.';
     } else {
       const resultado = calculateDeliveryFee({
         mode: loja.deliveryFeeMode as 'FIXED' | 'BY_DISTANCE' | 'BY_ZONE' | 'FREE',
@@ -189,7 +200,20 @@ export async function calcularCheckout({
 
   const faltamCentavos = loja.minOrderCents - carrinho.subtotalCents;
 
+  // Loja fechada aparece aqui, na tela, e não só ao enviar: antes o cliente
+  // preenchia tudo e descobria no último toque.
+  const abertura = isStoreOpen({
+    hours: loja.hours,
+    closures: loja.closures,
+    pausedUntil: loja.isPausedUntil,
+    pauseReason: loja.pauseReason,
+  });
+  const bloqueioDeHorario = abertura.isOpen
+    ? null
+    : `${abertura.reason ?? 'Loja fechada agora'}. Seu carrinho fica guardado para quando ela abrir.`;
+
   const bloqueio =
+    bloqueioDeHorario ??
     bloqueioDeEntrega ??
     (carrinho.itens.length === 0
       ? 'Seu carrinho está vazio.'

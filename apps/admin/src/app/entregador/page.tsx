@@ -1,7 +1,12 @@
 import { redirect } from 'next/navigation';
 import { AuthorizationError, requireCourier } from '@rapidinho/auth';
 import { prisma } from '@rapidinho/database';
-import { parseServerEnv, getPublicEnv, REALTIME_CHANNELS } from '@rapidinho/shared';
+import {
+  getPublicEnv,
+  inicioDoDia as inicioDoDiaEmBrasilia,
+  parseServerEnv,
+  REALTIME_CHANNELS,
+} from '@rapidinho/shared';
 import { createChannelToken } from '@rapidinho/shared/realtime/token';
 import { PainelDoEntregador } from './painel';
 
@@ -41,8 +46,8 @@ export default async function EntregadorPage() {
     },
   });
 
-  const inicioDoDia = new Date();
-  inicioDoDia.setHours(0, 0, 0, 0);
+  // Dia de Brasília: o servidor roda em UTC, e às 21h o "hoje" virava amanhã.
+  const inicioDoDia = inicioDoDiaEmBrasilia();
 
   const [disponiveis, minhas, ganhos] = await Promise.all([
     prisma.delivery.findMany({

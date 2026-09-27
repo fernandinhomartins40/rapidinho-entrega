@@ -13,6 +13,7 @@ import { QUEUES } from '@rapidinho/shared';
 import { cobrarMensalidades } from './jobs/plan-billing';
 import { expirarImpulsionamentos } from './jobs/boost-expiration';
 import { expirarPedido } from './jobs/order-timeout';
+import { lembrarLojaDoPedido } from './jobs/order-reminder';
 import { processarImagem } from './jobs/image-processing';
 
 /**
@@ -47,7 +48,12 @@ const trabalhadores = [
 
   new Worker(
     QUEUES.orderTimeout,
-    async (job: Job<{ orderId: string }>) => expirarPedido(job.data.orderId),
+    // Dois trabalhos na mesma fila, separados pelo nome: expirar Pix não pago
+    // e lembrar a loja de pedido sem aceite.
+    async (job: Job<{ orderId: string }>) =>
+      job.name === 'lembrar-loja'
+        ? lembrarLojaDoPedido(job.data.orderId)
+        : expirarPedido(job.data.orderId),
     { connection: conexao, concurrency: 5 },
   ),
 
