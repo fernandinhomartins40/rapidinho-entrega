@@ -119,6 +119,37 @@ export const PLANS = [
     trialDays: 14,
     sortOrder: 3,
   },
+  // Mercado, farmácia e demais comércios: mensalidade fixa e ZERO comissão.
+  // Comissão por pedido obriga quem vende com margem pequena a subir o preço
+  // no app — e aí ninguém compra. Valores ajustáveis em /admin/planos.
+  {
+    name: 'Comércio',
+    slug: 'comercio',
+    description: 'Mensalidade fixa, sem comissão: venda no app pelo preço do balcão.',
+    monthlyPriceCents: 4990,
+    commissionRate: 0,
+    maxProducts: 1000,
+    maxPhotos: 1000,
+    maxStaff: 3,
+    features: { reports: true, coupons: true, boost: true, csvImport: true, ownCouriers: false },
+    trialDays: 30,
+    sortOrder: 4,
+    segments: ['MARKET', 'PHARMACY', 'OTHER'] as const,
+  },
+  {
+    name: 'Comércio Plus',
+    slug: 'comercio-plus',
+    description: 'Sem comissão, catálogo ilimitado e entregadores próprios.',
+    monthlyPriceCents: 12990,
+    commissionRate: 0,
+    maxProducts: null,
+    maxPhotos: null,
+    maxStaff: null,
+    features: { reports: true, coupons: true, boost: true, csvImport: true, ownCouriers: true },
+    trialDays: 30,
+    sortOrder: 5,
+    segments: ['MARKET', 'PHARMACY', 'OTHER'] as const,
+  },
 ];
 
 export const BOOST_PACKAGES = [

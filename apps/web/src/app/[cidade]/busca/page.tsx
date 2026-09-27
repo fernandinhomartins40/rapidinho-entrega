@@ -106,6 +106,7 @@ async function buscar(citySlug: string, termo: string) {
         avgDeliveryTimeMinutes: true,
         isPausedUntil: true,
         pauseReason: true,
+        sellsAtCounterPrice: true,
         category: { select: { name: true, slug: true } },
         logo: { select: SELECT_IMAGEM },
         hours: { select: { weekday: true, opensAt: true, closesAt: true, isActive: true } },
@@ -159,6 +160,7 @@ async function buscar(citySlug: string, termo: string) {
       motivoFechada: abertura.reason ?? null,
       imagem: imagemExibivel(loja.logo),
       patrocinada: false,
+      precoDeBalcao: loja.sellsAtCounterPrice,
     };
   });
 

@@ -1,5 +1,5 @@
 import { prisma } from '@rapidinho/database';
-import { formatCents } from '@rapidinho/shared';
+import { formatCents, STORE_SEGMENT_LABEL } from '@rapidinho/shared';
 import { Badge, Card, CardContent, CardHeader, CardTitle } from '@rapidinho/ui';
 import { PlanoDialog } from './plano-dialog';
 import { AlternarPlano } from './alternar-plano';
@@ -48,6 +48,13 @@ export default async function PlanosPage() {
                     </div>
                     <div className="flex shrink-0 gap-1">
                       {plano.isDefault ? <Badge>Padrão</Badge> : null}
+                      <span className="text-muted-foreground block text-xs">
+                        {plano.segments.length === 0
+                          ? 'Todos os segmentos'
+                          : plano.segments
+                              .map((segmento) => STORE_SEGMENT_LABEL[segmento])
+                              .join(', ')}
+                      </span>
                       {plano.isActive ? null : <Badge variant="secondary">Inativo</Badge>}
                     </div>
                   </div>
@@ -119,6 +126,7 @@ export default async function PlanosPage() {
                         trialDays: plano.trialDays,
                         isActive: plano.isActive,
                         isDefault: plano.isDefault,
+                        segments: plano.segments,
                       }}
                     />
                     <AlternarPlano

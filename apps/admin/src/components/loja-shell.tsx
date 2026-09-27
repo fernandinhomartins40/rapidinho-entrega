@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   BadgePercent,
   Bike,
+  Send,
   Clock,
   LayoutDashboard,
   LogOut,
@@ -40,6 +41,7 @@ const NAV = [
   { href: '/loja/pizzas', label: 'Pizzas', icon: Pizza },
   { href: '/loja/horarios', label: 'Horários', icon: Clock },
   { href: '/loja/entrega', label: 'Entrega', icon: Truck },
+  { href: '/loja/corridas', label: 'Chamar entregador', icon: Send },
   { href: '/loja/entregadores', label: 'Entregadores', icon: Bike },
   { href: '/loja/cupons', label: 'Cupons', icon: BadgePercent },
   { href: '/loja/financeiro', label: 'Financeiro', icon: Wallet },

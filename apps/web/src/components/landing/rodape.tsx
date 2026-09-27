@@ -26,6 +26,7 @@ const REDES = [
 const LINKS_INSTITUCIONAIS = [
   { rotulo: 'Cadastrar minha loja', href: '/cadastro-loja' },
   { rotulo: 'Seja entregador', href: '/entregador' },
+  { rotulo: 'Traga o Rapidinho para sua cidade', href: '/minha-cidade' },
   { rotulo: 'Termos de uso', href: '/termos' },
   { rotulo: 'Privacidade', href: '/privacidade' },
 ] as const;

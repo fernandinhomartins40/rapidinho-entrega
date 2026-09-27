@@ -105,8 +105,24 @@ export async function cadastrarLoja(
       select: { id: true, role: true },
     });
 
+    // O segmento vem da categoria escolhida. Sem isto toda loja nascia como
+    // "outros": o restaurante ficava fora do "Tô com fome" e no plano errado.
+    const categoria = dados.categoryId
+      ? await prisma.storeCategory.findFirst({
+          where: { id: dados.categoryId, isActive: true },
+          select: { segment: true },
+        })
+      : null;
+    const segmento = categoria?.segment ?? 'OTHER';
+
+    // Plano de entrada do segmento: restaurante começa no plano com comissão;
+    // mercado, farmácia e outros, no de mensalidade sem comissão.
     const planoPadrao = await prisma.plan.findFirst({
-      where: { isDefault: true, isActive: true },
+      where: {
+        isActive: true,
+        OR: [{ segments: { has: segmento } }, { segments: { isEmpty: true } }],
+      },
+      orderBy: [{ isDefault: 'desc' }, { sortOrder: 'asc' }],
       select: { id: true, trialDays: true },
     });
 
@@ -117,6 +133,7 @@ export async function cadastrarLoja(
           slug: await slugDisponivel(dados.nome),
           cityId: cidade.id,
           categoryId: dados.categoryId || null,
+          segment: segmento,
           document: documento,
           documentType: documento.length === 11 ? 'CPF' : 'CNPJ',
           phone: telefone,

@@ -74,6 +74,7 @@ export function PainelDoEntregador({
   disponiveis,
   minhas,
   realtime,
+  children,
 }: {
   entregador: {
     nome: string | null;
@@ -86,6 +87,8 @@ export function PainelDoEntregador({
   disponiveis: CorridaDisponivel[];
   minhas: MinhaCorrida[];
   realtime: { channel: string; token: string; url: string };
+  /** Corridas avulsas das lojas, entre as suas e as disponíveis. */
+  children?: React.ReactNode;
 }) {
   const router = useRouter();
   const [pendente, iniciarTransicao] = useTransition();
@@ -305,6 +308,8 @@ export function PainelDoEntregador({
           </ul>
         </section>
       ) : null}
+
+      {children}
 
       <section>
         <h2 className="mb-3 text-lg font-bold">Corridas disponíveis</h2>

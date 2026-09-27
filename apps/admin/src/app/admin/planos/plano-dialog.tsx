@@ -17,6 +17,7 @@ import {
   Textarea,
 } from '@rapidinho/ui';
 import { atualizarPlano, criarPlano } from './actions';
+import { STORE_SEGMENT_LABEL } from '@rapidinho/shared';
 import { RECURSOS_DO_PLANO } from './recursos';
 import { ACTION_IDLE } from '@/lib/action-state';
 
@@ -33,6 +34,7 @@ export interface PlanoFormData {
   trialDays: number;
   isActive: boolean;
   isDefault: boolean;
+  segments: string[];
 }
 
 function paraReais(cents: number): string {
@@ -199,6 +201,29 @@ export function PlanoDialog({ plano }: { plano?: PlanoFormData }) {
               />
               <span className="text-sm font-medium">Disponível para contratação</span>
             </label>
+            <fieldset className="space-y-2">
+              <legend className="text-sm font-medium">
+                Quem pode assinar
+                <span className="text-muted-foreground block text-xs font-normal">
+                  Nenhum marcado = todos os segmentos. Restaurante no plano com comissão; mercado,
+                  farmácia e outros no plano sem comissão.
+                </span>
+              </legend>
+              <div className="flex flex-wrap gap-3">
+                {Object.entries(STORE_SEGMENT_LABEL).map(([valor, rotulo]) => (
+                  <label key={valor} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      name="segments"
+                      value={valor}
+                      defaultChecked={plano?.segments.includes(valor) ?? false}
+                      className="accent-primary h-4 w-4"
+                    />
+                    {rotulo}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
             <label className="flex items-center gap-3">
               <input
                 type="checkbox"

@@ -208,3 +208,74 @@ export async function atualizarLocalizacao(entrada: unknown): Promise<ActionResu
     return { ok: true };
   });
 }
+
+/* ------------------------------------------------------------------------ */
+/* Corridas avulsas                                                          */
+/* ------------------------------------------------------------------------ */
+
+const corridaSchema = z.object({ corridaId: z.string().min(10).max(40) });
+
+/**
+ * Aceita uma corrida avulsa (chamada pela loja, fora do app).
+ *
+ * Mesma trava da corrida de pedido: o `updateMany` só pega a corrida se ela
+ * ainda estiver aberta e sem dono, então dois entregadores tocando juntos não
+ * ficam os dois com ela. O entregador de loja só pega as da própria loja.
+ */
+export async function aceitarCorridaAvulsa(entrada: unknown): Promise<ActionResult> {
+  return comEntregador(async (courierId) => {
+    const { corridaId } = corridaSchema.parse(entrada);
+
+    const entregador = await prisma.courier.findUniqueOrThrow({
+      where: { id: courierId },
+      select: { cityId: true, storeId: true },
+    });
+
+    const { count } = await prisma.errand.updateMany({
+      where: {
+        id: corridaId,
+        status: 'OPEN',
+        courierId: null,
+        cityId: entregador.cityId,
+        ...(entregador.storeId ? { storeId: entregador.storeId } : {}),
+      },
+      data: { courierId, status: 'ACCEPTED', acceptedAt: new Date() },
+    });
+
+    if (count === 0) {
+      return { ok: false, message: 'Essa corrida já foi aceita por outro entregador.' };
+    }
+
+    revalidatePath('/entregador');
+    return { ok: true, message: 'Corrida aceita. Vá até a loja buscar.' };
+  });
+}
+
+const avancoAvulsaSchema = z.object({
+  corridaId: z.string().min(10).max(40),
+  status: z.enum(['PICKED_UP', 'DELIVERED']),
+});
+
+export async function avancarCorridaAvulsa(entrada: unknown): Promise<ActionResult> {
+  return comEntregador(async (courierId) => {
+    const { corridaId, status } = avancoAvulsaSchema.parse(entrada);
+    const de = status === 'PICKED_UP' ? 'ACCEPTED' : 'PICKED_UP';
+
+    // Só o dono da corrida, e só na ordem: aceita → retirada → entregue.
+    const { count } = await prisma.errand.updateMany({
+      where: { id: corridaId, courierId, status: de },
+      data: {
+        status,
+        ...(status === 'PICKED_UP' ? { pickedUpAt: new Date() } : { deliveredAt: new Date() }),
+      },
+    });
+
+    if (count === 0) return { ok: false, message: 'Esta corrida não está mais com você.' };
+
+    revalidatePath('/entregador');
+    return {
+      ok: true,
+      message: status === 'PICKED_UP' ? 'Boa entrega!' : 'Corrida concluída. Valeu!',
+    };
+  });
+}

@@ -1,9 +1,11 @@
 import { prisma } from '@rapidinho/database';
-import { formatCents } from '@rapidinho/shared';
+import { formatCents, formatPhoneBR, whatsappLink } from '@rapidinho/shared';
 import {
   Badge,
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
   Table,
   TableBody,
   TableCell,
@@ -18,7 +20,69 @@ import { AlternarCidade } from './alternar-cidade';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Cidades' };
 
+/**
+ * Demanda por cidade ainda não atendida, montada a partir de "Traga o
+ * Rapidinho para sua cidade". A cidade que junta gente para pedir, loja para
+ * vender e moto para entregar está pronta para abrir.
+ */
+async function carregarDemanda() {
+  const pedidos = await prisma.cityInterest.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 2000,
+    select: {
+      cityKey: true,
+      cityName: true,
+      state: true,
+      profile: true,
+      name: true,
+      phone: true,
+      businessName: true,
+      createdAt: true,
+    },
+  });
+
+  const porCidade = new Map<
+    string,
+    {
+      nome: string;
+      clientes: number;
+      lojas: number;
+      entregadores: number;
+      contatos: typeof pedidos;
+    }
+  >();
+
+  for (const pedido of pedidos) {
+    const linha = porCidade.get(pedido.cityKey) ?? {
+      nome: `${pedido.cityName}/${pedido.state}`,
+      clientes: 0,
+      lojas: 0,
+      entregadores: 0,
+      contatos: [],
+    };
+    if (pedido.profile === 'CUSTOMER') linha.clientes += 1;
+    if (pedido.profile === 'STORE') linha.lojas += 1;
+    if (pedido.profile === 'COURIER') linha.entregadores += 1;
+    // Loja e entregador primeiro: são eles que tornam a abertura possível.
+    if (pedido.profile !== 'CUSTOMER') linha.contatos.unshift(pedido);
+    else linha.contatos.push(pedido);
+    porCidade.set(pedido.cityKey, linha);
+  }
+
+  return [...porCidade.entries()]
+    .map(([chave, linha]) => ({ chave, ...linha, total: linha.contatos.length }))
+    .sort((a, b) => b.lojas + b.entregadores - (a.lojas + a.entregadores) || b.total - a.total)
+    .slice(0, 20);
+}
+
+const PERFIL: Record<string, string> = {
+  CUSTOMER: 'Quer pedir',
+  STORE: 'Tem loja',
+  COURIER: 'Quer entregar',
+};
+
 export default async function CidadesPage() {
+  const demanda = await carregarDemanda();
   const cidades = await prisma.city.findMany({
     orderBy: [{ isActive: 'desc' }, { name: 'asc' }],
     include: {
@@ -112,6 +176,72 @@ export default async function CidadesPage() {
               )}
             </TableBody>
           </Table>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Onde abrir a seguir</CardTitle>
+          <p className="text-muted-foreground text-sm">
+            Pedidos de "Traga o Rapidinho para sua cidade". As cidades com loja e entregador
+            interessados vêm primeiro — sem eles não há o que abrir.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {demanda.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              Ninguém pediu outra cidade ainda. O formulário fica em /minha-cidade, no rodapé da
+              landing e na escolha de cidade do app.
+            </p>
+          ) : (
+            demanda.map((cidade) => (
+              <details key={cidade.chave} className="rounded-xl border p-3">
+                <summary className="flex cursor-pointer flex-wrap items-center gap-2">
+                  <span className="font-semibold">{cidade.nome}</span>
+                  <Badge variant="secondary">{cidade.clientes} querem pedir</Badge>
+                  <Badge variant={cidade.lojas > 0 ? 'success' : 'secondary'}>
+                    {cidade.lojas} {cidade.lojas === 1 ? 'loja' : 'lojas'}
+                  </Badge>
+                  <Badge variant={cidade.entregadores > 0 ? 'success' : 'secondary'}>
+                    {cidade.entregadores}{' '}
+                    {cidade.entregadores === 1 ? 'entregador' : 'entregadores'}
+                  </Badge>
+                </summary>
+                <ul className="mt-3 divide-y text-sm">
+                  {cidade.contatos.slice(0, 30).map((contato) => (
+                    <li
+                      key={`${contato.phone}-${contato.profile}`}
+                      className="flex flex-wrap items-center justify-between gap-2 py-2"
+                    >
+                      <span>
+                        <span className="font-medium">{contato.name}</span>
+                        {contato.businessName ? (
+                          <span className="text-muted-foreground"> · {contato.businessName}</span>
+                        ) : null}
+                        <span className="text-muted-foreground block text-xs">
+                          {PERFIL[contato.profile]} ·{' '}
+                          {contato.createdAt.toLocaleDateString('pt-BR', {
+                            timeZone: 'America/Sao_Paulo',
+                          })}
+                        </span>
+                      </span>
+                      <a
+                        href={whatsappLink(
+                          contato.phone,
+                          `Olá, ${contato.name}! Aqui é do Rapidinho Entrega, sobre levar o app para ${cidade.nome}.`,
+                        )}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary-text font-semibold hover:underline"
+                      >
+                        {formatPhoneBR(contato.phone)}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            ))
+          )}
         </CardContent>
       </Card>
     </div>

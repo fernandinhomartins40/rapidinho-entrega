@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { Bike, Star } from 'lucide-react';
+import { BadgeCheck, Bike, Star } from 'lucide-react';
 import { Badge, cn } from '@rapidinho/ui';
 import { formatCents } from '@rapidinho/shared';
 
@@ -21,6 +21,8 @@ export interface LojaNaVitrine {
   motivoFechada: string | null;
   imagem: { url: string | null; blurDataUrl: string | null };
   patrocinada: boolean;
+  /** Selo "Preço de balcão": vende no app pelo preço da loja física. */
+  precoDeBalcao: boolean;
 }
 
 /**
@@ -73,8 +75,15 @@ export function CartaoDeLoja({ loja, cidadeSlug }: { loja: LojaNaVitrine; cidade
           ) : null}
         </p>
 
-        <p className="text-muted-foreground truncate text-sm">
-          {loja.categoria ?? loja.descricao ?? ''}
+        <p className="text-muted-foreground flex items-center gap-2 truncate text-sm">
+          <span className="truncate">{loja.categoria ?? loja.descricao ?? ''}</span>
+          {loja.precoDeBalcao ? (
+            // Compromisso da loja: preço do app = preço da loja física.
+            <span className="text-success inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold">
+              <BadgeCheck className="h-3.5 w-3.5" aria-hidden />
+              Preço de balcão
+            </span>
+          ) : null}
         </p>
 
         <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">

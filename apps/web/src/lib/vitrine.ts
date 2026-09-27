@@ -18,6 +18,7 @@ export function selectDaLojaNaVitrine(agora: Date) {
     avgDeliveryTimeMinutes: true,
     isPausedUntil: true,
     pauseReason: true,
+    sellsAtCounterPrice: true,
     city: { select: { slug: true } },
     category: { select: { name: true, slug: true } },
     logo: { select: SELECT_IMAGEM },
@@ -43,6 +44,7 @@ interface LojaDoBanco {
   avgDeliveryTimeMinutes: number;
   isPausedUntil: Date | null;
   pauseReason: string | null;
+  sellsAtCounterPrice: boolean;
   category: { name: string; slug: string } | null;
   logo: Parameters<typeof imagemExibivel>[0];
   hours: Parameters<typeof isStoreOpen>[0]['hours'];
@@ -74,5 +76,6 @@ export function paraLojaNaVitrine(loja: LojaDoBanco, patrocinada = false): LojaN
     motivoFechada: abertura.reason ?? null,
     imagem: imagemExibivel(loja.logo),
     patrocinada,
+    precoDeBalcao: loja.sellsAtCounterPrice,
   };
 }

@@ -2,7 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { AUDIT_ACTIONS, prisma } from '@rapidinho/database';
-import { planSchema, slugify } from '@rapidinho/shared';
+import { planSchema, slugify, STORE_SEGMENT_LABEL } from '@rapidinho/shared';
+import type { StoreSegment } from '@rapidinho/database';
 import { boolFromForm, centsFromForm, runAdminAction } from '@/lib/admin-action';
 import type { ActionResult } from '@/lib/action-state';
 import { RECURSOS_DO_PLANO } from './recursos';
@@ -19,7 +20,13 @@ function lerFormulario(formData: FormData) {
     features[recurso.chave] = boolFromForm(formData.get(`feature_${recurso.chave}`));
   }
 
-  return planSchema.parse({
+  // Segmentos que podem assinar; nenhum marcado = aberto a todos.
+  const segments = formData
+    .getAll('segments')
+    .map(String)
+    .filter((valor): valor is StoreSegment => valor in STORE_SEGMENT_LABEL);
+
+  const dados = planSchema.parse({
     name: formData.get('name'),
     description: formData.get('description') || undefined,
     monthlyPriceCents: centsFromForm(formData.get('monthlyPrice')) ?? 0,
@@ -32,6 +39,8 @@ function lerFormulario(formData: FormData) {
     isActive: boolFromForm(formData.get('isActive')),
     isDefault: boolFromForm(formData.get('isDefault')),
   });
+
+  return { ...dados, segments };
 }
 
 /** Só um plano pode ser o padrão de loja nova. */

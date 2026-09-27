@@ -17,8 +17,20 @@ export async function contratarPlano(entrada: unknown): Promise<ActionResult> {
   return runStoreOwnerAction(async (access) => {
     const { planId } = planoSchema.parse(entrada);
 
+    const loja = await prisma.store.findUniqueOrThrow({
+      where: { id: access.storeId },
+      select: { segment: true },
+    });
+
+    // Só planos do segmento da loja: a tela já filtra, mas a tela não é
+    // autorização — restaurante não pode assinar o plano sem comissão do
+    // comércio trocando o id no navegador.
     const plano = await prisma.plan.findFirst({
-      where: { id: planId, isActive: true },
+      where: {
+        id: planId,
+        isActive: true,
+        OR: [{ segments: { has: loja.segment } }, { segments: { isEmpty: true } }],
+      },
       select: { id: true, name: true, trialDays: true, monthlyPriceCents: true },
     });
 

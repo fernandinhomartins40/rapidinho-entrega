@@ -9,6 +9,7 @@ import {
 } from '@rapidinho/shared';
 import { createChannelToken } from '@rapidinho/shared/realtime/token';
 import { PainelDoEntregador } from './painel';
+import { CorridasAvulsas, type CorridaAvulsa } from './corridas-avulsas';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Entregas' };
@@ -109,6 +110,72 @@ export default async function EntregadorPage() {
 
   const channel = REALTIME_CHANNELS.courier(entregador.id);
 
+  // Corridas avulsas: as abertas da cidade (ou só da loja, para entregador de
+  // loja) e as que já são dele.
+  const selectDaAvulsa = {
+    id: true,
+    status: true,
+    customerName: true,
+    customerPhone: true,
+    street: true,
+    number: true,
+    neighborhood: true,
+    referencePoint: true,
+    notes: true,
+    feeCents: true,
+    collectCents: true,
+    store: {
+      select: {
+        name: true,
+        phone: true,
+        whatsapp: true,
+        street: true,
+        number: true,
+        neighborhood: true,
+      },
+    },
+  } as const;
+  const [avulsasAbertas, avulsasMinhas, ganhosAvulsos] = await Promise.all([
+    prisma.errand.findMany({
+      where: {
+        status: 'OPEN',
+        courierId: null,
+        cityId: entregador.cityId,
+        ...(entregador.storeId ? { storeId: entregador.storeId } : {}),
+      },
+      orderBy: { createdAt: 'asc' },
+      take: 20,
+      select: selectDaAvulsa,
+    }),
+    prisma.errand.findMany({
+      where: { courierId: entregador.id, status: { in: ['ACCEPTED', 'PICKED_UP'] } },
+      orderBy: { acceptedAt: 'asc' },
+      select: selectDaAvulsa,
+    }),
+    prisma.errand.aggregate({
+      where: { courierId: entregador.id, status: 'DELIVERED', deliveredAt: { gte: inicioDoDia } },
+      _sum: { feeCents: true },
+      _count: true,
+    }),
+  ]);
+
+  const paraTela = (corrida: (typeof avulsasAbertas)[number]): CorridaAvulsa => ({
+    id: corrida.id,
+    status: corrida.status as CorridaAvulsa['status'],
+    loja: {
+      nome: corrida.store.name,
+      endereco: `${corrida.store.street}${corrida.store.number ? `, ${corrida.store.number}` : ''} — ${corrida.store.neighborhood}`,
+      telefone: corrida.store.whatsapp ?? corrida.store.phone,
+    },
+    cliente: corrida.customerName,
+    telefoneDoCliente: corrida.customerPhone,
+    endereco: `${corrida.street}${corrida.number ? `, ${corrida.number}` : ''} — ${corrida.neighborhood}`,
+    referencia: corrida.referencePoint,
+    recado: corrida.notes,
+    feeCents: corrida.feeCents,
+    collectCents: corrida.collectCents,
+  });
+
   return (
     <PainelDoEntregador
       entregador={{
@@ -118,9 +185,11 @@ export default async function EntregadorPage() {
         nota: Number(entregador.ratingAverage),
         daLoja: entregador.storeId != null,
       }}
+      // O total do dia soma as entregas do app e as corridas avulsas: para
+      // quem vive de entrega, o número de cima precisa ser o dia inteiro.
       ganhosDeHoje={{
-        centavos: ganhos._sum.earningCents ?? 0,
-        entregas: ganhos._count,
+        centavos: (ganhos._sum.earningCents ?? 0) + (ganhosAvulsos._sum.feeCents ?? 0),
+        entregas: ganhos._count + ganhosAvulsos._count,
       }}
       disponiveis={disponiveis}
       minhas={minhas}
@@ -132,6 +201,15 @@ export default async function EntregadorPage() {
         ),
         url: getPublicEnv().NEXT_PUBLIC_SOCKET_URL,
       }}
-    />
+    >
+      <CorridasAvulsas
+        abertas={avulsasAbertas.map(paraTela)}
+        minhas={avulsasMinhas.map(paraTela)}
+        ganhosDeHoje={{
+          centavos: ganhosAvulsos._sum.feeCents ?? 0,
+          corridas: ganhosAvulsos._count,
+        }}
+      />
+    </PainelDoEntregador>
   );
 }

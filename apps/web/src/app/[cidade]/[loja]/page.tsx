@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Bike, Clock, MessageCircle, Star } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, Bike, Clock, MessageCircle, Star } from 'lucide-react';
 import { prisma } from '@rapidinho/database';
 import { getCurrentUser } from '@rapidinho/auth';
 import { Badge } from '@rapidinho/ui';
@@ -64,6 +64,7 @@ async function carregarLoja(citySlug: string, storeSlug: string) {
       acceptsCashOnDelivery: true,
       acceptsCardOnDelivery: true,
       isPausedUntil: true,
+      sellsAtCounterPrice: true,
       pauseReason: true,
       pizzaPricingRule: true,
       logo: { select: SELECT_IMAGEM },
@@ -254,6 +255,12 @@ export default async function LojaPage({
               <h1 className="text-xl font-bold leading-tight">{loja.name}</h1>
               {loja.description ? (
                 <p className="text-muted-foreground mt-0.5 text-sm">{loja.description}</p>
+              ) : null}
+              {loja.sellsAtCounterPrice ? (
+                <p className="text-success mt-1.5 inline-flex items-center gap-1 text-sm font-semibold">
+                  <BadgeCheck className="h-4 w-4" aria-hidden />
+                  Preço de balcão — o mesmo preço da loja física
+                </p>
               ) : null}
             </div>
           </div>

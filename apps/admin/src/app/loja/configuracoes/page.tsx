@@ -33,6 +33,7 @@ export default async function ConfiguracoesPage() {
       pixKey: true,
       soundAlertEnabled: true,
       autoAcceptOrders: true,
+      sellsAtCounterPrice: true,
       logoId: true,
       coverId: true,
       logo: { select: SELECT_IMAGEM },
@@ -73,7 +74,10 @@ export default async function ConfiguracoesPage() {
                 {loja.subscription.plan.monthlyPriceCents === 0
                   ? 'Sem mensalidade'
                   : `${formatCents(loja.subscription.plan.monthlyPriceCents)} por mês`}{' '}
-                · comissão de {Number(loja.subscription.plan.commissionRate)}% por pedido
+                ·{' '}
+                {Number(loja.subscription.plan.commissionRate) === 0
+                  ? 'sem comissão por pedido'
+                  : `comissão de ${Number(loja.subscription.plan.commissionRate)}% por pedido`}
               </p>
               {loja.subscription.currentPeriodEnd ? (
                 <p className="text-muted-foreground text-sm">

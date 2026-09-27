@@ -135,6 +135,7 @@ export async function salvarPagamentos(
 const operacaoSchema = z.object({
   soundAlertEnabled: z.boolean(),
   autoAcceptOrders: z.boolean(),
+  sellsAtCounterPrice: z.boolean(),
 });
 
 export async function salvarOperacao(
@@ -145,9 +146,25 @@ export async function salvarOperacao(
     const dados = operacaoSchema.parse({
       soundAlertEnabled: boolFromForm(formData.get('soundAlertEnabled')),
       autoAcceptOrders: boolFromForm(formData.get('autoAcceptOrders')),
+      sellsAtCounterPrice: boolFromForm(formData.get('sellsAtCounterPrice')),
     });
 
-    await prisma.store.update({ where: { id: access.storeId }, data: dados });
+    const atual = await prisma.store.findUniqueOrThrow({
+      where: { id: access.storeId },
+      select: { sellsAtCounterPrice: true },
+    });
+
+    await prisma.store.update({
+      where: { id: access.storeId },
+      data: {
+        ...dados,
+        // A data do compromisso só muda quando ele é assumido ou retirado:
+        // salvar outras preferências não pode "renovar" o selo.
+        ...(dados.sellsAtCounterPrice !== atual.sellsAtCounterPrice
+          ? { counterPriceSince: dados.sellsAtCounterPrice ? new Date() : null }
+          : {}),
+      },
+    });
 
     revalidatePath('/loja/configuracoes');
     revalidatePath('/loja/pedidos');

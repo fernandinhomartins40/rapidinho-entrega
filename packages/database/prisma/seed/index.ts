@@ -159,6 +159,8 @@ async function seedPlans() {
         trialDays: plan.trialDays,
         isDefault: plan.isDefault ?? false,
         sortOrder: plan.sortOrder,
+        // Só na criação: depois disso quem manda é o painel da plataforma.
+        segments: 'segments' in plan && plan.segments ? [...plan.segments] : [],
       },
     });
     plans.set(plan.slug, record.id);

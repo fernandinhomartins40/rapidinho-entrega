@@ -1,6 +1,7 @@
 'use client';
 
 import { useActionState } from 'react';
+import Link from 'next/link';
 import { Button, Card, CardContent, Input, Label } from '@rapidinho/ui';
 import { cadastrarLoja } from './actions';
 import { ACTION_IDLE } from '@/lib/action-state';
@@ -100,6 +101,12 @@ export function FormularioDeCadastro({
               </option>
             ))}
           </select>
+          <Link
+            href="/minha-cidade"
+            className="text-primary-text mt-1 inline-block text-xs font-semibold"
+          >
+            Minha cidade não está na lista
+          </Link>
         </div>
 
         <div>

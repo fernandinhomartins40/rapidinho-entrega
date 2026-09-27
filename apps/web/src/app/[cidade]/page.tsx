@@ -69,6 +69,7 @@ async function carregarVitrine(citySlug: string) {
         avgDeliveryTimeMinutes: true,
         isPausedUntil: true,
         pauseReason: true,
+        sellsAtCounterPrice: true,
         category: { select: { name: true, slug: true } },
         logo: { select: SELECT_IMAGEM },
         hours: { select: { weekday: true, opensAt: true, closesAt: true, isActive: true } },
@@ -139,6 +140,7 @@ async function carregarVitrine(citySlug: string) {
       motivoFechada: abertura.reason ?? null,
       imagem: imagemExibivel(loja.logo),
       patrocinada: idsImpulsionados.has(loja.id),
+      precoDeBalcao: loja.sellsAtCounterPrice,
     };
   });
 
@@ -154,6 +156,9 @@ async function carregarVitrine(citySlug: string) {
     lojas: [...comStatus].sort((a, b) => {
       if (a.aberta !== b.aberta) return a.aberta ? -1 : 1;
       if (a.patrocinada !== b.patrocinada) return a.patrocinada ? -1 : 1;
+      // Depois do anúncio, quem vende pelo preço do balcão: é o compromisso
+      // que mais importa para quem compra mercado e farmácia.
+      if (a.precoDeBalcao !== b.precoDeBalcao) return a.precoDeBalcao ? -1 : 1;
       return b.nota - a.nota;
     }),
   };

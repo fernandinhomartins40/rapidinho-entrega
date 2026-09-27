@@ -41,6 +41,7 @@ interface Loja {
   pixKey: string | null;
   soundAlertEnabled: boolean;
   autoAcceptOrders: boolean;
+  sellsAtCounterPrice: boolean;
   logoId: string | null;
   coverId: string | null;
   logoUrl: string | null;
@@ -330,6 +331,12 @@ function Operacao({ loja }: { loja: Loja }) {
             defaultChecked={loja.autoAcceptOrders}
             label="Aceitar pedidos automaticamente"
             description="Só use se você sempre aceita. O pedido entra direto em preparo, sem confirmação."
+          />
+          <SwitchField
+            name="sellsAtCounterPrice"
+            defaultChecked={loja.sellsAtCounterPrice}
+            label="Vendo no app pelo mesmo preço do balcão"
+            description="Sua loja ganha o selo “Preço de balcão” no app. É um compromisso com o cliente: o preço no app é o mesmo da loja."
           />
 
           <div className="flex flex-wrap items-center gap-3">

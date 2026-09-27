@@ -304,6 +304,7 @@ model City {
   coupons         Coupon[]
   neighborhoods   Neighborhood[]
   cravingSessions CravingSession[]
+  errands         Errand[]
 
   @@index([isActive])
   @@map("cities")
@@ -616,6 +617,12 @@ model Store {
   documents        StoreDocument[]
   banners          Banner[]
   favoritedBy      FavoriteStore[]
+  errands          Errand[]
+
+  /// Selo "Preço de balcão": a loja declara que vende no app pelo mesmo
+  /// preço da loja física. Vale como compromisso público com o cliente.
+  sellsAtCounterPrice Boolean   @default(false)
+  counterPriceSince   DateTime?
 
   @@index([cityId, status])
   @@index([categoryId])
@@ -1326,6 +1333,7 @@ model Courier {
   deliveries Delivery[]
   payouts    Payout[]
   reviews    Review[]
+  errands    Errand[]
 
   @@index([cityId, status, isOnline])
   @@index([storeId])
@@ -1413,6 +1421,10 @@ model Plan {
 
   subscriptions StoreSubscription[]
   invoices      PlanInvoice[]
+  /// Segmentos que podem assinar o plano. Vazio = todos. Restaurante fica
+  /// no modelo com comissão; mercado, farmácia e outros, na mensalidade sem
+  /// comissão — para não precisarem subir preço no app.
+  segments      StoreSegment[]      @default([])
 
   @@index([isActive, sortOrder])
   @@map("plans")
@@ -1891,4 +1903,80 @@ model CravingVote {
   @@id([sessionId, participantId, itemKey])
   @@index([sessionId, itemKey])
   @@map("craving_votes")
+}
+
+/// Quem pediu o Rapidinho numa cidade que ainda não tem. É o mapa de onde
+/// abrir: cidade com gente querendo pedir, loja querendo vender e motoboy
+/// querendo entregar está pronta para começar.
+model CityInterest {
+  id           String              @id @default(cuid())
+  /// Cidade normalizada ("cornelio-procopio-pr"), para agrupar grafias.
+  cityKey      String
+  cityName     String
+  state        String              @db.VarChar(2)
+  profile      CityInterestProfile
+  name         String
+  /// WhatsApp em E.164: é por ele que avisamos quando a cidade abrir.
+  phone        String
+  businessName String?
+  createdAt    DateTime            @default(now())
+
+  @@unique([cityKey, phone, profile])
+  @@index([cityKey])
+  @@map("city_interests")
+}
+
+enum CityInterestProfile {
+  CUSTOMER
+  STORE
+  COURIER
+}
+
+/// Corrida avulsa: a loja chama um entregador para uma entrega que não veio
+/// pelo app (balcão, WhatsApp, telefone). Cai na fila dos entregadores da
+/// cidade; a loja paga o entregador direto, pelo valor combinado aqui.
+model Errand {
+  id        String       @id @default(cuid())
+  storeId   String
+  store     Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  cityId    String
+  city      City         @relation(fields: [cityId], references: [id])
+  courierId String?
+  courier   Courier?     @relation(fields: [courierId], references: [id], onDelete: SetNull)
+  status    ErrandStatus @default(OPEN)
+
+  customerName   String
+  customerPhone  String?
+  street         String
+  number         String?
+  neighborhood   String
+  referencePoint String?
+  notes          String?
+
+  /// Quanto a loja paga ao entregador pela corrida.
+  feeCents     Int
+  /// Quanto o entregador cobra do cliente na entrega, se houver.
+  collectCents Int?
+
+  createdById  String?
+  acceptedAt   DateTime?
+  pickedUpAt   DateTime?
+  deliveredAt  DateTime?
+  cancelledAt  DateTime?
+  cancelReason String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([cityId, status])
+  @@index([storeId, createdAt])
+  @@index([courierId, status])
+  @@map("errands")
+}
+
+enum ErrandStatus {
+  OPEN
+  ACCEPTED
+  PICKED_UP
+  DELIVERED
+  CANCELLED
 }

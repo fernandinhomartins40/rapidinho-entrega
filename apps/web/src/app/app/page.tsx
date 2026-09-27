@@ -102,6 +102,23 @@ export default async function EntradaDoApp({
             ))}
           </ul>
         )}
+
+        {/* Quem mora onde ainda não chegamos não pode sair daqui sem porta. */}
+        <Link
+          href="/minha-cidade"
+          className="hover:border-primary mt-6 flex items-center gap-3 rounded-xl border-2 border-dashed p-4 transition-colors"
+        >
+          <span className="bg-primary/12 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+            <MapPin className="h-5 w-5" aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold">Minha cidade não está aqui</span>
+            <span className="text-muted-foreground block text-sm">
+              Peça o Rapidinho — com loja ou moto, venha junto.
+            </span>
+          </span>
+          <ArrowRight className="text-muted-foreground h-5 w-5 shrink-0" aria-hidden />
+        </Link>
       </div>
     </main>
   );

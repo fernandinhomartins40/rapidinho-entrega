@@ -1,4 +1,4 @@
-import { prisma } from '@rapidinho/database';
+import { prisma, type StoreSegment } from '@rapidinho/database';
 import { getStoreContext } from '@/lib/store-context';
 import { Planos } from './planos';
 
@@ -10,7 +10,11 @@ export default async function ImpulsionarPage() {
 
   const [planos, pacotes, assinatura, boosts] = await Promise.all([
     prisma.plan.findMany({
-      where: { isActive: true },
+      // Só os planos do segmento da loja (ou abertos a todos).
+      where: {
+        isActive: true,
+        OR: [{ segments: { has: store.segment as StoreSegment } }, { segments: { isEmpty: true } }],
+      },
       orderBy: { sortOrder: 'asc' },
       select: {
         id: true,
