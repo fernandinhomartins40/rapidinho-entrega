@@ -8,3 +8,4 @@ export * from './product-import';
 export * from './pix';
 export * from './notification-segment';
 export * from './shopping-list';
+export * from './cravings';

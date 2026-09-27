@@ -10,6 +10,8 @@ import { Logotipo } from '@/components/marca/logo';
 import { CartaoDeLoja, type LojaNaVitrine } from '@/components/app/cartao-de-loja';
 import { LembrarCidade } from '@/components/app/lembrar-cidade';
 import { PecaDeNovo, type PedidoParaRepetir } from '@/components/app/peca-de-novo';
+import { SaindoAgora } from '@/components/app/saindo-agora';
+import { pratosDaCidade } from '@/lib/pratos';
 import { MEDIDAS_DA_LANDING } from '@/components/landing/medidas';
 import { GRUPOS_DE_CATEGORIA, pertenceAoGrupo } from '@/lib/grupos-de-categoria';
 import { imagemExibivel, SELECT_IMAGEM } from '@/lib/media';
@@ -163,7 +165,7 @@ async function carregarVitrine(citySlug: string) {
  */
 async function contextoDoCliente(cityId: string) {
   const user = await getCurrentUser();
-  if (!user) return { endereco: null, paraRepetir: [] };
+  if (!user) return { userId: null, endereco: null, paraRepetir: [] };
 
   const [endereco, ultimos] = await Promise.all([
     enderecoDeEntrega(user.id, cityId),
@@ -201,7 +203,7 @@ async function contextoDoCliente(cityId: string) {
     });
   }
 
-  return { endereco, paraRepetir };
+  return { userId: user.id, endereco, paraRepetir };
 }
 
 async function enderecoDeEntrega(userId: string, cityId: string) {
@@ -228,8 +230,11 @@ export default async function CidadePage({
 
   if (!dados) notFound();
 
-  const { endereco, paraRepetir } = await contextoDoCliente(dados.cidade.id);
   const grupo = GRUPOS_DE_CATEGORIA.find((candidato) => candidato.chave === filtro);
+  const { userId, endereco, paraRepetir } = await contextoDoCliente(dados.cidade.id);
+  // Com filtro de categoria a pessoa já sabe o que quer: a vitrine de pratos
+  // é para quem ainda não sabe.
+  const pratos = grupo ? [] : await pratosDaCidade(dados.cidade.id, { userId, limite: 12 });
 
   const lojas = grupo
     ? dados.lojas.filter((loja) => pertenceAoGrupo(grupo.chave, loja.categoriaSlug))
@@ -310,6 +315,8 @@ export default async function CidadePage({
             })}
           </ul>
         </section>
+
+        {!grupo ? <SaindoAgora cidadeSlug={slug} pratos={pratos} /> : null}
 
         {/* Faixa da arte: é também a porta do pedido por lista. */}
         <Link

@@ -29,8 +29,9 @@ export function BarraInferior({ cidadeSlug }: { cidadeSlug: string | null }) {
   const pedindo = pathname.endsWith('/pedir');
 
   // A tela do produto tem a própria barra fixa ("Adicionar"); as duas juntas
-  // cobririam metade da tela de um celular pequeno.
-  if (pathname.includes('/produto/')) return null;
+  // cobririam metade da tela de um celular pequeno. O "Tô com fome" é tela
+  // cheia: o cartão e os botões de decidir precisam caber sem rolar.
+  if (pathname.includes('/produto/') || /\/fome(\/|$)/.test(pathname)) return null;
 
   const esquerda: ItemDaBarra[] = [
     { href: inicio, rotulo: 'Início', icone: Home, ativo: pathname === inicio },

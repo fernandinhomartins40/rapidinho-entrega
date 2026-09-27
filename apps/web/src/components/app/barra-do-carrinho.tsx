@@ -18,7 +18,8 @@ export function BarraDoCarrinho({ itens }: { itens: number }) {
     itens === 0 ||
     pathname.startsWith('/carrinho') ||
     pathname.endsWith('/pedir') ||
-    pathname.includes('/produto/')
+    pathname.includes('/produto/') ||
+    /\/fome(\/|$)/.test(pathname)
   ) {
     return null;
   }

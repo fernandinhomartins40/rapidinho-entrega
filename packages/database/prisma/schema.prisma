@@ -296,13 +296,14 @@ model City {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  stores        Store[]
-  addresses     Address[]
-  orders        Order[]
-  couriers      Courier[]
-  banners       Banner[]
-  coupons       Coupon[]
-  neighborhoods Neighborhood[]
+  stores          Store[]
+  addresses       Address[]
+  orders          Order[]
+  couriers        Courier[]
+  banners         Banner[]
+  coupons         Coupon[]
+  neighborhoods   Neighborhood[]
+  cravingSessions CravingSession[]
 
   @@index([isActive])
   @@map("cities")
@@ -1855,4 +1856,39 @@ model FavoriteStore {
   @@id([userId, storeId])
   @@index([storeId])
   @@map("favorite_stores")
+}
+
+/// "Decidir junto" do Tô com fome: um baralho de pratos congelado que várias
+/// pessoas passam pelo mesmo link. Dá match quando todas curtem o mesmo prato.
+/// Vale por algumas horas — é a decisão de uma refeição, não um histórico.
+model CravingSession {
+  id        String   @id @default(cuid())
+  cityId    String
+  city      City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  /// Chaves dos pratos na ordem do baralho (`p:<produto>` ou `s:<sabor>`).
+  items     Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  votes CravingVote[]
+
+  @@index([expiresAt])
+  @@map("craving_sessions")
+}
+
+/// Voto de um participante num prato. O participante é anônimo (id em
+/// cookie) com o apelido que ele mesmo digitou — ninguém precisa de conta
+/// para ajudar a escolher o jantar.
+model CravingVote {
+  sessionId     String
+  session       CravingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  participantId String
+  nickname      String
+  itemKey       String
+  liked         Boolean
+  createdAt     DateTime       @default(now())
+
+  @@id([sessionId, participantId, itemKey])
+  @@index([sessionId, itemKey])
+  @@map("craving_votes")
 }
