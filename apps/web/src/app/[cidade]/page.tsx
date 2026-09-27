@@ -19,6 +19,9 @@ import { imagemExibivel, SELECT_IMAGEM } from '@/lib/media';
 
 export const dynamic = 'force-dynamic';
 
+/** Lojas por seção de nicho na vitrine sem filtro; o resto fica em "Ver todas". */
+const LOJAS_POR_SECAO = 4;
+
 export async function generateMetadata({ params }: { params: Promise<{ cidade: string }> }) {
   const { cidade } = await params;
   const encontrada = await prisma.city.findFirst({
@@ -258,8 +261,24 @@ export default async function CidadePage({
     ? dados.lojas.filter((loja) => pertenceAoGrupo(grupo.chave, loja.categoriaSlug))
     : dados.lojas;
 
-  const abertas = lojas.filter((loja) => loja.aberta);
-  const fechadas = lojas.filter((loja) => !loja.aberta);
+  // A vitrine dividida por nicho: cada seção com a cor e as lojas dela,
+  // abertas primeiro. Seção com loja aberta agora vem antes; sem filtro, cada
+  // uma mostra poucas lojas e leva ao nicho inteiro.
+  const secoes = GRUPOS_DE_CATEGORIA.map((nicho) => {
+    const doNicho = lojas.filter((loja) => pertenceAoGrupo(nicho.chave, loja.categoriaSlug));
+    const ordenadas = [
+      ...doNicho.filter((loja) => loja.aberta),
+      ...doNicho.filter((loja) => !loja.aberta),
+    ];
+    return {
+      nicho,
+      abertas: doNicho.filter((loja) => loja.aberta).length,
+      total: ordenadas.length,
+      lojas: grupo ? ordenadas : ordenadas.slice(0, LOJAS_POR_SECAO),
+    };
+  })
+    .filter((secao) => secao.total > 0)
+    .sort((a, b) => Number(b.abertas > 0) - Number(a.abertas > 0));
 
   return (
     <main className="mx-auto max-w-lg">
@@ -340,9 +359,11 @@ export default async function CidadePage({
         {/* Faixa da arte: é também a porta do pedido por lista. */}
         <Link
           href={`/${slug}/pedir`}
-          className="bg-brand-deep relative flex min-h-[8.5rem] items-center overflow-hidden rounded-xl p-5 text-white"
+          // Sem `overflow-hidden`: o mascote sai um pouco por cima da faixa, inteiro,
+          // em vez de ter a cabeça e a moto cortadas.
+          className="bg-brand-deep relative mt-8 flex min-h-[8.5rem] items-center rounded-xl p-5 text-white"
         >
-          <span className="relative z-10 max-w-[60%]">
+          <span className="relative z-10 max-w-[55%]">
             <span className="block text-[17px] font-bold leading-snug">
               Tudo o que você precisa, <span className="text-primary">a um toque</span> de
               distância.
@@ -357,8 +378,8 @@ export default async function CidadePage({
             src="/landing/motoboy.webp"
             {...MEDIDAS_DA_LANDING['motoboy.webp']}
             alt=""
-            sizes="200px"
-            className="absolute -bottom-3 -right-4 h-auto w-[50%] drop-shadow-[0_10px_20px_rgba(0,0,0,0.6)]"
+            sizes="240px"
+            className="pointer-events-none absolute bottom-0 right-1 h-[calc(100%+2rem)] w-auto max-w-[50%] object-contain object-bottom drop-shadow-[0_10px_18px_rgba(0,0,0,0.45)]"
           />
         </Link>
 
@@ -395,41 +416,64 @@ export default async function CidadePage({
           </p>
         ) : null}
 
-        {abertas.length > 0 ? (
-          <section aria-labelledby="abertas">
-            <h2 id="abertas" className="mb-3 text-lg font-bold">
-              Abertas agora
-            </h2>
-            <ul className="space-y-3">
-              {abertas.map((loja) => (
-                <li key={loja.id}>
-                  <CartaoDeLoja loja={loja} cidadeSlug={slug} />
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : (
-          <p className="text-muted-foreground bg-card rounded-2xl border p-5 text-center">
-            {lojas.length === 0
-              ? 'Ainda não há lojas nesta categoria na sua cidade.'
-              : 'Nenhuma loja aberta agora. As de baixo abrem em breve — dá para ver o cardápio e voltar depois.'}
+        {secoes.length === 0 ? (
+          <p className="text-muted-foreground bg-card rounded-xl border p-5 text-center">
+            Ainda não há lojas nesta categoria na sua cidade.
           </p>
-        )}
+        ) : null}
 
-        {fechadas.length > 0 ? (
-          <section aria-labelledby="fechadas">
-            <h2 id="fechadas" className="mb-3 text-lg font-bold">
-              Fechadas no momento
-            </h2>
+        {secoes.map(({ nicho, abertas, total, lojas: daSecao }) => (
+          <section
+            key={nicho.chave}
+            aria-labelledby={`nicho-${nicho.chave}`}
+            data-nicho={nicho.chave}
+            className="space-y-3"
+          >
+            <header className="flex items-center gap-3">
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+                style={{ backgroundColor: nicho.fundo }}
+              >
+                <Image
+                  src={`/landing/${nicho.imagem}`}
+                  {...MEDIDAS_DA_LANDING[nicho.imagem]}
+                  alt=""
+                  className="max-h-6 w-auto"
+                />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2
+                  id={`nicho-${nicho.chave}`}
+                  className="text-lg font-bold leading-tight"
+                  style={{ color: nicho.cor }}
+                >
+                  {nicho.titulo}
+                </h2>
+                <p className="text-muted-foreground text-xs">
+                  {abertas > 0
+                    ? `${abertas} ${abertas === 1 ? 'aberta agora' : 'abertas agora'}`
+                    : 'Fechadas no momento — dá para ver o cardápio'}
+                </p>
+              </div>
+              {!grupo && total > daSecao.length ? (
+                <Link
+                  href={`/${slug}?categoria=${nicho.chave}`}
+                  className="shrink-0 text-sm font-semibold"
+                  style={{ color: nicho.cor }}
+                >
+                  Ver todas ({total})
+                </Link>
+              ) : null}
+            </header>
             <ul className="space-y-3">
-              {fechadas.map((loja) => (
+              {daSecao.map((loja) => (
                 <li key={loja.id}>
                   <CartaoDeLoja loja={loja} cidadeSlug={slug} />
                 </li>
               ))}
             </ul>
           </section>
-        ) : null}
+        ))}
       </div>
     </main>
   );

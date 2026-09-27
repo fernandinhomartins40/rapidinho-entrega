@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { BadgeCheck, Bike, ChevronRight, Clock, Star } from 'lucide-react';
 import { Badge, cn } from '@rapidinho/ui';
 import { formatCents } from '@rapidinho/shared';
+import { grupoDaLoja } from '@/lib/grupos-de-categoria';
 import type { ProdutoDaVitrine } from '@/lib/produtos-da-loja';
 import { ArteDoPrato } from './arte-do-prato';
 
@@ -49,13 +50,19 @@ function iniciais(nome: string): string {
  */
 export function CartaoDeLoja({ loja, cidadeSlug }: { loja: LojaNaVitrine; cidadeSlug: string }) {
   const produtos = loja.produtos ?? [];
+  // A cor do nicho (mercado verde, farmácia azul...) marca o cartão: dá para
+  // saber o tipo de loja sem ler.
+  const nicho = grupoDaLoja(loja.categoriaSlug);
 
   return (
     <article
       className={cn(
-        'bg-card overflow-hidden rounded-xl border border-black/5 shadow-[0_2px_10px_rgba(20,20,20,0.05)]',
+        'bg-card overflow-hidden rounded-xl border border-t-[3px] border-black/5 shadow-[0_2px_10px_rgba(20,20,20,0.05)]',
         !loja.aberta && 'bg-card/70',
       )}
+      style={{ borderTopColor: nicho.cor }}
+      data-nicho={nicho.chave}
+      data-aberta={loja.aberta}
     >
       <Link
         href={`/${cidadeSlug}/${loja.slug}`}
@@ -78,7 +85,8 @@ export function CartaoDeLoja({ loja, cidadeSlug }: { loja: LojaNaVitrine; cidade
         ) : (
           <span
             aria-hidden
-            className="bg-brand-deep text-primary flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-full text-base font-bold tracking-wide"
+            className="flex h-[3.25rem] w-[3.25rem] shrink-0 items-center justify-center rounded-full text-base font-bold tracking-wide text-white"
+            style={{ backgroundColor: nicho.cor }}
           >
             {iniciais(loja.nome)}
           </span>
@@ -102,7 +110,9 @@ export function CartaoDeLoja({ loja, cidadeSlug }: { loja: LojaNaVitrine; cidade
                 {loja.nota.toFixed(1)}
               </span>
             ) : null}
-            <span className="truncate">{loja.categoria ?? loja.descricao ?? ''}</span>
+            <span className="truncate font-medium" style={{ color: nicho.cor }}>
+              {loja.categoria ?? nicho.nome}
+            </span>
             <span className="flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" aria-hidden />
               {loja.tempoMin} min
@@ -140,16 +150,30 @@ export function CartaoDeLoja({ loja, cidadeSlug }: { loja: LojaNaVitrine; cidade
 
       {produtos.length > 0 ? (
         <ul
-          className="no-scrollbar flex snap-x gap-2.5 overflow-x-auto px-3 pb-3"
+          // `scroll-px-3`: sem ele o encaixe da rolagem ignora o recuo e o
+          // primeiro produto encosta na borda do cartão.
+          className="no-scrollbar flex snap-x scroll-px-3 gap-2 overflow-x-auto px-3 pb-3 pt-0.5"
           aria-label={`Produtos de ${loja.nome}`}
         >
           {produtos.map((produto) => {
             const desconto = produto.precoDeCents
               ? Math.round((1 - produto.precoCents / produto.precoDeCents) * 100)
               : 0;
+            const promocao = desconto > 0;
             return (
-              <li key={produto.id} className="w-[6.75rem] shrink-0 snap-start">
-                <Link href={produto.href} className="group block">
+              <li key={produto.id} className="w-[7.25rem] shrink-0 snap-start">
+                {/* Promoção é oportunidade: o cartão inteiro vira o amarelo da
+                    marca, com borda mais clara e brilho, e salta da faixa. Os
+                    outros têm a mesma moldura, transparente, para alinhar. */}
+                <Link
+                  href={produto.href}
+                  className={cn(
+                    'group block h-full rounded-xl border-2 p-1.5 transition-transform active:scale-95',
+                    promocao
+                      ? 'bg-primary border-[#FFD84D] shadow-[0_0_0_1px_rgba(255,216,77,0.6),0_6px_16px_rgba(255,185,0,0.45)]'
+                      : 'border-transparent',
+                  )}
+                >
                   <span className="relative block">
                     <ArteDoPrato
                       imagem={produto.imagem}
@@ -157,17 +181,23 @@ export function CartaoDeLoja({ loja, cidadeSlug }: { loja: LojaNaVitrine; cidade
                       nome={produto.nome}
                       tamanho="xs"
                       className={cn(
-                        'h-[6.75rem] w-full rounded-lg transition-transform group-active:scale-95',
+                        'h-[6.25rem] w-full rounded-lg',
+                        promocao && 'ring-1 ring-black/5',
                         !loja.aberta && 'opacity-70',
                       )}
                     />
-                    {desconto > 0 ? (
-                      <span className="bg-primary text-primary-foreground absolute left-1.5 top-1.5 rounded px-1.5 py-0.5 text-[10px] font-bold">
+                    {promocao ? (
+                      <span className="text-primary absolute left-1 top-1 rounded bg-[#141414] px-1.5 py-0.5 text-[10px] font-bold">
                         -{desconto}%
                       </span>
                     ) : null}
                   </span>
-                  <span className="mt-1.5 line-clamp-2 text-xs font-medium leading-snug">
+                  <span
+                    className={cn(
+                      'mt-1.5 line-clamp-2 text-xs leading-snug',
+                      promocao ? 'text-primary-foreground font-semibold' : 'font-medium',
+                    )}
+                  >
                     {produto.nome}
                   </span>
                   <span className="mt-0.5 flex flex-wrap items-baseline gap-x-1">
@@ -177,16 +207,16 @@ export function CartaoDeLoja({ loja, cidadeSlug }: { loja: LojaNaVitrine; cidade
                     <span
                       className={cn(
                         'text-[13px] font-bold',
-                        produto.precoDeCents ? 'text-success' : undefined,
+                        promocao && 'text-primary-foreground text-sm font-extrabold',
                       )}
                     >
                       {formatCents(produto.precoCents)}
                       {produto.porPeso ? (
-                        <span className="text-muted-foreground text-[10px] font-normal">/kg</span>
+                        <span className="text-[10px] font-normal opacity-70">/kg</span>
                       ) : null}
                     </span>
                     {produto.precoDeCents ? (
-                      <span className="text-muted-foreground text-[10px] line-through">
+                      <span className="text-primary-foreground/70 text-[10px] line-through">
                         {formatCents(produto.precoDeCents)}
                       </span>
                     ) : null}

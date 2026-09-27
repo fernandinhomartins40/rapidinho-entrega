@@ -43,16 +43,24 @@ test.describe('pedido do cliente', () => {
   test('monta o carrinho e finaliza o pedido', async ({ page }) => {
     await page.goto('/palmital-pr');
 
-    // A vitrine separa abertas de fechadas; o teste segue por uma aberta.
-    const abertas = page.getByRole('heading', { name: 'Abertas agora' });
-    await expect(abertas).toBeVisible();
+    // A vitrine é dividida por nicho, com as abertas primeiro em cada seção;
+    // o teste segue pelas lojas abertas, marcadas no próprio cartão.
+    const abertas = page.locator('article[data-aberta="true"] > a[href^="/palmital-pr/"]');
+    await expect(abertas.first()).toBeVisible();
 
     // Percorre as lojas abertas até achar uma com produto vendido por unidade.
     // A primeira nem sempre serve: o teste de aprovação publica uma loja sem
     // cardápio, e uma vitrine real também terá lojas recém-aprovadas. Amarrar
     // o fluxo de compra à ordem da vitrine seria falhar por motivo alheio ao
     // que este teste verifica.
-    const lojas = page.locator('section:has(#abertas) article > a[href^="/palmital-pr/"]');
+    // Mercado primeiro: produto de mercado é simples (sem escolha obrigatória
+    // de complemento), que é o que este teste precisa. Com a vitrine dividida
+    // por nicho, a primeira loja aberta passou a ser um restaurante, e o prato
+    // dele pedia "escolha a carne".
+    const deMercado = page.locator(
+      'section[data-nicho="mercado"] article[data-aberta="true"] > a[href^="/palmital-pr/"]',
+    );
+    const lojas = (await deMercado.count()) > 0 ? deMercado : abertas;
     const total = await lojas.count();
     let produto = null;
 
