@@ -85,7 +85,7 @@ export function BarraInferior({ cidadeSlug }: { cidadeSlug: string | null }) {
             aria-current={pedindo ? 'page' : undefined}
             className="group -mt-7 flex flex-col items-center gap-1 pb-2"
           >
-            <span className="botao-vidro botao-vidro-pulso flex h-16 w-16 items-center justify-center rounded-full text-[#141414] transition-transform group-active:scale-95">
+            <span className="botao-vidro flex h-16 w-16 items-center justify-center rounded-full text-[#141414] transition-transform group-active:scale-95">
               <Sparkles className="h-7 w-7" strokeWidth={2.2} aria-hidden />
             </span>
             <span

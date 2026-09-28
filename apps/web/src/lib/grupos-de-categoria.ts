@@ -6,8 +6,10 @@
  * "mercearia" — cada nicho junta as categorias do banco que respondem a essa
  * pergunta. "Outros" é o que sobra, para nenhuma loja ficar sem porta.
  *
- * Cada nicho tem uma cor, usada na seção, no monograma e no detalhe do cartão:
- * bater o olho e saber que aquilo é farmácia, e não mercado, sem ler.
+ * Cada nicho tem uma cor — tons sóbrios, não de brinquedo — usada como
+ * assinatura: o ícone da seção, o monograma e o rótulo da loja. Bater o olho
+ * e saber que aquilo é farmácia, e não mercado, sem ler. O `icone` (lucide) é
+ * o atalho do app; a `imagem` ilustrada fica para a landing.
  */
 export const GRUPOS_DE_CATEGORIA = [
   {
@@ -15,8 +17,9 @@ export const GRUPOS_DE_CATEGORIA = [
     nome: 'Restaurantes',
     titulo: 'Restaurantes e lanches',
     imagem: 'categorias/restaurantes.webp',
-    cor: '#EA580C',
-    fundo: '#FFF1E6',
+    icone: 'restaurantes',
+    cor: '#C2410C',
+    fundo: '#FBEFE7',
     slugs: ['restaurante', 'hamburgueria', 'lanchonete', 'pizzaria', 'acai-e-sorvetes'],
   },
   {
@@ -24,8 +27,9 @@ export const GRUPOS_DE_CATEGORIA = [
     nome: 'Mercado',
     titulo: 'Mercados',
     imagem: 'categorias/mercado.webp',
-    cor: '#15803D',
-    fundo: '#EAF6EE',
+    icone: 'mercado',
+    cor: '#2F7A4B',
+    fundo: '#EAF3ED',
     slugs: ['supermercado', 'mercearia', 'acougue'],
   },
   {
@@ -33,8 +37,9 @@ export const GRUPOS_DE_CATEGORIA = [
     nome: 'Farmácia',
     titulo: 'Farmácias',
     imagem: 'categorias/farmacia.webp',
-    cor: '#1D4ED8',
-    fundo: '#E8F0FD',
+    icone: 'farmacia',
+    cor: '#2554C7',
+    fundo: '#EAEFFA',
     slugs: ['farmacia'],
   },
   {
@@ -42,8 +47,9 @@ export const GRUPOS_DE_CATEGORIA = [
     nome: 'Bebidas',
     titulo: 'Bebidas, água e gás',
     imagem: 'categorias/bebidas.webp',
-    cor: '#7C3AED',
-    fundo: '#F1ECFD',
+    icone: 'bebidas',
+    cor: '#6B3FA0',
+    fundo: '#F0ECF6',
     slugs: ['bebidas', 'adega', 'agua-e-gas'],
   },
   {
@@ -51,8 +57,9 @@ export const GRUPOS_DE_CATEGORIA = [
     nome: 'Pet Shop',
     titulo: 'Pet shop',
     imagem: 'categorias/pet-shop.webp',
-    cor: '#A16207',
-    fundo: '#FBF3E4',
+    icone: 'pet-shop',
+    cor: '#8A5A12',
+    fundo: '#F5EFE4',
     slugs: ['petshop', 'pet-shop'],
   },
   {
@@ -60,8 +67,9 @@ export const GRUPOS_DE_CATEGORIA = [
     nome: 'Outros',
     titulo: 'Outras lojas',
     imagem: 'categorias/outros.webp',
-    cor: '#475569',
-    fundo: '#EEF1F4',
+    icone: 'outros',
+    cor: '#52525B',
+    fundo: '#EFEFF0',
     slugs: [],
   },
 ] as const;

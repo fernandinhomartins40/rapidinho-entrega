@@ -96,8 +96,8 @@ export function Cardapio({
                   href={`/${cidadeSlug}/pizza/${storeId}?tamanho=${tamanho.id}`}
                   className="bg-card hover:border-primary min-h-touch flex items-center gap-3 rounded-2xl border p-4"
                 >
-                  <span className="bg-accent flex h-12 w-12 items-center justify-center rounded-xl">
-                    <Pizza className="text-primary-text h-6 w-6" aria-hidden />
+                  <span className="bg-secondary flex h-12 w-12 items-center justify-center rounded-xl">
+                    <Pizza className="text-foreground h-6 w-6" strokeWidth={1.6} aria-hidden />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block font-semibold">{tamanho.name}</span>

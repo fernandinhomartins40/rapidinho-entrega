@@ -79,6 +79,10 @@ const ICONES: Record<IconeDoPrato, LucideIcon> = {
  * em traço fino sobre um tom pastel. Hoje nenhuma loja subiu foto — sem isto
  * a vitrine seria uma parede de cinza, e com desenho colorido grande ficava
  * com cara de livro infantil.
+ *
+ * `neutro`: quadro cinza-claro e traço grafite suave, para faixas de produto
+ * em que várias artes aparecem juntas — o pastel de cada tipo, repetido lado
+ * a lado, virava um arco-íris.
  */
 export function ArteDoPrato({
   imagem,
@@ -87,6 +91,7 @@ export function ArteDoPrato({
   tamanho = 'md',
   className,
   prioridade = false,
+  neutro = false,
 }: {
   imagem: string | null;
   arte: Arte;
@@ -94,6 +99,7 @@ export function ArteDoPrato({
   tamanho?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
   prioridade?: boolean;
+  neutro?: boolean;
 }) {
   if (imagem) {
     return (
@@ -117,7 +123,11 @@ export function ArteDoPrato({
       role="img"
       aria-label={nome}
       className={cn('relative flex items-center justify-center overflow-hidden', className)}
-      style={{ backgroundColor: arte.tom.fundo, color: arte.tom.tinta }}
+      style={
+        neutro
+          ? { backgroundColor: '#F1F1EF', color: '#8B8B87' }
+          : { backgroundColor: arte.tom.fundo, color: arte.tom.tinta }
+      }
     >
       <Icone
         aria-hidden

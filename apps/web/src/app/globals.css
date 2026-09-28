@@ -19,9 +19,12 @@
 }
 
 /*
- * Tema do aplicativo: claro, com o preto da marca só no topo (logo, endereço
- * e busca, como na arte do celular) e o amarelo reservado para ação e
- * destaque. Fundo off-white e cartões brancos: lê bem no sol e não cansa.
+ * Tema do aplicativo: neutro e adulto. Grafite, branco e um cinza quente de
+ * fundo fazem a estrutura; o amarelo da marca tem função — a ação principal e
+ * a etiqueta de oferta — e nunca é papel de parede. A cor de cada nicho é
+ * assinatura discreta (ícone, rótulo), não borda nem fundo. O preto da marca
+ * fica no topo (logo, endereço e busca).
+ *
  * Fica aqui, e não no pacote de UI, porque o painel da loja tem o próprio
  * tema.
  *
@@ -31,14 +34,14 @@
 :root {
   color-scheme: light;
 
-  --background: 40 20% 97%;
-  --foreground: 220 14% 10%;
+  --background: 60 6% 96%;
+  --foreground: 240 6% 9%;
 
   --card: 0 0% 100%;
-  --card-foreground: 220 14% 10%;
+  --card-foreground: 240 6% 9%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 220 14% 10%;
+  --popover-foreground: 240 6% 9%;
 
   /* Amarelo da arte (#FFB900) como preenchimento; o texto sobre ele é preto. */
   --primary: 44 100% 50%;
@@ -46,11 +49,11 @@
   /* Como TEXTO sobre fundo claro o amarelo some (1,7:1): âmbar escuro, 5:1. */
   --primary-text: 32 95% 30%;
 
-  --secondary: 40 12% 93%;
-  --secondary-foreground: 220 14% 12%;
+  --secondary: 60 5% 93%;
+  --secondary-foreground: 240 6% 12%;
 
-  --muted: 40 12% 94%;
-  --muted-foreground: 220 8% 40%;
+  --muted: 60 5% 94%;
+  --muted-foreground: 240 4% 40%;
 
   --accent: 44 100% 95%;
   --accent-foreground: 32 95% 24%;
@@ -65,8 +68,8 @@
   --warning-foreground: 220 14% 8%;
   --warning-text: 32 95% 30%;
 
-  --border: 40 10% 88%;
-  --input: 40 8% 82%;
+  --border: 60 4% 89%;
+  --input: 60 4% 82%;
   --ring: 44 100% 45%;
 
   /* O preto do topo e das faixas de marca. */
@@ -76,35 +79,20 @@
   --brand-amber: 44 100% 50%;
   --brand-flame: 24 100% 52%;
 
-  --radius: 0.75rem;
+  --radius: 0.875rem;
 }
 
-/* Botão "Pedir" da barra: vidro amarelo, com o brilho da borda de cima. */
+/* Números de preço e tempo alinhados: "R$ 11,90" não dança de largura. */
+.numeros {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Botão "Pedir" da barra: o amarelo sólido da marca, com um fio de luz na
+   borda de cima. Sem brilho de vidro nem pulo — ação firme, não brinquedo. */
 .botao-vidro {
-  background:
-    linear-gradient(160deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 45%),
-    linear-gradient(160deg, rgba(255, 205, 60, 0.92), rgba(255, 170, 0, 0.82));
+  background: hsl(var(--primary));
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.7),
-    inset 0 -6px 14px rgba(180, 100, 0, 0.35),
-    0 8px 20px rgba(214, 150, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 6px 16px rgba(20, 20, 20, 0.18),
     0 0 0 5px hsl(0 0% 100%);
-  -webkit-backdrop-filter: blur(14px) saturate(160%);
-  backdrop-filter: blur(14px) saturate(160%);
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .botao-vidro-pulso {
-    animation: pulso-vidro 2.8s ease-in-out infinite;
-  }
-}
-
-@keyframes pulso-vidro {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-2px);
-  }
 }

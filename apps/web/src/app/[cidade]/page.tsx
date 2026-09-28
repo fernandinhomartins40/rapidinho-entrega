@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronDown, ChevronRight, MapPin, Search, Sparkles } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, MapPin, Search } from 'lucide-react';
 import { prisma } from '@rapidinho/database';
 import { getCurrentUser } from '@rapidinho/auth';
 import { isStoreOpen } from '@rapidinho/shared';
@@ -11,9 +11,9 @@ import { CartaoDeLoja, type LojaNaVitrine } from '@/components/app/cartao-de-loj
 import { LembrarCidade } from '@/components/app/lembrar-cidade';
 import { PecaDeNovo, type PedidoParaRepetir } from '@/components/app/peca-de-novo';
 import { SaindoAgora } from '@/components/app/saindo-agora';
+import { IconeDoNicho } from '@/components/app/icone-do-nicho';
 import { pratosDaCidade } from '@/lib/pratos';
 import { produtosDasLojas } from '@/lib/produtos-da-loja';
-import { MEDIDAS_DA_LANDING } from '@/components/landing/medidas';
 import { GRUPOS_DE_CATEGORIA, pertenceAoGrupo } from '@/lib/grupos-de-categoria';
 import { imagemExibivel, SELECT_IMAGEM } from '@/lib/media';
 
@@ -316,35 +316,44 @@ export default async function CidadePage({
         </Link>
       </header>
 
-      <div className="space-y-7 px-5 pt-5">
+      <div className="space-y-8 px-5 pt-5">
         <section aria-labelledby="categorias">
           <h2 id="categorias" className="sr-only">
             Categorias
           </h2>
-          <ul className="grid grid-cols-3 gap-3">
+          {/* Fileira de atalhos: ícone de traço num quadro neutro, rótulo
+              embaixo. O ativo fica grafite — a mesma linguagem de filtro de
+              qualquer app sério, sem ilustração de brinquedo. */}
+          <ul className="no-scrollbar -mx-5 flex gap-1 overflow-x-auto px-4">
             {GRUPOS_DE_CATEGORIA.map((atalho) => {
               const ativo = atalho.chave === grupo?.chave;
               return (
-                <li key={atalho.chave}>
+                <li key={atalho.chave} className="shrink-0">
                   <Link
                     // Tocar de novo no atalho ativo volta para "tudo".
                     href={ativo ? `/${slug}` : `/${slug}?categoria=${atalho.chave}`}
                     aria-current={ativo ? 'true' : undefined}
                     scroll={false}
-                    className={cn(
-                      'flex aspect-[1/0.92] flex-col items-center justify-center gap-2 rounded-xl border border-black/5 bg-white px-1 text-center shadow-[0_2px_10px_rgba(20,20,20,0.06)] transition-transform active:scale-95',
-                      ativo && 'ring-primary ring-2',
-                    )}
+                    className="group flex w-[4.5rem] flex-col items-center gap-1.5 py-1"
                   >
-                    <span className="flex h-12 items-center justify-center">
-                      <Image
-                        src={`/landing/${atalho.imagem}`}
-                        {...MEDIDAS_DA_LANDING[atalho.imagem]}
-                        alt=""
-                        className="max-h-12 w-auto"
-                      />
+                    <span
+                      className={cn(
+                        'flex h-14 w-14 items-center justify-center rounded-2xl border transition-colors group-active:scale-95',
+                        ativo
+                          ? 'bg-foreground border-foreground text-background'
+                          : 'bg-card text-foreground',
+                      )}
+                    >
+                      <IconeDoNicho nicho={atalho} className="h-6 w-6" strokeWidth={1.6} />
                     </span>
-                    <span className="text-[13px] font-semibold text-neutral-900">
+                    <span
+                      className={cn(
+                        'text-center text-xs leading-tight',
+                        ativo
+                          ? 'text-foreground font-semibold'
+                          : 'text-muted-foreground font-medium',
+                      )}
+                    >
                       {atalho.nome}
                     </span>
                   </Link>
@@ -356,31 +365,42 @@ export default async function CidadePage({
 
         {!grupo ? <SaindoAgora cidadeSlug={slug} pratos={pratos} /> : null}
 
-        {/* Faixa da arte: é também a porta do pedido por lista. */}
+        {/* Porta do pedido por lista. Cartão editorial: título, uma ação e
+            uma lista desenhada — o mascote fica na landing, que é campanha. */}
         <Link
           href={`/${slug}/pedir`}
-          // Sem `overflow-hidden`: o mascote sai um pouco por cima da faixa, inteiro,
-          // em vez de ter a cabeça e a moto cortadas.
-          className="bg-brand-deep relative mt-8 flex min-h-[8.5rem] items-center rounded-xl p-5 text-white"
+          className="bg-brand-deep flex items-center gap-4 overflow-hidden rounded-2xl p-5 text-white transition-transform active:scale-[0.99]"
         >
-          <span className="relative z-10 max-w-[55%]">
-            <span className="block text-[17px] font-bold leading-snug">
-              Tudo o que você precisa, <span className="text-primary">a um toque</span> de
-              distância.
-            </span>
-            <span className="text-primary mt-2 inline-flex items-center gap-1 text-sm font-semibold">
-              <Sparkles className="h-4 w-4" aria-hidden />
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-medium uppercase tracking-[0.08em] text-white/55">
               Pedir por lista
+            </span>
+            <span className="mt-1.5 block text-[17px] font-semibold leading-snug tracking-tight">
+              Mande a lista. A gente monta o pedido.
+            </span>
+            <span className="bg-primary text-primary-foreground mt-4 inline-flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-semibold">
+              Escrever ou falar
               <ChevronRight className="h-4 w-4" aria-hidden />
             </span>
           </span>
-          <Image
-            src="/landing/motoboy.webp"
-            {...MEDIDAS_DA_LANDING['motoboy.webp']}
-            alt=""
-            sizes="240px"
-            className="pointer-events-none absolute bottom-0 right-1 h-[calc(100%+2rem)] w-auto max-w-[50%] object-contain object-bottom drop-shadow-[0_10px_18px_rgba(0,0,0,0.45)]"
-          />
+          <span
+            aria-hidden
+            className="w-[7.5rem] shrink-0 space-y-2 rounded-xl border border-white/10 bg-white/5 p-3"
+          >
+            {['w-14', 'w-10', 'w-12'].map((largura, indice) => (
+              <span key={largura} className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    'flex h-4 w-4 shrink-0 items-center justify-center rounded-full',
+                    indice < 2 ? 'bg-primary text-primary-foreground' : 'border border-white/30',
+                  )}
+                >
+                  {indice < 2 ? <Check className="h-2.5 w-2.5" strokeWidth={3} /> : null}
+                </span>
+                <span className={cn('h-1.5 rounded-full bg-white/25', largura)} />
+              </span>
+            ))}
+          </span>
         </Link>
 
         {paraRepetir.length > 0 ? <PecaDeNovo pedidos={paraRepetir} /> : null}
@@ -410,14 +430,18 @@ export default async function CidadePage({
         {grupo ? (
           <p className="text-muted-foreground -mb-3 text-sm">
             Mostrando <strong className="text-foreground">{grupo.nome}</strong> ·{' '}
-            <Link href={`/${slug}`} scroll={false} className="text-primary-text font-semibold">
+            <Link
+              href={`/${slug}`}
+              scroll={false}
+              className="text-foreground font-medium underline"
+            >
               ver tudo
             </Link>
           </p>
         ) : null}
 
         {secoes.length === 0 ? (
-          <p className="text-muted-foreground bg-card rounded-xl border p-5 text-center">
+          <p className="text-muted-foreground bg-card rounded-2xl border p-5 text-center">
             Ainda não há lojas nesta categoria na sua cidade.
           </p>
         ) : null}
@@ -430,22 +454,17 @@ export default async function CidadePage({
             className="space-y-3"
           >
             <header className="flex items-center gap-3">
+              {/* A cor do nicho é assinatura: só no ícone. O título é grafite. */}
               <span
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                style={{ backgroundColor: nicho.fundo }}
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+                style={{ backgroundColor: nicho.fundo, color: nicho.cor }}
               >
-                <Image
-                  src={`/landing/${nicho.imagem}`}
-                  {...MEDIDAS_DA_LANDING[nicho.imagem]}
-                  alt=""
-                  className="max-h-6 w-auto"
-                />
+                <IconeDoNicho nicho={nicho} className="h-[18px] w-[18px]" />
               </span>
               <div className="min-w-0 flex-1">
                 <h2
                   id={`nicho-${nicho.chave}`}
-                  className="text-lg font-bold leading-tight"
-                  style={{ color: nicho.cor }}
+                  className="text-lg font-semibold leading-tight tracking-tight"
                 >
                   {nicho.titulo}
                 </h2>
@@ -458,10 +477,11 @@ export default async function CidadePage({
               {!grupo && total > daSecao.length ? (
                 <Link
                   href={`/${slug}?categoria=${nicho.chave}`}
-                  className="shrink-0 text-sm font-semibold"
-                  style={{ color: nicho.cor }}
+                  className="text-foreground flex shrink-0 items-center gap-0.5 text-sm font-medium"
                 >
-                  Ver todas ({total})
+                  Ver todas
+                  <span className="text-muted-foreground numeros">({total})</span>
+                  <ChevronRight className="h-4 w-4" aria-hidden />
                 </Link>
               ) : null}
             </header>
