@@ -78,12 +78,30 @@ export async function mudarStatusDoPedido(entrada: unknown): Promise<ActionResul
         storeId: true,
         userId: true,
         type: true,
+        pickedAt: true,
         delivery: { select: { courierId: true } },
+        items: { select: { weightGrams: true, pickStatus: true } },
       },
     });
 
     if (!pedido) {
       return { result: { ok: false, message: 'Pedido não encontrado nesta loja.' } };
+    }
+
+    // Pesagem justa: item por quilo só sai depois de pesado — é o peso que
+    // fecha o valor que o cliente paga. Separação começada também precisa
+    // ser concluída, ou o que a loja marcou (falta, troca) não vale.
+    if (
+      dados.status === 'READY' &&
+      pedido.pickedAt == null &&
+      pedido.items.some((item) => item.weightGrams != null || item.pickStatus != null)
+    ) {
+      return {
+        result: {
+          ok: false,
+          message: 'Conclua a separação (pesagem) antes de marcar como pronto.',
+        },
+      };
     }
 
     const atual = pedido.status as OrderStatus;

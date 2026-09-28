@@ -380,12 +380,22 @@ export function FormularioDeCheckout({
                   </li>
                 ))}
               </ul>
-              {exigencias.temPesavel ? (
-                <p className="text-muted-foreground text-xs">
-                  Itens vendidos por peso (frutas, carnes, frios) são pesados na separação: o valor
-                  final pode variar um pouco para mais ou para menos.
-                </p>
-              ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
+
+        {exigencias.temPesavel ? (
+          <Card>
+            <CardContent className="space-y-1.5 pt-5 text-sm">
+              <p className="font-semibold">Pesagem justa</p>
+              <p className="text-muted-foreground">
+                Os itens por quilo são pesados na separação e você paga o peso real — no máximo 10%
+                acima do estimado; o que passar disso fica por conta da loja. Veio mais leve, paga
+                menos: no Pix ou cartão online, a diferença volta automaticamente.
+              </p>
+              <p className="text-muted-foreground">
+                Você acompanha a pesagem item por item na tela do pedido.
+              </p>
             </CardContent>
           </Card>
         ) : null}

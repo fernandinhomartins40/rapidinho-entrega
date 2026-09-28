@@ -188,6 +188,13 @@ export function Comanda({
                 {item.pizzaSizeName ? ` (${item.pizzaSizeName})` : ''}
                 <span className="preco">{formatCents(item.totalCents)}</span>
               </p>
+              {item.pickStatus === 'PICKED' && item.pickedWeightGrams ? (
+                <p className="recuo">PESOU {(item.pickedWeightGrams / 1000).toFixed(3)}kg</p>
+              ) : null}
+              {item.pickStatus === 'MISSING' ? <p className="recuo negrito">EM FALTA</p> : null}
+              {item.pickStatus === 'REPLACED' ? (
+                <p className="recuo negrito">TROCADO POR {item.replacementName}</p>
+              ) : null}
               {item.flavors.length > 0 ? (
                 <p className="recuo">{item.flavors.map((sabor) => sabor.flavorName).join(' / ')}</p>
               ) : null}

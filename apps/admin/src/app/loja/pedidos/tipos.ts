@@ -28,6 +28,15 @@ export interface ItemDoPedido {
   flavors: { id: string; flavorName: string }[];
   /** Borda, massa e adicionais da pizza. */
   pizzaExtras: { id: string; name: string; kind: string }[];
+  // Separação (pesagem justa)
+  pickStatus: 'PICKED' | 'MISSING' | 'REPLACED' | 'AWAITING_CUSTOMER' | null;
+  pickedWeightGrams: number | null;
+  replacementName: string | null;
+  replacementPriceCents: number | null;
+  replacementAccepted: boolean | null;
+  questionAskedAt: string | null;
+  /** Valor do checkout, quando a separação mudou o valor do item. */
+  estimatedTotalCents: number | null;
 }
 
 export interface PedidoNaTela {
@@ -40,7 +49,14 @@ export interface PedidoNaTela {
   subtotalCents: number;
   deliveryFeeCents: number;
   discountCents: number;
+  surchargeCents: number;
   totalCents: number;
+  /** Total do checkout, quando a separação mudou o total. */
+  estimatedTotalCents: number | null;
+  /** Quando a separação foi concluída. */
+  pickedAt: string | null;
+  /** Este pedido passa pela separação (mercado, farmácia, item por peso). */
+  separa: boolean;
   notes: string | null;
   createdAt: string;
   acceptedAt: string | null;
@@ -51,7 +67,11 @@ export interface PedidoNaTela {
   payment: {
     method: string;
     status: string;
+    provider: string;
     changeForCents: number | null;
+    amountCents: number;
+    refundedCents: number;
+    failReason: string | null;
   } | null;
   items: ItemDoPedido[];
   /** Nenhum pedido entregue antes por esta loja para este cliente. */
@@ -68,7 +88,7 @@ export const POLITICA_DE_SUBSTITUICAO: Record<
   NonNullable<PedidoNaTela['substitutionPolicy']>,
   string
 > = {
-  CONTACT_ME: 'Se faltar item: chamar o cliente no WhatsApp antes de trocar',
+  CONTACT_ME: 'Se faltar item: perguntar ao cliente pelo app antes de trocar',
   SUBSTITUTE_SIMILAR: 'Se faltar item: pode trocar por similar',
   REMOVE_ITEM: 'Se faltar item: tirar e mandar o resto',
 };

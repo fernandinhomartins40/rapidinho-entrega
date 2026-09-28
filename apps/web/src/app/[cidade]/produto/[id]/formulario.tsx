@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Minus, Plus, ShoppingBag } from 'lucide-react';
 import { Badge, Button, Card, CardContent, Input, cn } from '@rapidinho/ui';
-import { calculateCartItem, formatCents, formatGrams } from '@rapidinho/shared';
+import { calculateCartItem, formatCents, formatGrams, tetoDoItem } from '@rapidinho/shared';
 import { adicionarAoCarrinho } from '@/app/carrinho/actions';
 
 interface Opcao {
@@ -230,8 +230,11 @@ export function FormularioDoProduto({ produto, loja, grupos, cidadeSlug }: Props
                 <Plus className="h-5 w-5" aria-hidden />
               </Button>
             </div>
+            {/* Pesagem justa: a mesma regra que a loja vê na separação. */}
             <p className="text-muted-foreground mt-2 text-sm">
-              O peso final pode variar um pouco; você paga pelo que for pesado na loja.
+              <span className="text-foreground font-semibold">Pesagem justa:</span> a loja pesa na
+              separação e você paga o peso real. Estimado {formatCents(preco.totalCents)}, no máximo{' '}
+              {formatCents(tetoDoItem(preco))}. Veio mais leve, paga menos.
             </p>
           </CardContent>
         </Card>

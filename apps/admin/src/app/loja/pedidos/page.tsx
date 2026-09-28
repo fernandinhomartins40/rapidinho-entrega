@@ -37,7 +37,10 @@ async function carregarPedidos(storeId: string) {
       subtotalCents: true,
       deliveryFeeCents: true,
       discountCents: true,
+      surchargeCents: true,
       totalCents: true,
+      estimatedTotalCents: true,
+      pickedAt: true,
       notes: true,
       createdAt: true,
       acceptedAt: true,
@@ -48,10 +51,28 @@ async function carregarPedidos(storeId: string) {
       substitutionPolicy: true,
       ageConfirmedAt: true,
       prescriptionImage: { select: { largeKey: true, mediumKey: true, originalKey: true } },
-      payment: { select: { method: true, status: true, changeForCents: true } },
+      payment: {
+        select: {
+          method: true,
+          status: true,
+          provider: true,
+          changeForCents: true,
+          amountCents: true,
+          refundedCents: true,
+          failReason: true,
+        },
+      },
       items: {
+        orderBy: { id: 'asc' },
         select: {
           id: true,
+          pickStatus: true,
+          pickedWeightGrams: true,
+          replacementName: true,
+          replacementPriceCents: true,
+          replacementAccepted: true,
+          questionAskedAt: true,
+          estimatedTotalCents: true,
           productName: true,
           quantity: true,
           weightGrams: true,
@@ -106,6 +127,17 @@ export default async function PedidosPage() {
               )
             : null,
           ageConfirmedAt: pedido.ageConfirmedAt?.toISOString() ?? null,
+          pickedAt: pedido.pickedAt?.toISOString() ?? null,
+          // Separação (pesagem justa): mercado e farmácia sempre; qualquer
+          // loja quando há item por peso.
+          separa:
+            store.segment === 'MARKET' ||
+            store.segment === 'PHARMACY' ||
+            pedido.items.some((item) => item.weightGrams != null),
+          items: pedido.items.map((item) => ({
+            ...item,
+            questionAskedAt: item.questionAskedAt?.toISOString() ?? null,
+          })),
           primeiroPedido:
             userId != null &&
             (entreguesPorCliente.get(userId) ?? 0) - (pedido.status === 'DELIVERED' ? 1 : 0) === 0,

@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Bike, Check, Copy, MessageCircle, Wifi, WifiOff } from 'lucide-react';
+import { Bike, Check, Copy, MessageCircle, Scale, Wifi, WifiOff } from 'lucide-react';
 import { Badge, Button, Card, CardContent, cn } from '@rapidinho/ui';
 import { useRealtime } from '@rapidinho/ui/hooks/use-realtime';
 import {
@@ -19,6 +19,7 @@ import {
   whatsappLink,
   type OrderStatus,
 } from '@rapidinho/shared';
+import { responderTroca } from '../actions';
 
 interface Props {
   pedido: {
@@ -33,6 +34,10 @@ interface Props {
     deliveryFeeCents: number;
     discountCents: number;
     totalCents: number;
+    /** Total do checkout, quando a separação mudou o total. */
+    estimatedTotalCents: number | null;
+    /** Quando a loja concluiu a separação (pesagem). */
+    pickedAt: string | null;
     notes: string | null;
     cancelReason: string | null;
     addressSnapshot: unknown;
@@ -48,6 +53,7 @@ interface Props {
       method: string;
       status: string;
       changeForCents: number | null;
+      refundedCents: number;
       pixQrCode: string | null;
       pixQrCodeImage: string | null;
       pixExpiresAt: string | null;
@@ -58,6 +64,11 @@ interface Props {
       quantity: number;
       weightGrams: number | null;
       totalCents: number;
+      pickStatus: 'PICKED' | 'MISSING' | 'REPLACED' | 'AWAITING_CUSTOMER' | null;
+      pickedWeightGrams: number | null;
+      replacementName: string | null;
+      replacementPriceCents: number | null;
+      estimatedTotalCents: number | null;
       notes: string | null;
       pizzaSizeName: string | null;
       pizzaExtraName: string | null;
@@ -97,8 +108,13 @@ export function AcompanhamentoDoPedido({ pedido, realtime }: Props) {
       [REALTIME_EVENTS.orderStatusChanged]: aoMudar,
       [REALTIME_EVENTS.orderCancelled]: aoMudar,
       [REALTIME_EVENTS.deliveryStatusChanged]: aoMudar,
+      // Separação: item pesado, em falta ou troca perguntada.
+      [REALTIME_EVENTS.orderUpdated]: aoMudar,
     },
   });
+
+  const perguntas = pedido.items.filter((item) => item.pickStatus === 'AWAITING_CUSTOMER');
+  const temPesavel = pedido.items.some((item) => item.weightGrams != null);
 
   const etapaAtual = timelineIndex(status);
   const cancelado = status === 'CANCELLED' || status === 'REJECTED';
@@ -200,6 +216,10 @@ export function AcompanhamentoDoPedido({ pedido, realtime }: Props) {
         </Card>
       )}
 
+      {perguntas.map((item) => (
+        <PerguntaDeTroca key={item.id} orderId={pedido.id} item={item} />
+      ))}
+
       {pedido.status === 'PENDING_PAYMENT' && pedido.payment?.pixQrCode ? (
         <PagamentoPix
           qrCode={pedido.payment.pixQrCode}
@@ -238,14 +258,39 @@ export function AcompanhamentoDoPedido({ pedido, realtime }: Props) {
           <ul className="divide-y text-sm">
             {pedido.items.map((item) => (
               <li key={item.id} className="py-2">
-                <p className="flex justify-between gap-3 font-medium">
+                <p
+                  className={cn(
+                    'flex justify-between gap-3 font-medium',
+                    item.pickStatus === 'MISSING' && 'text-muted-foreground line-through',
+                  )}
+                >
                   <span>
                     {item.weightGrams ? formatGrams(item.weightGrams) : `${item.quantity}×`}{' '}
                     {item.productName}
                     {item.pizzaSizeName ? ` (${item.pizzaSizeName})` : ''}
                   </span>
-                  <span className="shrink-0">{formatCents(item.totalCents)}</span>
+                  <span className="shrink-0">
+                    {item.estimatedTotalCents != null &&
+                    item.estimatedTotalCents !== item.totalCents ? (
+                      <s className="text-muted-foreground mr-1.5 font-normal">
+                        {formatCents(item.estimatedTotalCents)}
+                      </s>
+                    ) : null}
+                    {formatCents(item.totalCents)}
+                  </span>
                 </p>
+                {item.pickStatus === 'PICKED' && item.pickedWeightGrams ? (
+                  <p className="text-success flex items-center gap-1 pl-3">
+                    <Scale className="h-3.5 w-3.5" aria-hidden />
+                    Pesou {formatGrams(item.pickedWeightGrams)}
+                  </p>
+                ) : null}
+                {item.pickStatus === 'MISSING' ? (
+                  <p className="text-destructive pl-3">Em falta — saiu da conta</p>
+                ) : null}
+                {item.pickStatus === 'REPLACED' ? (
+                  <p className="text-success pl-3">Trocado por {item.replacementName}</p>
+                ) : null}
                 {item.flavors.length > 0 ? (
                   <p className="text-muted-foreground pl-3">
                     {item.flavors.map((sabor) => sabor.flavorName).join(', ')}
@@ -283,10 +328,31 @@ export function AcompanhamentoDoPedido({ pedido, realtime }: Props) {
                 <span>−{formatCents(pedido.discountCents)}</span>
               </p>
             ) : null}
+            {pedido.estimatedTotalCents != null &&
+            pedido.estimatedTotalCents !== pedido.totalCents ? (
+              <p className="text-muted-foreground flex justify-between">
+                <span>Estimado no pedido</span>
+                <s>{formatCents(pedido.estimatedTotalCents)}</s>
+              </p>
+            ) : null}
             <p className="flex justify-between text-base font-bold">
-              <span>Total</span>
+              <span>
+                {pedido.pickedAt ? 'Total final' : temPesavel ? 'Total estimado' : 'Total'}
+              </span>
               <span>{formatCents(pedido.totalCents)}</span>
             </p>
+            {pedido.payment && pedido.payment.refundedCents > 0 ? (
+              <p className="text-success flex justify-between">
+                <span>Devolvido no seu pagamento</span>
+                <span>{formatCents(pedido.payment.refundedCents)}</span>
+              </p>
+            ) : null}
+            {temPesavel && !pedido.pickedAt && !cancelado ? (
+              <p className="text-muted-foreground pt-1 text-xs">
+                Pesagem justa: os itens por quilo são pesados na separação e você paga o peso real —
+                no máximo 10% acima do estimado. Veio mais leve, paga menos.
+              </p>
+            ) : null}
           </div>
 
           {pedido.payment ? (
@@ -419,6 +485,73 @@ function PagamentoPix({
         <p className="text-muted-foreground text-sm">
           Assim que o pagamento cair, esta tela muda sozinha.
         </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * A loja não achou um item e propôs uma troca: o cliente decide aqui, com um
+ * toque, em vez de uma conversa de WhatsApp com a loja esperando.
+ */
+function PerguntaDeTroca({
+  orderId,
+  item,
+}: {
+  orderId: string;
+  item: {
+    id: string;
+    productName: string;
+    totalCents: number;
+    replacementName: string | null;
+    replacementPriceCents: number | null;
+  };
+}) {
+  const [pendente, iniciar] = useTransition();
+  const [erro, setErro] = useState<string | null>(null);
+
+  function responder(aceita: boolean) {
+    setErro(null);
+    iniciar(async () => {
+      const resultado = await responderTroca({ orderId, itemId: item.id, aceita });
+      if (!resultado.ok) setErro(resultado.message ?? 'Não foi possível responder.');
+    });
+  }
+
+  const preco = item.replacementPriceCents ?? 0;
+  const diferenca = preco - item.totalCents;
+
+  return (
+    <Card className="border-primary border-2">
+      <CardContent className="space-y-3 pt-5">
+        <p className="text-primary-text text-sm font-semibold">A loja precisa de você</p>
+        <p className="font-semibold">Faltou {item.productName}.</p>
+        <p className="text-sm">
+          Sugestão da loja: <span className="font-semibold">{item.replacementName}</span> por{' '}
+          <span className="font-semibold">{formatCents(preco)}</span>
+          {diferenca !== 0 ? (
+            <span className="text-muted-foreground">
+              {' '}
+              ({diferenca > 0 ? '+' : '−'}
+              {formatCents(Math.abs(diferenca))} que o original)
+            </span>
+          ) : null}
+          .
+        </p>
+        <div className="flex gap-2">
+          <Button className="flex-1" disabled={pendente} onClick={() => responder(true)}>
+            Aceitar troca
+          </Button>
+          <Button
+            variant="outline"
+            className="flex-1"
+            disabled={pendente}
+            onClick={() => responder(false)}
+          >
+            Tirar do pedido
+          </Button>
+        </div>
+        {erro ? <p className="text-destructive text-sm">{erro}</p> : null}
       </CardContent>
     </Card>
   );

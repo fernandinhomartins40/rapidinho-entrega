@@ -130,6 +130,15 @@ enum OrderType {
   PICKUP
 }
 
+/// Situação de cada item na separação do pedido.
+enum PickStatus {
+  PICKED
+  MISSING
+  REPLACED
+  /// A loja propôs uma troca e espera o cliente responder no app.
+  AWAITING_CUSTOMER
+}
+
 enum PaymentMethod {
   PIX
   CREDIT_CARD_ONLINE
@@ -1160,6 +1169,11 @@ model Order {
   /// farmacêutico avaliar. A receita original é conferida na entrega.
   prescriptionImageId String?
   prescriptionImage   MediaAsset?          @relation("OrderPrescription", fields: [prescriptionImageId], references: [id], onDelete: SetNull)
+  /// Pesagem justa: quando a loja fechou a separação (pesou e conferiu tudo).
+  /// A partir daí os valores do pedido são os finais.
+  pickedAt            DateTime?
+  /// Total do checkout, guardado quando a separação muda o total.
+  estimatedTotalCents Int?
 
   @@index([storeId, status, createdAt])
   @@index([userId, createdAt])
@@ -1197,6 +1211,20 @@ model OrderItem {
   pizzaExtraPriceCents Int?
 
   notes String?
+
+  // --- Separação (pesagem justa) -----------------------------------------
+  pickStatus            PickStatus?
+  /// Peso real na balança (item por quilo).
+  pickedWeightGrams     Int?
+  /// Troca por similar: o que foi no lugar e por quanto.
+  replacementName       String?
+  replacementPriceCents Int?
+  /// O cliente respondeu a troca no app: true aceitou, false recusou.
+  replacementAccepted   Boolean?
+  /// Quando a loja perguntou ao cliente pelo app.
+  questionAskedAt       DateTime?
+  /// Valor do item no checkout, guardado quando a separação muda o valor.
+  estimatedTotalCents   Int?
 
   complements OrderItemComplement[]
   flavors     OrderItemPizzaFlavor[]
@@ -1278,9 +1306,11 @@ model Payment {
   platformFeeCents Int?
   settlementMode   SettlementMode @default(STORE_COLLECTS)
 
-  paidAt     DateTime?
-  refundedAt DateTime?
-  failReason String?
+  paidAt        DateTime?
+  refundedAt    DateTime?
+  /// Estorno parcial (pesagem justa: veio mais leve, item em falta).
+  refundedCents Int       @default(0)
+  failReason    String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

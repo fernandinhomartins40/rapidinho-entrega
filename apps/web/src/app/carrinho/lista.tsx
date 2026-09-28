@@ -146,7 +146,13 @@ export function ListaDoCarrinho({
                     </Button>
                   </div>
 
-                  <span className="font-semibold">{formatCents(item.totalCents)}</span>
+                  <span className="font-semibold">
+                    {/* Por quilo: o valor fecha na pesagem da loja. */}
+                    {item.sellingUnit === 'WEIGHT_KG' ? (
+                      <span className="text-muted-foreground mr-1 text-xs font-normal">aprox.</span>
+                    ) : null}
+                    {formatCents(item.totalCents)}
+                  </span>
                 </div>
               </div>
             </li>

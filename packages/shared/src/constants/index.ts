@@ -86,6 +86,8 @@ export const REALTIME_EVENTS = {
   orderCreated: 'order:created',
   orderStatusChanged: 'order:status-changed',
   orderCancelled: 'order:cancelled',
+  /** Separação: item pesado, em falta, troca perguntada ou respondida. */
+  orderUpdated: 'order:updated',
   deliveryAssigned: 'delivery:assigned',
   deliveryStatusChanged: 'delivery:status-changed',
   courierLocation: 'courier:location',

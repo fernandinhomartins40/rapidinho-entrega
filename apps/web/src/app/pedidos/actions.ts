@@ -1,8 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { prisma } from '@rapidinho/database';
-import { reviewSchema } from '@rapidinho/shared';
+import { publishRealtimeMany } from '@rapidinho/services';
+import { cuidSchema, REALTIME_CHANNELS, REALTIME_EVENTS, reviewSchema } from '@rapidinho/shared';
 import { runAuthedAction, type ActionResult } from '@/lib/action';
 import { validarItem } from '@/lib/regras-do-item';
 
@@ -289,5 +291,55 @@ export async function avaliarPedido(
     revalidatePath(`/pedidos/${pedido.id}`);
 
     return { ok: true, message: 'Obrigado pela avaliação!' };
+  });
+}
+
+const respostaSchema = z.object({
+  orderId: cuidSchema,
+  itemId: cuidSchema,
+  aceita: z.boolean(),
+});
+
+/**
+ * O cliente responde, no app, a troca que a loja propôs na separação.
+ *
+ * Aceitou: o item vai trocado, pelo preço que ele viu. Recusou: sai da conta.
+ * A loja recebe na hora, pelo socket, e segue a separação.
+ */
+export async function responderTroca(entrada: unknown): Promise<ActionResult> {
+  return runAuthedAction(async (user) => {
+    const dados = respostaSchema.parse(entrada);
+
+    const item = await prisma.orderItem.findFirst({
+      where: {
+        id: dados.itemId,
+        pickStatus: 'AWAITING_CUSTOMER',
+        order: { id: dados.orderId, userId: user.id, pickedAt: null },
+      },
+      select: { id: true, order: { select: { id: true, storeId: true } } },
+    });
+
+    if (!item) {
+      return { ok: false, message: 'Esta troca já foi decidida.' };
+    }
+
+    await prisma.orderItem.update({
+      where: { id: item.id },
+      data: dados.aceita
+        ? { pickStatus: 'REPLACED', replacementAccepted: true }
+        : { pickStatus: 'MISSING', replacementAccepted: false },
+    });
+
+    await publishRealtimeMany(
+      [REALTIME_CHANNELS.store(item.order.storeId), REALTIME_CHANNELS.order(item.order.id)],
+      REALTIME_EVENTS.orderUpdated,
+      { orderId: item.order.id, itemId: item.id },
+    );
+
+    revalidatePath(`/pedidos/${item.order.id}`);
+    return {
+      ok: true,
+      message: dados.aceita ? 'Troca aceita. A loja já foi avisada.' : 'Item retirado do pedido.',
+    };
   });
 }

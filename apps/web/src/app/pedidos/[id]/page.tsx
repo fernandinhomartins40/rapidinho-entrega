@@ -29,6 +29,8 @@ export default async function PedidoPage({ params }: { params: Promise<{ id: str
       deliveryFeeCents: true,
       discountCents: true,
       totalCents: true,
+      estimatedTotalCents: true,
+      pickedAt: true,
       notes: true,
       cancelReason: true,
       addressSnapshot: true,
@@ -46,14 +48,21 @@ export default async function PedidoPage({ params }: { params: Promise<{ id: str
           method: true,
           status: true,
           changeForCents: true,
+          refundedCents: true,
           pixQrCode: true,
           pixQrCodeImage: true,
           pixExpiresAt: true,
         },
       },
       items: {
+        orderBy: { id: 'asc' },
         select: {
           id: true,
+          pickStatus: true,
+          pickedWeightGrams: true,
+          replacementName: true,
+          replacementPriceCents: true,
+          estimatedTotalCents: true,
           productName: true,
           quantity: true,
           weightGrams: true,
@@ -92,6 +101,7 @@ export default async function PedidoPage({ params }: { params: Promise<{ id: str
         ...pedido,
         createdAt: pedido.createdAt.toISOString(),
         estimatedReadyAt: pedido.estimatedReadyAt?.toISOString() ?? null,
+        pickedAt: pedido.pickedAt?.toISOString() ?? null,
         payment: pedido.payment
           ? {
               ...pedido.payment,

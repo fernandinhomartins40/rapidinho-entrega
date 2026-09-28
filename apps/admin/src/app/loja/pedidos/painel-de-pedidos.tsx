@@ -7,6 +7,7 @@ import { Badge, Button, Card, CardContent, cn } from '@rapidinho/ui';
 import { useRealtime } from '@rapidinho/ui/hooks/use-realtime';
 import {
   formatCents,
+  formatGrams,
   formatPhoneBR,
   isActiveStatus,
   nextStatuses,
@@ -19,6 +20,7 @@ import {
 import { aceitarPedido, cancelarPedido, mudarStatusDoPedido } from './actions';
 import { iniciarAlerta, pararAlerta, prepararAudio } from '@/lib/alerta-sonoro';
 import { Comanda, abrirImpressao } from './comanda';
+import { SeparacaoDoPedido } from './separacao-do-pedido';
 import {
   extrasDaPizza,
   formatarEndereco,
@@ -114,6 +116,8 @@ export function PainelDePedidos({ pedidos, loja, realtime }: Props) {
       [REALTIME_EVENTS.orderCreated]: aoReceberEvento,
       [REALTIME_EVENTS.orderStatusChanged]: aoReceberEvento,
       [REALTIME_EVENTS.orderCancelled]: aoReceberEvento,
+      // Separação: o cliente respondeu uma troca pelo app.
+      [REALTIME_EVENTS.orderUpdated]: aoReceberEvento,
     },
   });
 
@@ -286,6 +290,12 @@ function CartaoDePedido({
     (status) => status !== 'CANCELLED' && status !== 'REJECTED',
   );
 
+  // Pesagem justa: enquanto separa, a lista de itens vira a tela da balança.
+  const separando =
+    pedido.separa &&
+    pedido.pickedAt == null &&
+    (pedido.status === 'ACCEPTED' || pedido.status === 'PREPARING');
+
   return (
     <Card className={cn(pedido.status === 'RECEIVED' && 'border-primary border-2')}>
       <CardContent className="space-y-4 pt-5">
@@ -339,19 +349,39 @@ function CartaoDePedido({
           </div>
         </div>
 
-        <ul className="space-y-2 border-y py-3 text-sm">
+        {separando ? <SeparacaoDoPedido pedido={pedido} /> : null}
+
+        <ul className={cn('space-y-2 border-y py-3 text-sm', separando && 'hidden')}>
           {pedido.items.map((item) => (
             <li key={item.id}>
-              <p className="font-medium">
+              <p
+                className={cn(
+                  'font-medium',
+                  item.pickStatus === 'MISSING' && 'text-muted-foreground line-through',
+                )}
+              >
                 {item.weightGrams
                   ? `${(item.weightGrams / 1000).toFixed(3)} kg`
                   : `${item.quantity}×`}{' '}
                 {item.productName}
                 {item.pizzaSizeName ? ` (${item.pizzaSizeName})` : ''}
                 <span className="text-muted-foreground float-right font-normal">
+                  {item.estimatedTotalCents != null &&
+                  item.estimatedTotalCents !== item.totalCents ? (
+                    <s className="mr-1.5">{formatCents(item.estimatedTotalCents)}</s>
+                  ) : null}
                   {formatCents(item.totalCents)}
                 </span>
               </p>
+              {item.pickStatus === 'PICKED' && item.pickedWeightGrams ? (
+                <p className="text-success pl-4">Pesou {formatGrams(item.pickedWeightGrams)}</p>
+              ) : null}
+              {item.pickStatus === 'MISSING' ? (
+                <p className="text-destructive pl-4">Em falta</p>
+              ) : null}
+              {item.pickStatus === 'REPLACED' ? (
+                <p className="text-success pl-4">Trocado por {item.replacementName}</p>
+              ) : null}
               {item.flavors.length > 0 ? (
                 <p className="text-muted-foreground pl-4">
                   Sabores: {item.flavors.map((sabor) => sabor.flavorName).join(', ')}
@@ -402,10 +432,26 @@ function CartaoDePedido({
               <span>−{formatCents(pedido.discountCents)}</span>
             </p>
           ) : null}
+          {pedido.estimatedTotalCents != null &&
+          pedido.estimatedTotalCents !== pedido.totalCents ? (
+            <p className="text-muted-foreground flex justify-between">
+              <span>Estimado no pedido</span>
+              <s>{formatCents(pedido.estimatedTotalCents)}</s>
+            </p>
+          ) : null}
           <p className="flex justify-between text-base font-bold">
-            <span>Total</span>
+            <span>{pedido.pickedAt ? 'Total final' : 'Total'}</span>
             <span>{formatCents(pedido.totalCents)}</span>
           </p>
+          {pedido.payment && pedido.payment.refundedCents > 0 ? (
+            <p className="text-success flex justify-between">
+              <span>Devolvido ao cliente</span>
+              <span>{formatCents(pedido.payment.refundedCents)}</span>
+            </p>
+          ) : null}
+          {pedido.payment?.failReason ? (
+            <p className="text-destructive">{pedido.payment.failReason}</p>
+          ) : null}
           {pedido.payment ? (
             <p className="text-muted-foreground">
               {PAYMENT_METHOD_LABEL[pedido.payment.method as keyof typeof PAYMENT_METHOD_LABEL] ??
