@@ -34,20 +34,23 @@ export interface DadosDaPizzaria {
 /** Cores das partes da pizza no desenho, uma por sabor escolhido. */
 const CORES_DAS_PARTES = ['#F59E0B', '#DC2626', '#16A34A', '#7C3AED'];
 
-const NOME_DA_DIVISAO: Record<number, string> = {
-  1: 'Inteira',
-  2: 'Meio a meio',
-  3: '3 sabores',
-  4: '4 sabores',
-};
+/** Aviso de quando o cliente tenta mais sabores do que o tamanho aceita. */
+interface AvisoDeSabor {
+  texto: string;
+  /** Sabor que o cliente tentou pôr (para as ações do aviso). */
+  saborId?: string;
+  /** Menor tamanho que comporta o sabor a mais, se houver. */
+  maior?: { id: string; nome: string; maxSabores: number };
+}
 
 /**
  * Montador de pizza.
  *
- * A ordem é a de quem pede no balcão: tamanho → em quantas partes → sabor de
- * cada parte → borda, massa e adicionais. O desenho mostra a pizza dividida
- * com o sabor de cada parte, e o preço acompanha cada toque, já explicando a
- * regra da casa (pelo sabor mais caro ou pela média).
+ * Tamanho → sabores → borda, massa e adicionais. Não se pergunta "em quantas
+ * partes": quantos sabores o cliente tocar é a divisão (um = inteira, dois =
+ * meio a meio...). Se tentar mais do que o tamanho aceita, um aviso explica e
+ * oferece trocar para o tamanho que comporta. O desenho mostra a pizza
+ * dividida e o preço acompanha cada toque, já explicando a regra da casa.
  */
 export function MontadorDePizza({
   cidadeSlug,
@@ -61,8 +64,9 @@ export function MontadorDePizza({
   const router = useRouter();
   const [tamanhoId, setTamanhoId] = useState(tamanhoInicial);
   const tamanho = dados.tamanhos.find((opcao) => opcao.id === tamanhoId)!;
-  const [partes, setPartes] = useState(1);
-  const [escolhidos, setEscolhidos] = useState<(string | null)[]>([null]);
+  const [saboresEscolhidos, setSaboresEscolhidos] = useState<string[]>([]);
+  const [aviso, setAviso] = useState<AvisoDeSabor | null>(null);
+  const partes = Math.max(1, saboresEscolhidos.length);
   const [borda, setBorda] = useState<string | null>(null);
   const [massa, setMassa] = useState<string | null>(null);
   const [adicionais, setAdicionais] = useState<Set<string>>(new Set());
@@ -95,43 +99,67 @@ export function MontadorDePizza({
     return [...grupos.entries()];
   }, [saboresDoTamanho, busca]);
 
-  function trocarTamanho(id: string) {
+  const nomeDoSabor = (id: string) => dados.sabores.find((sabor) => sabor.id === id)?.nome ?? '';
+  const temPreco = (saborId: string, tamanhoDoPreco: string) =>
+    dados.sabores.find((sabor) => sabor.id === saborId)?.precos[tamanhoDoPreco] != null;
+
+  function trocarTamanho(id: string, saborExtra?: string) {
     const novo = dados.tamanhos.find((opcao) => opcao.id === id)!;
     setTamanhoId(id);
-    // Se o tamanho novo aceita menos sabores, corta as partes excedentes.
-    const novasPartes = Math.min(partes, novo.maxSabores);
-    setPartes(novasPartes);
-    setEscolhidos((atuais) =>
-      atuais
-        .slice(0, novasPartes)
-        // Sabor sem preço no tamanho novo sai.
-        .map((saborId) =>
-          saborId && dados.sabores.find((sabor) => sabor.id === saborId)?.precos[id] != null
-            ? saborId
-            : null,
-        ),
+    // Sabor sem preço no tamanho novo sai; o que passar do limite também.
+    const candidatos = [...saboresEscolhidos, ...(saborExtra ? [saborExtra] : [])];
+    const comPreco = candidatos.filter((saborId) => temPreco(saborId, id));
+    const ficam = comPreco.slice(0, novo.maxSabores);
+    const sairam = candidatos.filter((saborId) => !ficam.includes(saborId));
+    setSaboresEscolhidos(ficam);
+    setAviso(
+      sairam.length > 0
+        ? {
+            texto: `${novo.nome} aceita ${novo.maxSabores === 1 ? '1 sabor' : `até ${novo.maxSabores} sabores`}: tiramos ${sairam.map(nomeDoSabor).join(', ')}.`,
+          }
+        : null,
     );
   }
 
-  function trocarPartes(quantas: number) {
-    setPartes(quantas);
-    setEscolhidos((atuais) =>
-      Array.from({ length: quantas }, (_, indice) => atuais[indice] ?? null),
-    );
-  }
-
-  /** Toque num sabor: preenche a próxima parte vazia (ou a última). */
+  /** Toque num sabor: põe ou tira. Passou do limite do tamanho, avisa. */
   function escolherSabor(saborId: string) {
-    setEscolhidos((atuais) => {
-      const vazia = atuais.findIndex((atual) => atual == null);
-      const proximos = [...atuais];
-      proximos[vazia === -1 ? atuais.length - 1 : vazia] = saborId;
-      return proximos;
+    if (saboresEscolhidos.includes(saborId)) {
+      setSaboresEscolhidos((atuais) => atuais.filter((id) => id !== saborId));
+      setAviso(null);
+      return;
+    }
+
+    if (saboresEscolhidos.length < tamanho.maxSabores) {
+      setSaboresEscolhidos((atuais) => [...atuais, saborId]);
+      setAviso(null);
+      return;
+    }
+
+    // O menor tamanho que comporta mais um sabor e tem preço para todos.
+    const quantos = saboresEscolhidos.length + 1;
+    const maior = dados.tamanhos.find(
+      (opcao) =>
+        opcao.maxSabores >= quantos &&
+        [...saboresEscolhidos, saborId].every((id) => temPreco(id, opcao.id)),
+    );
+
+    setAviso({
+      texto:
+        tamanho.maxSabores === 1
+          ? `A ${tamanho.nome} é de 1 sabor só.`
+          : `A ${tamanho.nome} aceita até ${tamanho.maxSabores} sabores.`,
+      saborId,
+      maior: maior ? { id: maior.id, nome: maior.nome, maxSabores: maior.maxSabores } : undefined,
     });
   }
 
-  const saboresEscolhidos = escolhidos.filter((id): id is string => id != null);
-  const completa = saboresEscolhidos.length === partes;
+  /** Ação do aviso: troca o último sabor escolhido pelo que foi tocado. */
+  function trocarUltimoSabor(saborId: string) {
+    setSaboresEscolhidos((atuais) => [...atuais.slice(0, -1), saborId]);
+    setAviso(null);
+  }
+
+  const completa = saboresEscolhidos.length > 0;
 
   const extrasEscolhidos = [...(borda ? [borda] : []), ...(massa ? [massa] : []), ...adicionais];
   const precoDosExtras = extrasEscolhidos.reduce(
@@ -191,44 +219,34 @@ export function MontadorDePizza({
         <div className="mt-5 flex items-center gap-5">
           <DesenhoDaPizza
             partes={partes}
-            nomes={escolhidos.map(
-              (id) => (id && dados.sabores.find((sabor) => sabor.id === id)?.nome) || null,
-            )}
+            nomes={saboresEscolhidos.length > 0 ? saboresEscolhidos.map(nomeDoSabor) : [null]}
           />
           <ol className="min-w-0 flex-1 space-y-1.5 text-sm">
-            {escolhidos.map((id, indice) => {
-              const sabor = id ? dados.sabores.find((opcao) => opcao.id === id) : null;
-              return (
-                <li key={indice} className="flex items-center gap-2">
-                  <span
-                    aria-hidden
-                    className="h-3 w-3 shrink-0 rounded-full"
-                    style={{ backgroundColor: CORES_DAS_PARTES[indice] }}
-                  />
-                  <span className={cn('min-w-0 flex-1 truncate', !sabor && 'text-white/50')}>
-                    {sabor
-                      ? sabor.nome
-                      : partes === 1
-                        ? 'Escolha o sabor'
-                        : `Escolha a ${indice + 1}ª parte`}
-                  </span>
-                  {sabor ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setEscolhidos((atuais) =>
-                          atuais.map((atual, posicao) => (posicao === indice ? null : atual)),
-                        )
-                      }
-                      aria-label={`Tirar ${sabor.nome}`}
-                      className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10"
-                    >
-                      <X className="h-3.5 w-3.5" aria-hidden />
-                    </button>
-                  ) : null}
-                </li>
-              );
-            })}
+            {saboresEscolhidos.length === 0 ? (
+              <li className="text-white/60">
+                {tamanho.maxSabores === 1
+                  ? 'Escolha o sabor'
+                  : `Escolha até ${tamanho.maxSabores} sabores`}
+              </li>
+            ) : null}
+            {saboresEscolhidos.map((id, indice) => (
+              <li key={id} className="flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className="h-3 w-3 shrink-0 rounded-full"
+                  style={{ backgroundColor: CORES_DAS_PARTES[indice] }}
+                />
+                <span className="min-w-0 flex-1 truncate">{nomeDoSabor(id)}</span>
+                <button
+                  type="button"
+                  onClick={() => escolherSabor(id)}
+                  aria-label={`Tirar ${nomeDoSabor(id)}`}
+                  className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10"
+                >
+                  <X className="h-3.5 w-3.5" aria-hidden />
+                </button>
+              </li>
+            ))}
           </ol>
         </div>
       </header>
@@ -259,36 +277,22 @@ export function MontadorDePizza({
           </div>
         </Secao>
 
-        {tamanho.maxSabores > 1 ? (
-          <Secao titulo="Em quantas partes?">
-            <div className="flex flex-wrap gap-2">
-              {Array.from({ length: tamanho.maxSabores }, (_, indice) => indice + 1).map(
-                (quantas) => (
-                  <Opcao
-                    key={quantas}
-                    ativa={quantas === partes}
-                    onClick={() => trocarPartes(quantas)}
-                    compacta
-                  >
-                    {NOME_DA_DIVISAO[quantas] ?? `${quantas} sabores`}
-                  </Opcao>
-                ),
-              )}
-            </div>
-            {partes > 1 ? (
-              <p className="text-muted-foreground mt-2 text-xs">
-                {dados.regra === 'HIGHEST_PRICE'
-                  ? 'Nesta pizzaria, pizza de mais de um sabor sai pelo preço do sabor mais caro.'
-                  : 'Nesta pizzaria, pizza de mais de um sabor sai pela média dos preços dos sabores.'}
-              </p>
-            ) : null}
-          </Secao>
-        ) : null}
-
         <Secao
-          titulo={partes === 1 ? 'Sabor' : 'Sabores'}
-          detalhe={`${saboresEscolhidos.length} de ${partes}`}
+          titulo={tamanho.maxSabores === 1 ? 'Sabor' : 'Sabores'}
+          detalhe={
+            tamanho.maxSabores === 1
+              ? '1 sabor'
+              : `${saboresEscolhidos.length} de até ${tamanho.maxSabores}`
+          }
         >
+          {tamanho.maxSabores > 1 ? (
+            <p className="text-muted-foreground -mt-1 mb-3 text-xs">
+              Toque em até {tamanho.maxSabores} sabores: a pizza se divide sozinha.{' '}
+              {dados.regra === 'HIGHEST_PRICE'
+                ? 'Com mais de um sabor, vale o preço do mais caro.'
+                : 'Com mais de um sabor, vale a média dos preços.'}
+            </p>
+          ) : null}
           <label className="relative mb-3 block">
             <Search
               className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
@@ -310,22 +314,27 @@ export function MontadorDePizza({
                 </p>
                 <ul className="bg-card divide-y rounded-xl border">
                   {lista.map((sabor) => {
-                    const vezes = saboresEscolhidos.filter((id) => id === sabor.id).length;
+                    const escolhido = saboresEscolhidos.includes(sabor.id);
+                    const lotada = !escolhido && saboresEscolhidos.length >= tamanho.maxSabores;
                     return (
                       <li key={sabor.id}>
                         <button
                           type="button"
                           onClick={() => escolherSabor(sabor.id)}
-                          aria-pressed={vezes > 0}
-                          className="flex w-full items-start gap-3 px-3 py-3 text-left"
+                          aria-pressed={escolhido}
+                          className={cn(
+                            'flex w-full items-start gap-3 px-3 py-3 text-left',
+                            // Continua tocável: o toque explica como pôr mais.
+                            lotada && 'opacity-60',
+                          )}
                         >
                           <span
                             className={cn(
                               'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2',
-                              vezes > 0 ? 'border-primary bg-primary' : 'border-input',
+                              escolhido ? 'border-primary bg-primary' : 'border-input',
                             )}
                           >
-                            {vezes > 0 ? <Check className="h-3 w-3" aria-hidden /> : null}
+                            {escolhido ? <Check className="h-3 w-3" aria-hidden /> : null}
                           </span>
                           <span className="min-w-0 flex-1">
                             <span className="block font-semibold">{sabor.nome}</span>
@@ -418,6 +427,50 @@ export function MontadorDePizza({
       {/* Barra fixa: quantidade, total e o botão — sempre à vista. */}
       <div className="bg-card pb-safe fixed inset-x-0 bottom-0 z-50 border-t p-4 shadow-[0_-6px_20px_rgba(20,20,20,0.06)]">
         <div className="mx-auto max-w-lg space-y-2">
+          {aviso ? (
+            <div
+              role="status"
+              className="bg-warning/15 text-warning-text space-y-2 rounded-xl px-3 py-2.5 text-sm"
+            >
+              <div className="flex items-start gap-2">
+                <p className="flex-1 font-medium">
+                  {aviso.texto}
+                  {aviso.maior && aviso.saborId
+                    ? ` Para pôr ${nomeDoSabor(aviso.saborId)} também, mude para ${aviso.maior.nome} (até ${aviso.maior.maxSabores} sabores).`
+                    : ''}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setAviso(null)}
+                  aria-label="Fechar aviso"
+                  className="-mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+                >
+                  <X className="h-4 w-4" aria-hidden />
+                </button>
+              </div>
+              {aviso.saborId ? (
+                <div className="flex flex-wrap gap-2">
+                  {aviso.maior ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() => trocarTamanho(aviso.maior!.id, aviso.saborId)}
+                    >
+                      Mudar para {aviso.maior.nome}
+                    </Button>
+                  ) : null}
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => trocarUltimoSabor(aviso.saborId!)}
+                  >
+                    {tamanho.maxSabores === 1 ? 'Trocar o sabor' : 'Trocar o último sabor'}
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           {erro ? (
             <p role="alert" className="text-destructive text-sm font-medium">
               {erro}{' '}
@@ -459,9 +512,7 @@ export function MontadorDePizza({
               isLoading={pendente}
               onClick={adicionar}
             >
-              {completa
-                ? `Adicionar · ${formatCents(totalCents)}`
-                : `Escolha ${partes - saboresEscolhidos.length} ${partes - saboresEscolhidos.length === 1 ? 'sabor' : 'sabores'}`}
+              {completa ? `Adicionar · ${formatCents(totalCents)}` : 'Escolha um sabor'}
             </Button>
           </div>
         </div>
