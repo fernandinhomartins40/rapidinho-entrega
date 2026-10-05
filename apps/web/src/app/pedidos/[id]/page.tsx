@@ -89,7 +89,9 @@ export default async function PedidoPage({ params }: { params: Promise<{ id: str
           },
         },
       },
-      reviews: { select: { id: true } },
+      reviews: {
+        select: { id: true, storeId: true, rating: true, comment: true, replyText: true },
+      },
     },
   });
 
@@ -113,6 +115,13 @@ export default async function PedidoPage({ params }: { params: Promise<{ id: str
           createdAt: linha.createdAt.toISOString(),
         })),
         jaAvaliado: pedido.reviews.length > 0,
+        // A avaliação da loja e a resposta dela: o cliente vê que foi ouvido.
+        avaliacaoDaLoja: (() => {
+          const daLoja = pedido.reviews.find((avaliacao) => avaliacao.storeId != null);
+          return daLoja
+            ? { nota: daLoja.rating, comentario: daLoja.comment, resposta: daLoja.replyText }
+            : null;
+        })(),
       }}
       realtime={orderRealtime(pedido.id, user.id)}
     />

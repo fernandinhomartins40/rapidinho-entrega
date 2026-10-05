@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useTransition } from 'react';
-import { Check, MessageCircle, RotateCcw, Scale, X } from 'lucide-react';
+import { Check, MessageCircle, PauseCircle, RotateCcw, Scale, X } from 'lucide-react';
 import { Button, cn } from '@rapidinho/ui';
 import {
   faixaDePeso,
@@ -14,6 +14,7 @@ import {
   valorDoItemSeparado,
   whatsappLink,
 } from '@rapidinho/shared';
+import { pausarProdutosDoPedido } from './actions';
 import { concluirSeparacao, registrarItemDaSeparacao } from './separacao';
 import type { ItemDoPedido, PedidoNaTela } from './tipos';
 
@@ -218,10 +219,26 @@ function LinhaDaSeparacao({
                   ? `Trocado por ${item.replacementName} · ${formatCents(valor.finalCents)}${item.replacementAccepted ? ' (cliente aceitou)' : ''}`
                   : `Perguntado ao cliente: ${item.replacementName} por ${formatCents(item.replacementPriceCents ?? 0)}${minutos != null ? ` · há ${minutos} min` : ''}`}
           </p>
-          <Button size="sm" variant="ghost" disabled={pendente} onClick={desfazer}>
-            <RotateCcw className="h-4 w-4" aria-hidden />
-            Desfazer
-          </Button>
+          <div className="flex flex-wrap gap-1">
+            {/* Faltou na prateleira, falta para o próximo cliente também. */}
+            {item.pickStatus === 'MISSING' && item.productId ? (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={pendente}
+                onClick={() =>
+                  onExecutar(() => pausarProdutosDoPedido({ ...base, itemIds: [item.id] }))
+                }
+              >
+                <PauseCircle className="h-4 w-4" aria-hidden />
+                Tirar do cardápio até amanhã
+              </Button>
+            ) : null}
+            <Button size="sm" variant="ghost" disabled={pendente} onClick={desfazer}>
+              <RotateCcw className="h-4 w-4" aria-hidden />
+              Desfazer
+            </Button>
+          </div>
         </div>
         {valor.cortesiaCents > 0 ? (
           <p className="text-warning-text text-xs">

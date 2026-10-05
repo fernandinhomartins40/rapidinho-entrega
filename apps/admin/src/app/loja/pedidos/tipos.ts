@@ -16,6 +16,8 @@ export interface ComplementoDoItem {
 
 export interface ItemDoPedido {
   id: string;
+  /** Produto do cardápio (null se foi excluído depois do pedido). */
+  productId: string | null;
   productName: string;
   quantity: number;
   weightGrams: number | null;
@@ -25,7 +27,8 @@ export interface ItemDoPedido {
   pizzaSizeName: string | null;
   pizzaExtraName: string | null;
   complements: ComplementoDoItem[];
-  flavors: { id: string; flavorName: string }[];
+  /** `flavorId` null: o sabor foi apagado do cardápio depois do pedido. */
+  flavors: { id: string; flavorName: string; flavorId: string | null }[];
   /** Borda, massa e adicionais da pizza. */
   pizzaExtras: { id: string; name: string; kind: string }[];
   // Separação (pesagem justa)
@@ -82,6 +85,12 @@ export interface PedidoNaTela {
   ageConfirmedAt: string | null;
   /** Foto da receita (link assinado e temporário). */
   receitaUrl: string | null;
+  /** Corrida do pedido: existe a partir de "Pronto", em pedido de entrega. */
+  entrega: {
+    status:
+      'PENDING' | 'ASSIGNED' | 'ACCEPTED' | 'PICKED_UP' | 'DELIVERED' | 'CANCELLED' | 'REFUSED';
+    entregador: { nome: string; telefone: string | null } | null;
+  } | null;
 }
 
 export const POLITICA_DE_SUBSTITUICAO: Record<

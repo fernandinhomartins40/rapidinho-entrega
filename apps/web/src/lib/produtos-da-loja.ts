@@ -1,6 +1,7 @@
 import { prisma } from '@rapidinho/database';
 import { arteDoProduto, classificarPrato, type ArteDoPrato } from '@rapidinho/shared';
 import { imagemExibivel, SELECT_IMAGEM } from '@/lib/media';
+import { saborDisponivelAgora } from '@/lib/sabores';
 
 /**
  * Os produtos que aparecem no cartão da loja, numa faixa que rola de lado.
@@ -71,7 +72,7 @@ export async function produtosDasLojas(
       ORDER BY "storeId", posicao
     `,
     prisma.pizzaFlavor.findMany({
-      where: { storeId: { in: ids }, isAvailable: true },
+      where: { storeId: { in: ids }, ...saborDisponivelAgora() },
       orderBy: { sortOrder: 'asc' },
       select: {
         id: true,

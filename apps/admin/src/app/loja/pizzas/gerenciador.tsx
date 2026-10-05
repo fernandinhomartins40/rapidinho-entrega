@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useState, useTransition } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { PauseCircle, PlayCircle, Plus, Trash2 } from 'lucide-react';
 import {
   Badge,
   Button,
@@ -17,6 +17,7 @@ import {
   excluirExtra,
   excluirSabor,
   excluirTamanho,
+  pausarSabor,
   salvarExtra,
   salvarRegraDePreco,
   salvarSabor,
@@ -38,6 +39,8 @@ interface Sabor {
   description: string | null;
   groupName: string | null;
   prices: { sizeId: string; priceCents: number }[];
+  /** Esgotado hoje: fora do cardápio até a meia-noite. */
+  pausado?: boolean;
 }
 
 interface Extra {
@@ -244,6 +247,11 @@ function Sabores({ sabores, tamanhos }: { sabores: Sabor[]; tamanhos: Tamanho[] 
                         {sabor.groupName}
                       </Badge>
                     ) : null}
+                    {sabor.pausado ? (
+                      <Badge variant="warning" className="ml-2">
+                        Esgotado até amanhã
+                      </Badge>
+                    ) : null}
                   </p>
                   <p className="text-muted-foreground text-sm">
                     {sabor.prices
@@ -255,7 +263,29 @@ function Sabores({ sabores, tamanhos }: { sabores: Sabor[]; tamanhos: Tamanho[] 
                       .join(' · ') || 'Sem preço definido'}
                   </p>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex shrink-0 gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={removendo}
+                    aria-label={
+                      sabor.pausado
+                        ? `Voltar ${sabor.name} ao cardápio`
+                        : `${sabor.name} acabou: pausar até amanhã`
+                    }
+                    title={sabor.pausado ? 'Voltar ao cardápio' : 'Acabou: pausar até amanhã'}
+                    onClick={() =>
+                      iniciarTransicao(() =>
+                        pausarSabor({ id: sabor.id, pausar: !sabor.pausado }).then(() => undefined),
+                      )
+                    }
+                  >
+                    {sabor.pausado ? (
+                      <PlayCircle className="h-5 w-5" aria-hidden />
+                    ) : (
+                      <PauseCircle className="h-5 w-5" aria-hidden />
+                    )}
+                  </Button>
                   <Button variant="outline" size="sm" onClick={() => setEditando(sabor)}>
                     Editar
                   </Button>

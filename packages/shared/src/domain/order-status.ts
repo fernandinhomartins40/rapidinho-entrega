@@ -69,6 +69,28 @@ export const ORDER_STATUS_CUSTOMER_MESSAGE: Record<OrderStatus, string> = {
   REJECTED: 'A loja não pôde aceitar este pedido.',
 };
 
+/**
+ * Aviso (push/WhatsApp) que o cliente recebe quando o pedido muda de status.
+ *
+ * Loja e entregador avançam o mesmo pedido; os dois avisos saem daqui para o
+ * cliente não receber textos diferentes conforme quem tocou no botão. O de
+ * "entregue" já abre a avaliação: é quando a experiência está fresca, e o
+ * botão de avaliar ficava escondido no fim do acompanhamento.
+ */
+export function avisoDeStatusAoCliente(
+  orderId: string,
+  status: OrderStatus,
+): { body: string; url: string } {
+  if (status === 'DELIVERED') {
+    return {
+      body: `${ORDER_STATUS_CUSTOMER_MESSAGE.DELIVERED} Conta pra gente como foi?`,
+      url: `/pedidos/${orderId}/avaliar`,
+    };
+  }
+
+  return { body: ORDER_STATUS_CUSTOMER_MESSAGE[status], url: `/pedidos/${orderId}` };
+}
+
 /** Etapas exibidas na linha do tempo do acompanhamento (pedido de entrega). */
 export const ORDER_TIMELINE: readonly OrderStatus[] = [
   'RECEIVED',

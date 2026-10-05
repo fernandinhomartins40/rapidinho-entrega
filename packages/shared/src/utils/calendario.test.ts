@@ -17,6 +17,12 @@ describe('inicioDoDia', () => {
     const agora = new Date('2026-09-28T15:00:00Z');
     expect(inicioDoDia(agora, 6).toISOString()).toBe('2026-09-22T03:00:00.000Z');
   });
+
+  it('com -1 dá a meia-noite de amanhã (pausa "até amanhã" do produto esgotado)', () => {
+    // 22h de Brasília: "amanhã" é o dia seguinte de Brasília, não o de UTC.
+    const agora = new Date('2026-09-28T01:00:00Z');
+    expect(inicioDoDia(agora, -1).toISOString()).toBe('2026-09-28T03:00:00.000Z');
+  });
 });
 
 describe('inicioDoMes', () => {

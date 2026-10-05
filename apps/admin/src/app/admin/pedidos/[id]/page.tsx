@@ -14,6 +14,7 @@ import {
 import { Badge, Card, CardContent, CardHeader, CardTitle } from '@rapidinho/ui';
 import { formatarEndereco, lerEndereco } from '@/app/loja/pedidos/tipos';
 import { CancelarPedido } from '../cancelar-pedido';
+import { ModerarAvaliacao } from '../moderar-avaliacao';
 import { dataHora, estaAtrasado, hora, tempoDecorrido, VARIANTE_DO_STATUS } from '../formatos';
 
 export const dynamic = 'force-dynamic';
@@ -320,7 +321,24 @@ export default async function PedidoDetalhePage({ params }: { params: Promise<{ 
                         <span className="sr-only">{avaliacao.rating} de 5</span>
                       </span>
                     </p>
-                    {avaliacao.comment ? <p className="mt-1">{avaliacao.comment}</p> : null}
+                    {avaliacao.comment ? (
+                      <>
+                        <p className="mt-1">
+                          {avaliacao.comment}
+                          {avaliacao.hiddenAt ? (
+                            <Badge variant="warning" className="ml-2">
+                              Oculto na loja
+                            </Badge>
+                          ) : null}
+                        </p>
+                        {avaliacao.storeId ? (
+                          <ModerarAvaliacao
+                            reviewId={avaliacao.id}
+                            oculta={avaliacao.hiddenAt != null}
+                          />
+                        ) : null}
+                      </>
+                    ) : null}
                     {avaliacao.replyText ? (
                       <p className="bg-muted mt-2 rounded-lg px-3 py-2">
                         <strong>Resposta da loja:</strong> {avaliacao.replyText}

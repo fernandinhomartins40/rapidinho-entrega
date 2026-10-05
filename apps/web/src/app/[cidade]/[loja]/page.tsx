@@ -198,6 +198,23 @@ export default async function LojaPage({
 
   const contato = loja.whatsapp ?? loja.phone;
 
+  // Últimos comentários, bons e ruins: escolher só os elogios seria vitrine,
+  // não avaliação. Comentário ocultado pela plataforma (ofensa) fica de fora;
+  // do cliente aparece só o primeiro nome.
+  const comentarios = await prisma.review.findMany({
+    where: { storeId: loja.id, hiddenAt: null, comment: { not: null } },
+    orderBy: { createdAt: 'desc' },
+    take: 5,
+    select: {
+      id: true,
+      rating: true,
+      comment: true,
+      replyText: true,
+      createdAt: true,
+      order: { select: { customerName: true } },
+    },
+  });
+
   const user = await getCurrentUser();
   const favorita = user
     ? (await prisma.favoriteStore.count({ where: { userId: user.id, storeId: loja.id } })) > 0
@@ -267,10 +284,17 @@ export default async function LojaPage({
 
           <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
             {loja.ratingCount > 0 ? (
-              <span className="flex items-center gap-1">
-                <Star className="fill-warning text-warning h-4 w-4" aria-hidden />
-                {Number(loja.ratingAverage).toFixed(1)} ({loja.ratingCount})
-              </span>
+              comentarios.length > 0 ? (
+                <a href="#avaliacoes" className="flex items-center gap-1 underline">
+                  <Star className="fill-warning text-warning h-4 w-4" aria-hidden />
+                  {Number(loja.ratingAverage).toFixed(1)} ({loja.ratingCount})
+                </a>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <Star className="fill-warning text-warning h-4 w-4" aria-hidden />
+                  {Number(loja.ratingAverage).toFixed(1)} ({loja.ratingCount})
+                </span>
+              )
             ) : null}
             <span className="flex items-center gap-1">
               <Clock className="h-4 w-4" aria-hidden />
@@ -330,6 +354,52 @@ export default async function LojaPage({
           aberta={abertura.isOpen}
           cidadeSlug={cidade}
         />
+
+        {comentarios.length > 0 ? (
+          <section id="avaliacoes" className="scroll-mt-4 py-8">
+            <h2 className="text-lg font-bold">O que dizem os clientes</h2>
+            <ul className="mt-3 space-y-3">
+              {comentarios.map((avaliacao) => (
+                <li key={avaliacao.id} className="bg-card rounded-xl border p-4 text-sm">
+                  <p className="flex flex-wrap items-center justify-between gap-2">
+                    <span
+                      className="flex items-center gap-0.5"
+                      role="img"
+                      aria-label={`Nota ${avaliacao.rating} de 5`}
+                    >
+                      {[1, 2, 3, 4, 5].map((posicao) => (
+                        <Star
+                          key={posicao}
+                          className={
+                            posicao <= avaliacao.rating
+                              ? 'fill-warning text-warning h-4 w-4'
+                              : 'text-muted-foreground/40 h-4 w-4'
+                          }
+                          aria-hidden
+                        />
+                      ))}
+                    </span>
+                    <span className="text-muted-foreground text-xs">
+                      {avaliacao.order.customerName.split(' ')[0]} ·{' '}
+                      {avaliacao.createdAt.toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: 'short',
+                        timeZone: 'America/Sao_Paulo',
+                      })}
+                    </span>
+                  </p>
+                  <p className="mt-2">“{avaliacao.comment}”</p>
+                  {avaliacao.replyText ? (
+                    <p className="bg-secondary mt-2 rounded-lg px-3 py-2">
+                      <span className="block text-xs font-semibold">Resposta da loja</span>
+                      {avaliacao.replyText}
+                    </p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
       </div>
     </main>
   );

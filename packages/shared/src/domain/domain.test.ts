@@ -4,7 +4,7 @@ import { calculateDeliveryFee } from './delivery-fee';
 import { calculatePizzaPrice } from './pizza-pricing';
 import { calculateCartItem, calculateOrderTotals } from './cart-pricing';
 import { applyCoupon, type CouponRule } from './coupon';
-import { canTransition, isFinalStatus } from './order-status';
+import { avisoDeStatusAoCliente, canTransition, isFinalStatus } from './order-status';
 
 /** 2025-03-10 é uma segunda-feira. Horários em America/Sao_Paulo (UTC-3). */
 const monday = (hour: number, minute = 0) => new Date(Date.UTC(2025, 2, 10, hour + 3, minute));
@@ -315,5 +315,20 @@ describe('status do pedido', () => {
   it('reconhece status finais', () => {
     expect(isFinalStatus('DELIVERED')).toBe(true);
     expect(isFinalStatus('PREPARING')).toBe(false);
+  });
+});
+
+describe('aviso de status ao cliente', () => {
+  it('entregue abre direto a avaliação', () => {
+    const aviso = avisoDeStatusAoCliente('ped1', 'DELIVERED');
+    expect(aviso.url).toBe('/pedidos/ped1/avaliar');
+    expect(aviso.body).toContain('Conta pra gente como foi?');
+  });
+
+  it('demais status abrem o acompanhamento', () => {
+    expect(avisoDeStatusAoCliente('ped1', 'OUT_FOR_DELIVERY')).toEqual({
+      body: 'Seu pedido saiu para entrega.',
+      url: '/pedidos/ped1',
+    });
   });
 });

@@ -2,7 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { BellRing, Check, Clock, Printer, Volume2, VolumeX, Wifi, WifiOff, X } from 'lucide-react';
+import {
+  BellRing,
+  Bike,
+  Check,
+  Clock,
+  Printer,
+  Volume2,
+  VolumeX,
+  Wifi,
+  WifiOff,
+  X,
+} from 'lucide-react';
 import { Badge, Button, Card, CardContent, cn } from '@rapidinho/ui';
 import { useRealtime } from '@rapidinho/ui/hooks/use-realtime';
 import {
@@ -17,7 +28,12 @@ import {
   whatsappLink,
   type OrderStatus,
 } from '@rapidinho/shared';
-import { aceitarPedido, cancelarPedido, mudarStatusDoPedido } from './actions';
+import {
+  aceitarPedido,
+  cancelarPedido,
+  mudarStatusDoPedido,
+  pausarProdutosDoPedido,
+} from './actions';
 import { iniciarAlerta, pararAlerta, prepararAudio } from '@/lib/alerta-sonoro';
 import { Comanda, abrirImpressao } from './comanda';
 import { SeparacaoDoPedido } from './separacao-do-pedido';
@@ -118,6 +134,10 @@ export function PainelDePedidos({ pedidos, loja, realtime }: Props) {
       [REALTIME_EVENTS.orderCancelled]: aoReceberEvento,
       // Separação: o cliente respondeu uma troca pelo app.
       [REALTIME_EVENTS.orderUpdated]: aoReceberEvento,
+      // Entregador pegou a corrida, retirou ou entregou: sem estes dois, o
+      // pedido ficava "Pronto" na tela até chegar outro pedido.
+      [REALTIME_EVENTS.deliveryAssigned]: aoReceberEvento,
+      [REALTIME_EVENTS.deliveryStatusChanged]: aoReceberEvento,
     },
   });
 
@@ -286,8 +306,16 @@ function CartaoDePedido({
     });
   }
 
+  // Motoboy da plataforma a caminho: a saída é marcada por ele, ao retirar.
+  // "Entregue" continua, como saída de emergência da loja.
+  const motoboyACaminho =
+    pedido.entrega?.entregador != null &&
+    (pedido.entrega.status === 'ASSIGNED' || pedido.entrega.status === 'ACCEPTED');
   const proximos = nextStatuses(pedido.status).filter(
-    (status) => status !== 'CANCELLED' && status !== 'REJECTED',
+    (status) =>
+      status !== 'CANCELLED' &&
+      status !== 'REJECTED' &&
+      !(status === 'OUT_FOR_DELIVERY' && motoboyACaminho),
   );
 
   // Pesagem justa: enquanto separa, a lista de itens vira a tela da balança.
@@ -414,6 +442,8 @@ function CartaoDePedido({
             ) : null}
           </div>
         ) : null}
+
+        {pedido.entrega ? <SituacaoDaEntrega entrega={pedido.entrega} /> : null}
 
         <div className="space-y-1 text-sm">
           <p className="flex justify-between">
@@ -563,6 +593,52 @@ function BotaoRecusar({
 }) {
   const [motivo, setMotivo] = useState('');
   const [abrindo, setAbrindo] = useState(false);
+  const [paraPausar, setParaPausar] = useState<string[]>([]);
+
+  // O que dá para tirar do cardápio: produtos e, na pizza, os sabores (pizza
+  // não tem produto — o que acaba é a calabresa). Sabor repetido em duas
+  // pizzas aparece uma vez. Excluídos depois do pedido ficam de fora.
+  const opcoes = useMemo(() => {
+    const lista: { chave: string; nome: string }[] = [];
+    const saboresVistos = new Set<string>();
+    for (const item of pedido.items) {
+      if (item.productId) lista.push({ chave: `i:${item.id}`, nome: item.productName });
+      for (const sabor of item.flavors) {
+        if (!sabor.flavorId || saboresVistos.has(sabor.flavorId)) continue;
+        saboresVistos.add(sabor.flavorId);
+        lista.push({ chave: `s:${sabor.id}`, nome: `Sabor ${sabor.flavorName}` });
+      }
+    }
+    return lista;
+  }, [pedido.items]);
+  const esgotado = /esgotad|acabou|em falta/i.test(motivo);
+
+  function escolherMotivo(pronto: string) {
+    setMotivo(pronto);
+    // Uma opção só: o esgotado só pode ser ela.
+    if (/esgotad/i.test(pronto) && opcoes.length === 1) {
+      setParaPausar([opcoes[0]!.chave]);
+    }
+  }
+
+  function confirmar() {
+    const escolhidas = esgotado ? paraPausar : [];
+    const itemIds = escolhidas.filter((c) => c.startsWith('i:')).map((c) => c.slice(2));
+    const saborIds = escolhidas.filter((c) => c.startsWith('s:')).map((c) => c.slice(2));
+    onExecutar(async () => {
+      const resultado = await cancelarPedido({ orderId: pedido.id, reason: motivo.trim() });
+      if (!resultado.ok || escolhidas.length === 0) return resultado;
+      // Recusa e pausa no mesmo toque: o que acabou sai do cardápio antes que
+      // o próximo cliente peça de novo.
+      const pausa = await pausarProdutosDoPedido({ orderId: pedido.id, itemIds, saborIds });
+      return pausa.ok
+        ? pausa
+        : {
+            ok: false,
+            message: `${resultado.message} Não deu para pausar: pause em Produtos ou Pizzas.`,
+          };
+    });
+  }
 
   if (!abrindo) {
     return (
@@ -583,7 +659,7 @@ function BotaoRecusar({
           <button
             key={pronto}
             type="button"
-            onClick={() => setMotivo(pronto)}
+            onClick={() => escolherMotivo(pronto)}
             aria-pressed={motivo === pronto}
             className={cn(
               'rounded-full border px-3 py-1.5 text-xs font-medium',
@@ -601,13 +677,33 @@ function BotaoRecusar({
         placeholder="Ex.: produto esgotado"
         className="border-input min-h-touch w-full rounded-lg border px-3"
       />
+      {esgotado && opcoes.length > 0 ? (
+        <fieldset className="space-y-1">
+          <legend className="text-sm font-semibold">Tirar do cardápio até amanhã:</legend>
+          {opcoes.map((opcao) => (
+            <label key={opcao.chave} className="min-h-touch flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-5 w-5"
+                checked={paraPausar.includes(opcao.chave)}
+                onChange={(evento) =>
+                  setParaPausar((atuais) =>
+                    evento.target.checked
+                      ? [...atuais, opcao.chave]
+                      : atuais.filter((chave) => chave !== opcao.chave),
+                  )
+                }
+              />
+              {opcao.nome}
+            </label>
+          ))}
+        </fieldset>
+      ) : null}
       <div className="flex gap-2">
         <Button
           variant="destructive"
           disabled={pendente || motivo.trim().length < 3}
-          onClick={() =>
-            onExecutar(() => cancelarPedido({ orderId: pedido.id, reason: motivo.trim() }))
-          }
+          onClick={confirmar}
         >
           Confirmar
         </Button>
@@ -616,6 +712,48 @@ function BotaoRecusar({
         </Button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Quem está com a corrida. Responde a pergunta que a loja fazia ligando para
+ * o motoboy ou indo até a porta: alguém pegou? quem vem? já saiu?
+ */
+function SituacaoDaEntrega({ entrega }: { entrega: NonNullable<PedidoNaTela['entrega']> }) {
+  const nome = entrega.entregador?.nome ?? 'Entregador';
+  const texto: Partial<Record<typeof entrega.status, string>> = {
+    PENDING: 'Procurando entregador…',
+    ASSIGNED: 'Procurando entregador…',
+    ACCEPTED: `${nome} aceitou e vem buscar — ele marca a saída ao retirar`,
+    PICKED_UP: `${nome} está levando o pedido`,
+    DELIVERED: `Entregue por ${nome}`,
+  };
+  const linha = texto[entrega.status];
+
+  if (!linha) return null;
+
+  const esperando = entrega.status === 'PENDING' || entrega.status === 'ASSIGNED';
+
+  return (
+    <p
+      className={cn(
+        'flex flex-wrap items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium',
+        esperando ? 'bg-muted text-muted-foreground' : 'bg-accent text-accent-foreground',
+      )}
+    >
+      <Bike className="h-4 w-4 shrink-0" aria-hidden />
+      <span className="flex-1">{linha}</span>
+      {entrega.entregador?.telefone && !esperando && entrega.status !== 'DELIVERED' ? (
+        <a
+          href={whatsappLink(entrega.entregador.telefone)}
+          target="_blank"
+          rel="noreferrer"
+          className="underline"
+        >
+          {formatPhoneBR(entrega.entregador.telefone)}
+        </a>
+      ) : null}
+    </p>
   );
 }
 

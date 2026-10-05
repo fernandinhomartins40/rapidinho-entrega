@@ -6,6 +6,7 @@ import {
   type PratoDoBaralho,
 } from '@rapidinho/shared';
 import { imagemExibivel, SELECT_IMAGEM } from '@/lib/media';
+import { saborDisponivelAgora } from '@/lib/sabores';
 
 /**
  * Pratos, e não lojas.
@@ -149,7 +150,7 @@ export async function pratosDaCidade(
         },
       },
       pizzaFlavors: {
-        where: { isAvailable: true },
+        where: saborDisponivelAgora(),
         select: {
           id: true,
           name: true,

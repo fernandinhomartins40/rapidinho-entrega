@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@rapidinho/database';
 import { isStoreOpen } from '@rapidinho/shared';
 import { MontadorDePizza, type DadosDaPizzaria } from './montador';
+import { saborDisponivelAgora } from '@/lib/sabores';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Monte sua pizza' };
@@ -49,7 +50,7 @@ export default async function PizzaPage({
         select: { id: true, name: true, description: true, maxFlavors: true, slices: true },
       },
       pizzaFlavors: {
-        where: { isAvailable: true },
+        where: saborDisponivelAgora(),
         orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
         select: {
           id: true,

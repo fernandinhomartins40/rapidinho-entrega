@@ -60,6 +60,8 @@ export const AUDIT_ACTIONS = {
   payoutCreated: 'payout.created',
   payoutPaid: 'payout.paid',
   orderCancelledByPlatform: 'order.cancelled_by_platform',
+  reviewHidden: 'review.hidden',
+  reviewShown: 'review.shown',
   dataExported: 'lgpd.data_exported',
   dataDeleted: 'lgpd.data_deleted',
 } as const;

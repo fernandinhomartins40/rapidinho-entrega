@@ -22,6 +22,7 @@ export default async function PizzasPage() {
         name: true,
         description: true,
         groupName: true,
+        pausedUntil: true,
         prices: { select: { sizeId: true, priceCents: true } },
       },
     }),
@@ -43,7 +44,11 @@ export default async function PizzasPage() {
 
       <GerenciadorDePizzas
         tamanhos={tamanhos}
-        sabores={sabores}
+        sabores={sabores.map(({ pausedUntil, ...sabor }) => ({
+          ...sabor,
+          // Pausa vencida é sabor no ar: só conta a que ainda vale.
+          pausado: pausedUntil != null && pausedUntil > new Date(),
+        }))}
         extras={extras}
         regraDePreco={store.pizzaPricingRule as 'HIGHEST_PRICE' | 'AVERAGE_PRICE'}
       />

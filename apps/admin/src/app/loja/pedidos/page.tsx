@@ -22,7 +22,13 @@ async function carregarPedidos(storeId: string) {
   return prisma.order.findMany({
     where: {
       storeId,
-      OR: [{ status: { in: [...STATUS_EM_ABERTO] } }, { createdAt: { gte: inicioDoDia } }],
+      // "Saiu para entrega" não exige ação da loja (fica fora do contador),
+      // mas continua na tela: pedido da madrugada que sai depois da meia-noite
+      // sumia de "Em andamento" com o motoboy ainda na rua.
+      OR: [
+        { status: { in: [...STATUS_EM_ABERTO, 'OUT_FOR_DELIVERY'] } },
+        { createdAt: { gte: inicioDoDia } },
+      ],
     },
     orderBy: { createdAt: 'desc' },
     take: 100,
@@ -51,6 +57,12 @@ async function carregarPedidos(storeId: string) {
       substitutionPolicy: true,
       ageConfirmedAt: true,
       prescriptionImage: { select: { largeKey: true, mediumKey: true, originalKey: true } },
+      delivery: {
+        select: {
+          status: true,
+          courier: { select: { user: { select: { name: true, phone: true } } } },
+        },
+      },
       payment: {
         select: {
           method: true,
@@ -66,6 +78,7 @@ async function carregarPedidos(storeId: string) {
         orderBy: { id: 'asc' },
         select: {
           id: true,
+          productId: true,
           pickStatus: true,
           pickedWeightGrams: true,
           replacementName: true,
@@ -82,7 +95,7 @@ async function carregarPedidos(storeId: string) {
           pizzaSizeName: true,
           pizzaExtraName: true,
           complements: { select: { id: true, optionName: true, quantity: true, priceCents: true } },
-          flavors: { select: { id: true, flavorName: true } },
+          flavors: { select: { id: true, flavorName: true, flavorId: true } },
           pizzaExtras: { select: { id: true, name: true, kind: true } },
         },
       },
@@ -115,8 +128,19 @@ export default async function PedidosPage() {
   return (
     <PainelDePedidos
       pedidos={await Promise.all(
-        pedidos.map(async ({ userId, prescriptionImage, ...pedido }) => ({
+        pedidos.map(async ({ userId, prescriptionImage, delivery, ...pedido }) => ({
           ...pedido,
+          entrega: delivery
+            ? {
+                status: delivery.status,
+                entregador: delivery.courier
+                  ? {
+                      nome: delivery.courier.user.name ?? 'Entregador',
+                      telefone: delivery.courier.user.phone,
+                    }
+                  : null,
+              }
+            : null,
           // Receita é dado de saúde: fica no armazenamento privado e só abre
           // por link assinado, que expira.
           receitaUrl: prescriptionImage

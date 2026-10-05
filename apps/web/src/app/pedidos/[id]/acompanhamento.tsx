@@ -42,6 +42,11 @@ interface Props {
     cancelReason: string | null;
     addressSnapshot: unknown;
     jaAvaliado: boolean;
+    avaliacaoDaLoja: {
+      nota: number;
+      comentario: string | null;
+      resposta: string | null;
+    } | null;
     store: {
       name: string;
       slug: string;
@@ -382,6 +387,26 @@ export function AcompanhamentoDoPedido({ pedido, realtime }: Props) {
           ) : null}
         </CardContent>
       </Card>
+
+      {pedido.avaliacaoDaLoja ? (
+        <Card>
+          <CardContent className="space-y-2 pt-5 text-sm">
+            <p className="font-semibold">
+              Sua avaliação: {pedido.avaliacaoDaLoja.nota} de 5{' '}
+              <span aria-hidden>{'★'.repeat(pedido.avaliacaoDaLoja.nota)}</span>
+            </p>
+            {pedido.avaliacaoDaLoja.comentario ? (
+              <p className="text-muted-foreground">“{pedido.avaliacaoDaLoja.comentario}”</p>
+            ) : null}
+            {pedido.avaliacaoDaLoja.resposta ? (
+              <div className="bg-secondary rounded-lg px-3 py-2">
+                <p className="text-xs font-semibold">Resposta da {pedido.store.name}</p>
+                <p className="mt-0.5">{pedido.avaliacaoDaLoja.resposta}</p>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="flex flex-wrap gap-2">
         {contato ? (

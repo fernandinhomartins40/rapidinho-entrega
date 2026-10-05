@@ -1,105 +1,101 @@
-# Plano de Implementação
+# Plano de Implementação — rodada 2 (2026-10-05)
+
+> A rodada 1 (2026-09-27: endereço de outra cidade, lembrete de pedido parado,
+> expiração de Pix, fila de campanhas, fuso horário, checkout em "revisar e
+> confirmar") está concluída e registrada no histórico do git
+> (`4ab4135`). Esta rodada parte do que entrou depois dela — pizza, mercado
+> com pesagem, entregadores de vários comércios — e das pendências que a
+> rodada 1 deixou registradas.
 
 ## Resumo da aplicação
 
-Marketplace de delivery multi-cidade (Palmital/PR em operação). Monorepo pnpm +
-Turborepo: `apps/web` (PWA do cliente + landing), `apps/admin` (painel da loja
-em `/loja` e da plataforma em `/admin`), `apps/realtime` (Socket.io sobre
-Redis), `apps/worker` (BullMQ: notificações, imagens, expiração de Pix,
-cobrança de planos, impulsionamento, campanhas). Prisma/PostgreSQL 16, Redis,
-MinIO, login por OTP, deploy por GitHub Actions para VPS com Docker Compose.
+Marketplace de delivery multi-cidade (Palmital/PR). Monorepo pnpm + Turborepo:
+`apps/web` (PWA do cliente), `apps/admin` (painel da loja em `/loja`, do
+entregador em `/entregador` e da plataforma em `/admin`), `apps/realtime`
+(Socket.io sobre Redis), `apps/worker` (BullMQ). Prisma/PostgreSQL 16, Redis,
+MinIO, login por OTP, deploy por GitHub Actions em VPS com Docker Compose.
 
-Usuários e fluxos principais confirmados no código:
-
-- **Cliente**: vitrine da cidade → loja → produto → carrinho (um por loja) →
-  checkout → acompanhamento em tempo real → avaliação → pedir novamente.
-  Também: busca, pedido por lista, favoritos, endereços, LGPD.
-- **Lojista**: painel de pedidos em tempo real com alerta sonoro (aceitar com
-  tempo de preparo, avançar status, recusar/cancelar, comanda), cardápio,
-  horários, entrega, cupons, financeiro.
-- **Plataforma**: lojas, pedidos, usuários, entregadores, planos, banners,
-  cupons, campanhas, financeiro, auditoria.
+Três pessoas usam o sistema no mesmo pedido: **cliente** (pede e acompanha),
+**loja** (aceita, prepara, separa) e **entregador** (pega a corrida, retira,
+entrega). Esta rodada olhou principalmente as passagens entre elas.
 
 ## Principais problemas encontrados
 
-1. **P1 — Checkout aceita endereço de outra cidade.** `lib/checkout.ts` e
-   `checkout/actions.ts` buscam o endereço só por `userId`; a página lista os
-   endereços de todas as cidades. Com taxa fixa, o pedido passa e a loja
-   recebe uma entrega impossível. Contraria a regra de isolamento por cidade
-   do `ARCHITECTURE.md`.
-2. **P1 — Pedido novo parado sem ninguém ver.** A loja só é avisada pelo
-   socket do painel (`publishRealtime` no checkout/webhook). Com o painel
-   fechado — lojista no balcão, celular no bolso — o pedido fica em
-   "Recebido" indefinidamente e o cliente espera sem saber. Não existe nenhuma
-   rotina para pedido não aceito (o worker só expira Pix não pago).
-3. **P1 — Expiração de Pix nunca agendada** (achado na implementação).
-   `agendarExpiracaoDePedido` e o job `expirarPedido` existem, mas nada chama
-   o agendamento: Pix abandonado ficaria em "aguardando pagamento" para
-   sempre, segurando o cupom.
-4. **P1 — Campanhas do admin falham ao entrar na fila** (achado na
-   implementação). Os ids de job usavam `:` (`campanha:<id>`), que o BullMQ 6
-   recusa lançando erro no `add`. A campanha era gravada e nunca enviada.
-   Produção ainda não tinha campanhas nem Pix presos (conferido no banco).
-5. **P2 — "Hoje" e "este mês" em UTC nos painéis** (achado na análise).
-   `setHours(0,0,0,0)` no servidor em UTC: às 21h de Brasília o "Encerrados
-   hoje" do lojista zerava e o faturamento do dia virava o do dia seguinte.
-   Afetava 6 telas (loja, pedidos da loja, financeiro da loja, entregador,
-   visão geral e financeiro da plataforma).
+1. **P1 — Tela da loja não acompanha o entregador.** `avancarCorrida` e
+   `aceitarCorrida` (`apps/admin/src/app/entregador/actions.ts`) publicam
+   `delivery:assigned` e `delivery:status-changed` no canal da loja, mas o
+   painel de pedidos só escuta eventos `order:*`. Quando o motoboy retira ou
+   entrega, o pedido continua "Pronto" na tela da loja até outro pedido
+   chegar — e a loja não sabe se alguém pegou a corrida.
+2. **P1 — Cliente não é avisado quando quem avança é o entregador.** A loja
+   marcando "Saiu para entrega"/"Entregue" dispara push + WhatsApp; o
+   entregador marcando a mesma coisa não dispara nada. Com entregador da
+   plataforma (o fluxo normal desde `fdda585`), o cliente que fechou o app não
+   sabe que o pedido saiu nem que chegou.
+3. **P1 — Avaliações sem dono.** O cliente avalia a loja e escreve comentário
+   (3.080 avaliações no banco de demonstração), o modelo tem `replyText` e
+   `repliedAt` para a resposta da loja e o painel da plataforma já exibe a
+   resposta — mas não existe nenhuma tela em `/loja` para ler ou responder.
+   O comentário só é lido pelo admin da plataforma.
+
+4. **P2 — Pedido da madrugada some da tela da loja** (achado na
+   validação). A tela de pedidos carrega "em aberto" ou "criados hoje", e
+   "em aberto" não incluía "Saiu para entrega". Pedido feito antes da
+   meia-noite que sai depois dela sumia de "Em andamento" com o motoboy ainda
+   na rua.
 
 ## Oportunidades de melhoria
 
-| ID    | TIPO        | SITUAÇÃO ATUAL                                                                    | OPORTUNIDADE                                                                 | ESFORÇO ELIMINADO                                   | BENEFÍCIO                                                 | SOLUÇÃO                                                                                               | PRIORIDADE | RISCO                                       | TESTE                        | STATUS |
-| ----- | ----------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ---------- | ------------------------------------------- | ---------------------------- | ------ |
-| OP-01 | AUTOMATIZAR | Loja só descobre pedido com o painel aberto                                       | Lembrete automático à equipe da loja quando o pedido passa 3 min sem aceite  | Lojista vigiar a tela; cliente esperar sem resposta | Menos pedido esquecido, cliente atendido mais rápido      | Job atrasado na fila `orderTimeout` → se ainda `RECEIVED`, WhatsApp + push para dono/equipe ativa     | P1         | Aviso repetido (evitado por jobId e status) | Unidade do job + fluxo local | DONE   |
-| OP-02 | ANTECIPAR   | Checkout abre sem forma de pagamento; cliente escolhe do zero em todo pedido      | Pré-selecionar a forma usada no último pedido (se a loja aceita)             | Um toque e uma decisão por pedido                   | Checkout em "revisar e confirmar"                         | Buscar `payment.method` do último pedido do cliente e iniciar o estado com ele                        | P1         | Baixo: segue editável e visível             | Navegador                    | DONE   |
-| OP-03 | ELIMINAR    | Troco digitado à mão, com vírgula, e recusado se menor que o total                | Atalhos de troco calculados pelo total (Não preciso, próximas notas)         | Digitar valor, errar e corrigir                     | Menos erro de troco, que é o que o entregador esquece     | Chips com valores redondos acima do total                                                             | P2         | Baixo                                       | Navegador                    | DONE   |
-| OP-04 | ANTECIPAR   | Para repetir pedido, o cliente vai em Pedidos e procura                           | "Peça de novo" no início com as últimas lojas, um toque recoloca no carrinho | Navegar até Pedidos, rolar, lembrar o que pediu     | Recompra em um toque — o caso mais comum no interior      | Faixa na vitrine com os últimos pedidos entregues, reaproveitando `pedirNovamente`                    | P2         | Baixo                                       | Navegador                    | DONE   |
-| OP-05 | ELIMINAR    | Recusar/cancelar exige digitar o motivo no painel da loja, com pedido pingando    | Motivos prontos em um toque (ainda editáveis)                                | Digitar no meio da correria                         | Recusa mais rápida e mensagem mais clara para o cliente   | Chips com motivos comuns preenchendo o campo                                                          | P2         | Baixo                                       | Navegador (painel)           | DONE   |
-| OP-06 | ANTECIPAR   | Cartão do pedido mostra só a hora; loja calcula de cabeça quanto tempo passou     | Tempo decorrido e alerta de atraso no cartão; cliente novo identificado      | Conta de cabeça; perguntar se o cliente já comprou  | Prioriza o pedido certo; atenção extra ao primeiro pedido | "há X min" + selo "Atrasado" (preparo + 30 min, mesma regra do admin) + selo "1º pedido" por contagem | P2         | Baixo                                       | Navegador (painel)           | DONE   |
-| OP-08 | ANTECIPAR   | Loja fechada só era avisada ao tocar em "Fazer pedido", depois de tudo preenchido | Aviso de loja fechada no próprio checkout, com botão desabilitado            | Preencher o checkout inteiro à toa                  | Cliente sabe na hora e o carrinho fica guardado           | Checagem de horário no cálculo do checkout (mesma função da tela e do envio)                          | P2         | Baixo                                       | Navegador                    | DONE   |
-| OP-07 | ELIMINAR    | Telefone do cliente no painel aparece cru (+5544…)                                | Telefone formatado                                                           | Decifrar número                                     | Leitura rápida                                            | `formatPhoneBR`                                                                                       | P3         | Nenhum                                      | Navegador                    | DONE   |
+| ID    | TIPO      | SITUAÇÃO ATUAL                                                              | OPORTUNIDADE                                                                                     | ESFORÇO ELIMINADO                                                     | BENEFÍCIO                                                    | SOLUÇÃO                                                                                                                                                                                       | PRIORIDADE | RISCO                                   | TESTE             | STATUS |
+| ----- | --------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------------------------- | ----------------- | ------ |
+| OP-01 | CRIAR     | Loja não vê avaliações nem comentários; `replyText` sem tela                | Tela "Avaliações" com nota, comentário, pedido e resposta; pendentes primeiro                    | Ligar para a plataforma para saber o que o cliente achou              | Loja corrige o que o cliente reclama e recupera o cliente    | `/loja/avaliacoes` + ação `responderAvaliacao` (filtrada pela loja do vínculo) + item no menu + contador na visão geral                                                                       | P1         | Baixo: só a loja dona responde, uma vez | Tipos + navegador | DONE   |
+| OP-02 | JUNTAR    | Cliente avalia e nunca sabe se alguém leu                                   | Resposta da loja aparece no acompanhamento do pedido e chega por push                            | —                                                                     | Cliente sente que foi ouvido                                 | Exibir a própria avaliação + resposta em `/pedidos/[id]`; push ao responder                                                                                                                   | P2         | Baixo                                   | Navegador         | DONE   |
+| OP-03 | ANTECIPAR | Loja não sabe se a corrida foi pega nem por quem                            | Situação do entregador no cartão: "Procurando entregador", "Fulano vai buscar", "Fulano levando" | Ligar para o motoboy / sair na porta para ver                         | Loja sabe quando embalar e quem vai chegar                   | Incluir `delivery` no carregamento do painel e escutar `delivery:*`                                                                                                                           | P1         | Baixo                                   | Navegador         | DONE   |
+| OP-04 | JUNTAR    | "Produto esgotado" ou item "Em falta" não tira o produto do cardápio        | Pausar o produto até amanhã no mesmo toque em que a loja recusa ou marca a falta                 | Ir em Produtos, achar o item e pausar — ou receber outro pedido igual | Próximo cliente não pede o que acabou                        | Ação `pausarProdutosDoPedido` (itens do pedido, filtrada pela loja); ao escolher "Produto esgotado" a loja marca os itens (já marcado quando o pedido tem um item só); botão no item em falta | P2         | Baixo: pausa volta sozinha à meia-noite | Tipos + navegador | DONE   |
+| OP-05 | ANTECIPAR | Aviso de "entregue" leva para o acompanhamento; avaliar exige achar o botão | Aviso de entregue abre direto "Como foi seu pedido?"                                             | Um toque e a procura pelo botão                                       | Mais avaliações, no momento em que a experiência está fresca | `url` da notificação de `DELIVERED` aponta para `/pedidos/[id]/avaliar` (que já redireciona se avaliado)                                                                                      | P2         | Nenhum                                  | Navegador         | DONE   |
 
 ## Plano de execução
 
-| ID    | PRIORIDADE | PROBLEMA                                    | SOLUÇÃO                                                                                                                                                 | ARQUIVOS/ÁREAS                                                                               | RISCO  | TESTE                               | STATUS |
-| ----- | ---------- | ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | ------ | ----------------------------------- | ------ |
-| PB-01 | P1         | Endereço de outra cidade aceito no checkout | Filtrar por `cityId` da loja no cálculo, na ação e na lista; mensagem clara se não houver                                                               | `apps/web/src/lib/checkout.ts`, `app/checkout/actions.ts`, `app/checkout/[storeId]/page.tsx` | Baixo  | Navegador + tipos                   | DONE   |
-| OP-01 | P1         | Pedido não aceito esquecido                 | Ver tabela de oportunidades                                                                                                                             | `packages/services/src/queues.ts`, `apps/worker`, checkout, webhook                          | Médio  | Unidade + fluxo local com worker    | DONE   |
-| PB-02 | P1         | Pix abandonado nunca expira                 | Agendar a expiração no checkout (35 min) só quando o gateway confirma — Pix direto na chave da loja é confirmado à mão e não pode ser cancelado sozinho | `app/checkout/actions.ts`                                                                    | Baixo  | Fila no Redis local                 | DONE   |
-| PB-03 | P2         | Dia e mês em UTC nos painéis                | `inicioDoDia`/`inicioDoMes` no fuso de Brasília em `@rapidinho/shared`, com testes, aplicados nas 6 telas                                               | `packages/shared/src/utils/calendario.ts` + painéis                                          | Baixo  | 5 testes de virada de dia/mês       | DONE   |
-| PB-04 | P1         | Campanhas nunca entram na fila              | `idDeJob()` com hífen para todos os ids de job, com teste                                                                                               | `packages/services/src/queues.ts`                                                            | Baixo  | Teste + job agendado no Redis local | DONE   |
-| OP-02 | P1         | Pagamento sempre em branco                  | Ver tabela                                                                                                                                              | checkout page/formulário                                                                     | Baixo  | Navegador                           | DONE   |
-| OP-03 | P2         | Troco manual                                | Ver tabela                                                                                                                                              | checkout formulário                                                                          | Baixo  | Navegador                           | DONE   |
-| OP-04 | P2         | Recompra escondida                          | Ver tabela                                                                                                                                              | `app/[cidade]/page.tsx`, `app/pedidos/pedir-novamente.tsx`                                   | Baixo  | Navegador                           | DONE   |
-| OP-05 | P2         | Motivo digitado                             | Ver tabela                                                                                                                                              | `apps/admin/src/app/loja/pedidos/painel-de-pedidos.tsx`                                      | Baixo  | Navegador                           | DONE   |
-| OP-06 | P2         | Sem noção de tempo/cliente novo             | Ver tabela                                                                                                                                              | painel de pedidos + `page.tsx`/`tipos.ts` do painel                                          | Baixo  | Navegador                           | DONE   |
-| OP-07 | P3         | Telefone cru                                | Ver tabela                                                                                                                                              | painel de pedidos                                                                            | Nenhum | Navegador                           | DONE   |
+| ID    | PRIORIDADE | PROBLEMA                                         | SOLUÇÃO                                                                                         | ARQUIVOS/ÁREAS                                                                    | RISCO  | TESTE              | STATUS |
+| ----- | ---------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------ | ------------------ | ------ |
+| PB-01 | P1         | Painel da loja surdo aos eventos do motoboy      | Escutar `delivery:assigned` e `delivery:status-changed` no painel                               | `apps/admin/src/app/loja/pedidos/painel-de-pedidos.tsx`                           | Baixo  | Navegador (2 abas) | DONE   |
+| PB-02 | P1         | Cliente sem aviso quando o motoboy avança        | `notificarUsuario` em `avancarCorrida`, igual ao da loja, com a mesma `tag`                     | `apps/admin/src/app/entregador/actions.ts`                                        | Baixo  | Navegador + banco  | DONE   |
+| PB-03 | P2         | Pedido "Saiu para entrega" de ontem some da tela | Consulta da tela inclui `OUT_FOR_DELIVERY`; o contador do menu continua só com o que exige ação | `apps/admin/src/app/loja/pedidos/page.tsx`                                        | Baixo  | Navegador          | DONE   |
+| OP-03 | P1         | Ver tabela                                       | Ver tabela                                                                                      | `loja/pedidos/page.tsx`, `tipos.ts`, `painel-de-pedidos.tsx`                      | Baixo  | Navegador          | DONE   |
+| OP-01 | P1         | Ver tabela                                       | Ver tabela                                                                                      | `apps/admin/src/app/loja/avaliacoes/*`, `loja-shell.tsx`, `loja/page.tsx`, shared | Baixo  | Tipos + navegador  | DONE   |
+| OP-02 | P2         | Ver tabela                                       | Ver tabela                                                                                      | `apps/web/src/app/pedidos/[id]/*`                                                 | Baixo  | Navegador          | DONE   |
+| OP-04 | P2         | Ver tabela                                       | Ver tabela                                                                                      | `loja/pedidos/actions.ts`, `painel-de-pedidos.tsx`, `separacao-do-pedido.tsx`     | Baixo  | Navegador          | DONE   |
+| OP-05 | P2         | Ver tabela                                       | Ver tabela                                                                                      | `loja/pedidos/actions.ts`, `entregador/actions.ts`                                | Nenhum | Revisão + banco    | DONE   |
 
 ## Ordem de implementação
 
-1. PB-01 (correção de regra, isolada).
-2. OP-02 e OP-03 (mesma tela do checkout).
-3. OP-01 (fila + worker + pontos de disparo).
-4. OP-05, OP-06, OP-07 (mesmo componente do painel da loja).
-5. OP-04 (vitrine).
-6. Validação completa: tipos, lint, testes, fluxo no navegador (celular e
-   notebook), e2e local quando possível, deploy.
+1. PB-01, PB-02 e OP-03 (mesma passagem loja ↔ entregador ↔ cliente).
+2. OP-05 (mesmos pontos de notificação).
+3. OP-04 (painel de pedidos e separação).
+4. OP-01 e OP-02 (avaliações, ponta a ponta).
+5. Validação: tipos, lint, testes, build, fluxo no navegador em celular e
+   notebook.
+
+## Continuação — o que tinha ficado de fora (mesmo dia)
+
+A pedido do usuário, os três itens deixados de fora foram implementados.
+
+| ID    | TIPO     | SITUAÇÃO ATUAL                                                                                                   | SOLUÇÃO                                                                                                                                                                                      | ARQUIVOS/ÁREAS                                                                                      | RISCO                                        | TESTE                         | STATUS |
+| ----- | -------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------- | ----------------------------- | ------ |
+| OP-06 | JUNTAR   | Pizza não tem produto: "esgotado" não oferecia nada para pausar; `PizzaFlavor` só tinha `isAvailable` (exclusão) | `PizzaFlavor.pausedUntil` (migração aditiva), filtro único `saborDisponivelAgora` no app do cliente, sabores na recusa por esgotado e botão pausar/retomar na tela de Pizzas                 | `packages/database`, `apps/web/src/lib/sabores.ts` + 5 consultas, `loja/pizzas/*`, `loja/pedidos/*` | Baixo: coluna nula, volta sozinho            | Navegador + banco             | DONE   |
+| OP-07 | ELIMINAR | Loja podia marcar "Saiu para entrega"/"Entregue" com motoboy da plataforma a caminho, sem mexer na corrida       | Com motoboy a caminho, a saída é dele (botão some e o servidor recusa); "Entregue" da loja continua e sincroniza a corrida; despacho próprio tira a corrida da fila                          | `loja/pedidos/actions.ts`, `painel-de-pedidos.tsx`                                                  | Baixo: a loja sempre tem uma saída           | Navegador (3 caminhos)        | DONE   |
+| OP-08 | CRIAR    | Comentários só visíveis para loja e plataforma, embora os termos digam que a avaliação é pública                 | Últimos 5 comentários (bons e ruins) na página da loja, com primeiro nome e resposta; moderação da plataforma (`Review.hiddenAt`) com auditoria; a loja vê quando um comentário foi ocultado | `[cidade]/[loja]/page.tsx`, `admin/pedidos/*`, `loja/avaliacoes/*`, `packages/database`             | Baixo: ofensa ocultável, nota segue na média | Navegador + banco + auditoria | DONE   |
 
 ## Itens que não serão alterados
 
-- **Cancelamento automático de pedido não aceito**: muda regra de negócio
-  (quanto esperar, se reembolsa Pix, se penaliza a loja) — várias
-  interpretações válidas. Fica o lembrete (OP-01), que não decide nada pela
-  loja.
-- **Estrutura de carrinho por loja**: é regra de operação (cada loja despacha
-  o seu), documentada no código.
-- **Painel da plataforma**: recebeu a gestão de pedidos nesta mesma semana;
-  sem fricção nova observada.
-- **Landing e identidade visual**: preservadas.
+- **Cancelamento automático de pedido não aceito**: mesma razão da rodada 1.
+- **Landing, identidade visual e redesign recente (`8fddff5`)**: preservados.
+- **Seed de demonstração**: os pedidos "em andamento" com corrida já retirada
+  não vêm do seed (o histórico deles termina em "Entregue"); o status foi
+  alterado direto no banco local depois do seed. Não é defeito do código.
 
 ## Bloqueios reais
 
-Nenhum para os itens acima. O envio real de WhatsApp em produção depende de
-`WHATSAPP_PROVIDER` configurado com a Evolution API (hoje `fake`); o lembrete
-funciona por push e fica pronto para o WhatsApp assim que o provedor for
-ligado.
+Nenhum. O WhatsApp em produção continua com `WHATSAPP_PROVIDER=fake`
+(registrado na rodada 1); os avisos novos usam os mesmos canais e passam a
+chegar por WhatsApp assim que o provedor for ligado.

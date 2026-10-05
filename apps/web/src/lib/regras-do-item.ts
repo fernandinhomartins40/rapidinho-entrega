@@ -1,6 +1,7 @@
 import type { z } from 'zod';
 import { prisma } from '@rapidinho/database';
 import type { addToCartSchema } from '@rapidinho/shared';
+import { saborDisponivelAgora } from '@/lib/sabores';
 
 /**
  * As regras de um item antes de ele entrar no carrinho — de cada ramo.
@@ -186,7 +187,7 @@ async function validarPizza(storeId: string, item: ItemDoCarrinho): Promise<Resu
     where: {
       id: { in: item.flavorIds },
       storeId,
-      isAvailable: true,
+      ...saborDisponivelAgora(),
       prices: { some: { sizeId: tamanho.id } },
     },
   });

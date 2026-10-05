@@ -921,7 +921,11 @@ model PizzaFlavor {
   image       MediaAsset? @relation(fields: [imageId], references: [id], onDelete: SetNull)
   /// Agrupamento visual (Tradicionais, Especiais, Doces).
   groupName   String?
+  /// false = removido do cardápio (exclusão lógica). Para "acabou hoje" use
+  /// `pausedUntil`, que volta sozinho.
   isAvailable Boolean     @default(true)
+  /// Pausa com prazo: o sabor esgotado sai do cardápio e volta sozinho.
+  pausedUntil DateTime?
   sortOrder   Int         @default(0)
 
   createdAt DateTime @default(now())
@@ -1699,6 +1703,10 @@ model Review {
   /// Resposta do lojista.
   replyText String?   @db.Text
   repliedAt DateTime?
+
+  /// Moderação: comentário ofensivo ocultado pela plataforma. Sai da página
+  /// pública da loja; a nota continua valendo na média.
+  hiddenAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

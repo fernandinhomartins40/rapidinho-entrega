@@ -6,6 +6,7 @@ import {
   type OrderTotals,
 } from '@rapidinho/shared';
 import { imagemExibivel, SELECT_IMAGEM } from './media';
+import { saborForaDoAr } from '@/lib/sabores';
 
 /**
  * Leitura e precificação do carrinho.
@@ -156,6 +157,7 @@ export async function carregarCarrinho(
                   id: true,
                   name: true,
                   isAvailable: true,
+                  pausedUntil: true,
                   prices: { select: { sizeId: true, priceCents: true } },
                 },
               },
@@ -242,7 +244,7 @@ export async function carregarCarrinho(
     // produto, um sabor ou um complemento escolhido. Avisar antes do checkout
     // é melhor que a loja recusar o pedido depois.
     const produtoForaDoAr = item.pizzaSize
-      ? item.flavors.some((sabor) => !sabor.flavor.isAvailable) ||
+      ? item.flavors.some((sabor) => saborForaDoAr(sabor.flavor)) ||
         extras.some((extra) => !extra.disponivel)
       : !item.product ||
         item.product.deletedAt != null ||

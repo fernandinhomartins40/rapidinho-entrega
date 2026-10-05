@@ -1,11 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { AUDIT_ACTIONS, desfazerReservasDoPedido, prisma } from '@rapidinho/database';
 import { notificarUsuario, publishRealtimeMany } from '@rapidinho/services';
 import {
   cancelOrderSchema,
   canTransition,
+  cuidSchema,
   ORDER_STATUS_LABEL,
   REALTIME_CHANNELS,
   REALTIME_EVENTS,
@@ -108,6 +110,46 @@ export async function cancelarPedidoPelaPlataforma(
         entityId: pedido.id,
         before: { status: atual },
         after: { status: 'CANCELLED', reason: dados.reason },
+      },
+    };
+  });
+}
+
+const moderacaoSchema = z.object({ reviewId: cuidSchema, ocultar: z.boolean() });
+
+/**
+ * Moderação: oculta (ou volta a mostrar) o comentário de uma avaliação na
+ * página pública da loja. Para ofensa, que os termos proíbem — não para nota
+ * ruim. A nota continua na média: ocultar a crítica não pode melhorar a loja.
+ */
+export async function moderarAvaliacao(entrada: unknown): Promise<ActionResult> {
+  return runAdminAction(async () => {
+    const { reviewId, ocultar } = moderacaoSchema.parse(entrada);
+
+    const avaliacao = await prisma.review.findUnique({
+      where: { id: reviewId },
+      select: { id: true, orderId: true, hiddenAt: true },
+    });
+    if (!avaliacao) return { result: { ok: false, message: 'Avaliação não encontrada.' } };
+
+    await prisma.review.update({
+      where: { id: avaliacao.id },
+      data: { hiddenAt: ocultar ? new Date() : null },
+    });
+
+    revalidatePath(`/admin/pedidos/${avaliacao.orderId}`);
+
+    return {
+      result: {
+        ok: true,
+        message: ocultar ? 'Comentário oculto da página da loja.' : 'Comentário visível de novo.',
+      },
+      audit: {
+        action: ocultar ? AUDIT_ACTIONS.reviewHidden : AUDIT_ACTIONS.reviewShown,
+        entityType: 'Review',
+        entityId: avaliacao.id,
+        before: { hiddenAt: avaliacao.hiddenAt },
+        after: { oculto: ocultar },
       },
     };
   });

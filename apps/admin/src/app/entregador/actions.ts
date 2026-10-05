@@ -3,9 +3,9 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { prisma } from '@rapidinho/database';
-import { capturarErro, publishRealtimeMany } from '@rapidinho/services';
+import { capturarErro, notificarUsuario, publishRealtimeMany } from '@rapidinho/services';
 import { AuthorizationError, requireCourier } from '@rapidinho/auth';
-import { REALTIME_CHANNELS, REALTIME_EVENTS } from '@rapidinho/shared';
+import { avisoDeStatusAoCliente, REALTIME_CHANNELS, REALTIME_EVENTS } from '@rapidinho/shared';
 import type { ActionResult } from '@/lib/action-state';
 
 /**
@@ -97,7 +97,7 @@ export async function avancarCorrida(entrada: unknown): Promise<ActionResult> {
         id: true,
         status: true,
         orderId: true,
-        order: { select: { storeId: true, number: true, status: true } },
+        order: { select: { storeId: true, number: true, status: true, userId: true } },
       },
     });
 
@@ -154,6 +154,20 @@ export async function avancarCorrida(entrada: unknown): Promise<ActionResult> {
       REALTIME_EVENTS.deliveryStatusChanged,
       { deliveryId: entrega.id, orderId: entrega.orderId, status: dados.status },
     );
+
+    // Mesmo aviso que o cliente recebe quando é a loja que avança: com
+    // entregador da plataforma, "saiu" e "chegou" são marcados aqui, e sem
+    // isto quem fechou o app só descobria o pedido na porta.
+    if (entrega.order.userId) {
+      await notificarUsuario({
+        userId: entrega.order.userId,
+        title: `Pedido #${entrega.order.number}`,
+        ...avisoDeStatusAoCliente(entrega.orderId, statusDoPedido),
+        canais: ['PUSH', 'WHATSAPP'],
+        entity: { type: 'Order', id: entrega.orderId },
+        tag: `pedido-${entrega.orderId}`,
+      });
+    }
 
     revalidatePath('/entregador');
     return {

@@ -1,9 +1,17 @@
 import Link from 'next/link';
-import { AlertTriangle, Clock, Package, ShoppingBag, TrendingUp } from 'lucide-react';
+import {
+  AlertTriangle,
+  Clock,
+  MessageSquare,
+  Package,
+  ShoppingBag,
+  TrendingUp,
+} from 'lucide-react';
 import { prisma } from '@rapidinho/database';
 import { Badge, Card, CardContent, CardHeader, CardTitle } from '@rapidinho/ui';
 import { formatCents, inicioDoDia as inicioDoDiaEmBrasilia } from '@rapidinho/shared';
 import { Indicador } from '@/components/indicador';
+import { ondeParaResponder } from '@/lib/avaliacoes';
 import { getStoreContext, STATUS_EM_ABERTO } from '@/lib/store-context';
 
 export const dynamic = 'force-dynamic';
@@ -20,34 +28,41 @@ async function carregarResumo(storeId: string) {
   // Dia de Brasília: o servidor roda em UTC, e às 21h o "hoje" virava amanhã.
   const inicioDoDia = inicioDoDiaEmBrasilia();
 
-  const [emAberto, doDia, faturado, maisVendidos, produtosPausados, semEstoque] = await Promise.all(
-    [
-      prisma.order.count({ where: { storeId, status: { in: [...STATUS_EM_ABERTO] } } }),
-      prisma.order.count({ where: { storeId, createdAt: { gte: inicioDoDia } } }),
-      prisma.order.aggregate({
-        where: { storeId, status: 'DELIVERED', createdAt: { gte: inicioDoDia } },
-        _sum: { totalCents: true, commissionCents: true },
-        _count: true,
-      }),
-      prisma.orderItem.groupBy({
-        by: ['productName'],
-        where: {
-          order: { storeId, status: 'DELIVERED', createdAt: { gte: inicioDoDia } },
-        },
-        _sum: { quantity: true, totalCents: true },
-        orderBy: { _sum: { quantity: 'desc' } },
-        take: 5,
-      }),
-      prisma.product.count({
-        where: {
-          storeId,
-          deletedAt: null,
-          OR: [{ isAvailable: false }, { pausedUntil: { gt: new Date() } }],
-        },
-      }),
-      prisma.product.count({ where: { storeId, deletedAt: null, stockQuantity: 0 } }),
-    ],
-  );
+  const [
+    emAberto,
+    doDia,
+    faturado,
+    maisVendidos,
+    produtosPausados,
+    semEstoque,
+    avaliacoesParaResponder,
+  ] = await Promise.all([
+    prisma.order.count({ where: { storeId, status: { in: [...STATUS_EM_ABERTO] } } }),
+    prisma.order.count({ where: { storeId, createdAt: { gte: inicioDoDia } } }),
+    prisma.order.aggregate({
+      where: { storeId, status: 'DELIVERED', createdAt: { gte: inicioDoDia } },
+      _sum: { totalCents: true, commissionCents: true },
+      _count: true,
+    }),
+    prisma.orderItem.groupBy({
+      by: ['productName'],
+      where: {
+        order: { storeId, status: 'DELIVERED', createdAt: { gte: inicioDoDia } },
+      },
+      _sum: { quantity: true, totalCents: true },
+      orderBy: { _sum: { quantity: 'desc' } },
+      take: 5,
+    }),
+    prisma.product.count({
+      where: {
+        storeId,
+        deletedAt: null,
+        OR: [{ isAvailable: false }, { pausedUntil: { gt: new Date() } }],
+      },
+    }),
+    prisma.product.count({ where: { storeId, deletedAt: null, stockQuantity: 0 } }),
+    prisma.review.count({ where: ondeParaResponder(storeId) }),
+  ]);
 
   const entregues = faturado._count;
   const totalCents = faturado._sum.totalCents ?? 0;
@@ -63,6 +78,7 @@ async function carregarResumo(storeId: string) {
     maisVendidos,
     produtosPausados,
     semEstoque,
+    avaliacoesParaResponder,
   };
 }
 
@@ -103,6 +119,23 @@ export default async function LojaDashboardPage() {
             </p>
             <Link href="/loja/pedidos" className="font-semibold underline">
               Abrir pedidos
+            </Link>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {dados.avaliacoesParaResponder > 0 ? (
+        <Card>
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-5">
+            <p className="flex items-center gap-2 font-semibold">
+              <MessageSquare className="text-primary h-5 w-5" aria-hidden />
+              {dados.avaliacoesParaResponder}{' '}
+              {dados.avaliacoesParaResponder === 1
+                ? 'avaliação esperando sua resposta'
+                : 'avaliações esperando sua resposta'}
+            </p>
+            <Link href="/loja/avaliacoes" className="font-semibold underline">
+              Ler e responder
             </Link>
           </CardContent>
         </Card>

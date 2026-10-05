@@ -3,7 +3,13 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { prisma } from '@rapidinho/database';
-import { pizzaExtraSchema, pizzaFlavorSchema, pizzaSizeSchema } from '@rapidinho/shared';
+import {
+  cuidSchema,
+  inicioDoDia,
+  pizzaExtraSchema,
+  pizzaFlavorSchema,
+  pizzaSizeSchema,
+} from '@rapidinho/shared';
 import { runStoreAction, type ActionResult } from '@/lib/store-action';
 import { centsFromForm, formToObject, boolFromForm } from '@/lib/admin-action';
 
@@ -179,6 +185,33 @@ export async function excluirSabor(id: string): Promise<ActionResult> {
 
     revalidatePath('/loja/pizzas');
     return { result: { ok: true, message: 'Sabor removido do cardápio.' } };
+  });
+}
+
+const pausaDeSaborSchema = z.object({ id: cuidSchema, pausar: z.boolean() });
+
+/**
+ * "Acabou a calabresa": pausa o sabor até a meia-noite (volta sozinho) ou
+ * devolve ao cardápio. Diferente de remover, que é para sempre.
+ */
+export async function pausarSabor(entrada: unknown): Promise<ActionResult> {
+  return runStoreAction(async (access) => {
+    const { id, pausar } = pausaDeSaborSchema.parse(entrada);
+
+    const { count } = await prisma.pizzaFlavor.updateMany({
+      where: { id, storeId: access.storeId, isAvailable: true },
+      data: { pausedUntil: pausar ? inicioDoDia(new Date(), -1) : null },
+    });
+
+    if (count === 0) return { result: { ok: false, message: 'Sabor não encontrado.' } };
+
+    revalidatePath('/loja/pizzas');
+    return {
+      result: {
+        ok: true,
+        message: pausar ? 'Sabor fora do cardápio até amanhã.' : 'Sabor de volta ao cardápio.',
+      },
+    };
   });
 }
 
