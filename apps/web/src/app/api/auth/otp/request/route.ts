@@ -21,6 +21,16 @@ export const POST = apiHandler(async (request: Request) => {
   const env = parseServerEnv();
   const ip = clientIpFromHeaders(request.headers);
 
+  // Na confirmação reversa a plataforma não envia código: quem envia é o
+  // cliente, pela tela de login. Mandar um código aqui seria pagar por um
+  // envio que a operação decidiu não fazer.
+  if (env.OTP_PROVIDER === 'sms-reverso') {
+    return NextResponse.json(
+      { error: 'Entre pela tela de login: a confirmação é por SMS enviado do seu celular.' },
+      { status: 409 },
+    );
+  }
+
   const byPhone = await consumeRateLimit(
     `otp:request:phone:${phone}`,
     RATE_LIMITS.otpRequest.points,

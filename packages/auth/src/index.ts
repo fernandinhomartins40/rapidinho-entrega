@@ -11,6 +11,9 @@ export {
   requestOtp,
   verifyOtp,
   purgeExpiredOtpCodes,
+  confirmInboundSms,
   type RequestOtpResult,
   type VerifyOtpResult,
+  type InboundSmsResult,
 } from './otp';
+export * from './sms-login';

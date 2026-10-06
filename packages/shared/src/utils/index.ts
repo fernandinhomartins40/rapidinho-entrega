@@ -4,3 +4,4 @@ export * from './document';
 export * from './geo';
 export * from './slug';
 export * from './calendario';
+export * from './sms-reverso';

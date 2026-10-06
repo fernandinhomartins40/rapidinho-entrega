@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@rapidinho/auth';
 import { Logotipo } from '@/components/marca/logo';
+import { parseServerEnv } from '@rapidinho/shared';
 import { LoginForm } from './login-form';
 
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,7 @@ export default async function EntrarPage({
   searchParams: Promise<{ destino?: string }>;
 }) {
   const user = await getCurrentUser();
+  const porSms = parseServerEnv().OTP_PROVIDER === 'sms-reverso';
   if (user) redirect('/');
 
   const { destino } = await searchParams;
@@ -25,7 +27,7 @@ export default async function EntrarPage({
           <h1 className="text-muted-foreground mt-3 text-base font-medium">Painel de gestão</h1>
         </header>
 
-        <LoginForm destino={destino ?? '/'} />
+        <LoginForm destino={destino ?? '/'} porSms={porSms} />
 
         <p className="text-muted-foreground mt-8 text-center text-xs">
           Acesso restrito a lojistas e à equipe da plataforma.

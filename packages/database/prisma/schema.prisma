@@ -449,6 +449,13 @@ model OtpCode {
   requestIp  String?
   createdAt  DateTime  @default(now())
 
+  // --- Confirmação reversa (o cliente envia o SMS) -----------------------
+  /// Hash do segredo que só o navegador que pediu o login conhece. Preenchido
+  /// = código de confirmação reversa: aparece na tela e NÃO vale digitado.
+  browserTokenHash String?
+  /// Quando o SMS com este código chegou vindo deste telefone.
+  confirmedAt      DateTime?
+
   @@index([phone, expiresAt])
   @@map("otp_codes")
 }

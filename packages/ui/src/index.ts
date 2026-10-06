@@ -11,3 +11,4 @@ export * from './components/switch';
 export * from './components/table';
 export * from './components/dialog';
 export * from './components/image-uploader';
+export * from './components/confirmacao-por-sms';

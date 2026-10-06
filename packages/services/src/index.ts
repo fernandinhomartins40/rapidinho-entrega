@@ -26,3 +26,4 @@ export * from './messaging/push';
 export * from './notifications';
 export * from './notifications/campaign';
 export * from './payments/mercadopago';
+export * from './sms-gateway';

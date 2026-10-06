@@ -8,11 +8,13 @@
  */
 
 export interface LoginState {
-  step: 'phone' | 'code';
+  step: 'phone' | 'code' | 'sms';
   phone?: string;
   error?: string;
   /// Em desenvolvimento o código volta aqui, para não depender do WhatsApp.
   devCode?: string;
+  /// Confirmação reversa: o cliente envia este SMS e a tela entra sozinha.
+  sms?: { texto: string; link: string; numero: string };
 }
 
 export const LOGIN_INITIAL_STATE: LoginState = { step: 'phone' };

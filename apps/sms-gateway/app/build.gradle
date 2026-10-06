@@ -1,0 +1,38 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'br.com.rapidinhoentrega.sms'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'br.com.rapidinhoentrega.sms'
+        // Android 6: o mais antigo com permissão pedida em tempo de uso, que
+        // é como RECEIVE_SMS funciona. Cobre qualquer celular em uso hoje.
+        minSdk 23
+        targetSdk 35
+        versionCode 2
+        versionName '1.1'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            // App de uso interno, instalado à mão: assinado com a chave de
+            // depuração da máquina que compila (ver README).
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    // Reenvio quando falta internet e o sinal de vida de 15 em 15 minutos,
+    // sobrevivendo a reinício do celular e à economia de bateria.
+    implementation 'androidx.work:work-runtime:2.9.1'
+}

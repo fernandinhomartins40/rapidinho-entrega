@@ -110,6 +110,10 @@ export const DEFAULT_CITY_SLUG = 'palmital-pr';
 export const RATE_LIMITS = {
   otpRequest: { points: 3, durationSeconds: 900 },
   otpVerify: { points: 5, durationSeconds: 900 },
+  /** SMS repassados pelo gateway: folga para pico, trava se o token vazar. */
+  smsGateway: { points: 120, durationSeconds: 60 },
+  /** Login do app gateway: poucas tentativas, a senha libera o token. */
+  smsAppLogin: { points: 5, durationSeconds: 900 },
   search: { points: 60, durationSeconds: 60 },
   checkout: { points: 10, durationSeconds: 300 },
   upload: { points: 30, durationSeconds: 300 },

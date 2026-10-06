@@ -362,10 +362,16 @@ jobs:
       - name: Preparar configuração da aplicação
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
+          SMS_APP_SENHA: ${{ secrets.SMS_APP_SENHA }}
         run: |
           RELEASE_DIR="$APP_ROOT/releases/${{ steps.release.outputs.version }}"
+          # A senha do app gateway não sai do runner: só o hash vai para a VPS.
+          SMS_APP_SENHA_SHA256=""
+          if [ -n "$SMS_APP_SENHA" ]; then
+            SMS_APP_SENHA_SHA256="$(printf '%s' "$SMS_APP_SENHA" | sha256sum | cut -d' ' -f1)"
+          fi
           sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
-            "APP_ROOT='$APP_ROOT' GHCR_OWNER='${GITHUB_REPOSITORY_OWNER,,}' SUPER_ADMIN_PHONE='${{ secrets.SUPER_ADMIN_PHONE }}' SENTRY_DSN='${{ secrets.SENTRY_DSN }}' \
+            "APP_ROOT='$APP_ROOT' GHCR_OWNER='${GITHUB_REPOSITORY_OWNER,,}' SUPER_ADMIN_PHONE='${{ secrets.SUPER_ADMIN_PHONE }}' SENTRY_DSN='${{ secrets.SENTRY_DSN }}' SMS_GATEWAY_NUMBER='${{ secrets.SMS_GATEWAY_NUMBER }}' SMS_APP_SENHA_SHA256='$SMS_APP_SENHA_SHA256' \
              CANONICAL_URL='$CANONICAL_URL' PRIMARY_DOMAIN='$PRIMARY_DOMAIN' ADMIN_DOMAIN='$ADMIN_DOMAIN' SSL_EMAIL='$SSL_EMAIL' \
              PORT_RANGE_START='$PORT_RANGE_START' PORT_RANGE_END='$PORT_RANGE_END' bash '$RELEASE_DIR/.github/scripts/preparar-env.sh'"
       - name: Fazer pull do GHCR e subir a release

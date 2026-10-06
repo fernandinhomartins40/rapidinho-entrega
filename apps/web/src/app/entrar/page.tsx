@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getCurrentUser } from '@rapidinho/auth';
 import { Logotipo } from '@/components/marca/logo';
+import { parseServerEnv } from '@rapidinho/shared';
 import { LoginForm } from './login-form';
 
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,7 @@ export default async function EntrarPage({
   searchParams: Promise<{ destino?: string }>;
 }) {
   const user = await getCurrentUser();
+  const porSms = parseServerEnv().OTP_PROVIDER === 'sms-reverso';
   const { destino } = await searchParams;
 
   if (user) redirect(destino ?? '/');
@@ -26,11 +28,14 @@ export default async function EntrarPage({
           </Link>
           <h1 className="mt-4 text-xl font-bold">Entre com seu telefone</h1>
           <p className="text-muted-foreground mt-1">
-            Sem senha e sem cadastro demorado. Você recebe um código no WhatsApp.
+            Sem senha e sem cadastro demorado.{' '}
+            {porSms
+              ? 'Você confirma o número com um SMS do seu celular.'
+              : 'Você recebe um código no WhatsApp.'}
           </p>
         </header>
 
-        <LoginForm destino={destino ?? '/'} />
+        <LoginForm destino={destino ?? '/'} porSms={porSms} />
 
         <p className="text-muted-foreground mt-8 text-center text-xs leading-relaxed">
           Ao continuar você aceita os{' '}

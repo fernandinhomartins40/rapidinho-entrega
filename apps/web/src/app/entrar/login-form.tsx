@@ -1,10 +1,10 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { startTransition, useActionState, useCallback, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { Alert, Button, Card, CardContent, Input, Label } from '@rapidinho/ui';
-import { maskPhoneBR } from '@rapidinho/shared';
-import { autenticar } from './actions';
+import { Alert, Button, Card, CardContent, ConfirmacaoPorSms, Input, Label } from '@rapidinho/ui';
+import { formatPhoneBR, maskPhoneBR } from '@rapidinho/shared';
+import { autenticar, conferirSms } from './actions';
 import { LOGIN_INITIAL_STATE } from './login-state';
 
 /**
@@ -12,9 +12,27 @@ import { LOGIN_INITIAL_STATE } from './login-state';
  *
  * Sem senha de propósito — o cliente esquece senha, não esquece o WhatsApp.
  */
-export function LoginForm({ destino }: { destino: string }) {
+export function LoginForm({ destino, porSms = false }: { destino: string; porSms?: boolean }) {
   const [state, enviar, enviando] = useActionState(autenticar, LOGIN_INITIAL_STATE);
   const [phone, setPhone] = useState('');
+  const conferir = useCallback(() => conferirSms(destino), [destino]);
+
+  if (state.step === 'sms' && state.sms && state.phone) {
+    return (
+      <ConfirmacaoPorSms
+        telefone={formatPhoneBR(state.phone)}
+        numero={state.sms.numero}
+        texto={state.sms.texto}
+        link={state.sms.link}
+        conferir={conferir}
+        aoTrocarTelefone={() => {
+          const dados = new FormData();
+          dados.set('intencao', 'trocar-telefone');
+          startTransition(() => enviar(dados));
+        }}
+      />
+    );
+  }
 
   if (state.step === 'phone') {
     return (
@@ -38,14 +56,16 @@ export function LoginForm({ destino }: { destino: string }) {
                 required
               />
               <p className="text-muted-foreground mt-1.5 text-sm">
-                Enviamos um código pelo WhatsApp.
+                {porSms
+                  ? 'Você confirma com um SMS enviado do seu celular.'
+                  : 'Enviamos um código pelo WhatsApp.'}
               </p>
             </div>
 
             {state.error ? <Alert variant="destructive">{state.error}</Alert> : null}
 
             <Button type="submit" block isLoading={enviando}>
-              Receber código
+              {porSms ? 'Continuar' : 'Receber código'}
             </Button>
           </form>
         </CardContent>

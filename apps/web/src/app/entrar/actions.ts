@@ -2,14 +2,29 @@
 
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { createDatabaseSession, requestOtp, verifyOtp } from '@rapidinho/auth';
+import {
+  cancelarLoginPorSms,
+  conferirLoginPorSms,
+  createDatabaseSession,
+  iniciarLoginPorSms,
+  requestOtp,
+  verifyOtp,
+} from '@rapidinho/auth';
 import {
   clientIpFromHeaders,
   consumeRateLimit,
   getOtpSender,
   resetRateLimit,
 } from '@rapidinho/services';
-import { parseServerEnv, RATE_LIMITS, requestOtpSchema, verifyOtpSchema } from '@rapidinho/shared';
+import {
+  formatPhoneBR,
+  linkDoSmsDeConfirmacao,
+  parseServerEnv,
+  RATE_LIMITS,
+  requestOtpSchema,
+  textoDoSmsDeConfirmacao,
+  verifyOtpSchema,
+} from '@rapidinho/shared';
 import { LOGIN_INITIAL_STATE, type LoginState } from './login-state';
 
 /**
@@ -32,6 +47,7 @@ export async function autenticar(previous: LoginState, formData: FormData): Prom
   const intencao = formData.get('intencao');
 
   if (intencao === 'trocar-telefone') {
+    await cancelarLoginPorSms();
     return LOGIN_INITIAL_STATE;
   }
 
@@ -58,6 +74,25 @@ async function solicitarCodigo(formData: FormData): Promise<LoginState> {
     return {
       step: 'phone',
       error: `Muitas tentativas. Tente de novo em ${Math.ceil(limit.retryAfterSeconds / 60)} minutos.`,
+    };
+  }
+
+  // Confirmação reversa: o cliente envia o SMS, a operação não paga envio.
+  if (env.OTP_PROVIDER === 'sms-reverso' && env.SMS_GATEWAY_NUMBER) {
+    const pedido = await iniciarLoginPorSms({
+      phone,
+      ttlSeconds: env.OTP_TTL_SECONDS,
+      requestIp: await currentIp(),
+    });
+
+    return {
+      step: 'sms',
+      phone,
+      sms: {
+        texto: textoDoSmsDeConfirmacao(pedido.code),
+        link: linkDoSmsDeConfirmacao(env.SMS_GATEWAY_NUMBER, pedido.code),
+        numero: formatPhoneBR(env.SMS_GATEWAY_NUMBER),
+      },
     };
   }
 
@@ -109,4 +144,23 @@ async function verificarCodigo(previous: LoginState, formData: FormData): Promis
   // de graça, para quem montar o link.
   const destino = String(formData.get('destino') ?? '/');
   redirect(destino.startsWith('/') && !destino.startsWith('//') ? destino : '/');
+}
+
+/**
+ * A tela de confirmação por SMS pergunta isto de tempos em tempos. Quando o
+ * SMS chegou, a sessão já sai criada daqui e a tela só segue para o destino.
+ */
+export async function conferirSms(
+  destino: string,
+): Promise<
+  { status: 'ok'; destino: string } | { status: 'aguardando' } | { status: 'erro'; reason: string }
+> {
+  const resultado = await conferirLoginPorSms();
+  if (resultado.status !== 'ok') return resultado;
+
+  // Só caminho interno: destino absoluto viraria redirecionamento aberto.
+  return {
+    status: 'ok',
+    destino: destino.startsWith('/') && !destino.startsWith('//') ? destino : '/',
+  };
 }

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   BadgePercent,
   Bell,
+  MessageSquare,
   Bike,
   Building2,
   ClipboardList,
@@ -36,6 +37,7 @@ const NAV = [
   { href: '/admin/impulsionamento', label: 'Impulsionamento', icon: Megaphone },
   { href: '/admin/banners', label: 'Banners', icon: ImageIcon },
   { href: '/admin/notificacoes', label: 'Notificações', icon: Bell },
+  { href: '/admin/sms', label: 'Login por SMS', icon: MessageSquare },
   { href: '/admin/cupons', label: 'Cupons', icon: BadgePercent },
   { href: '/admin/financeiro', label: 'Financeiro', icon: Wallet },
   { href: '/admin/auditoria', label: 'Auditoria', icon: ClipboardList },

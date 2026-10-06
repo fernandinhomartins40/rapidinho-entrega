@@ -7,6 +7,11 @@ import { z } from 'zod';
  * primeira vez que um cliente tenta pagar.
  */
 
+/** `CHAVE=` vazio no .env é "não configurado", não um valor inválido. */
+function vazioComoAusente(valor: unknown): unknown {
+  return valor === '' ? undefined : valor;
+}
+
 const serverEnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
@@ -38,7 +43,23 @@ const serverEnvSchema = z.object({
   EVOLUTION_API_KEY: z.string().optional(),
   EVOLUTION_INSTANCE: z.string().optional(),
 
-  OTP_PROVIDER: z.enum(['whatsapp', 'sms', 'console']).default('console'),
+  /// `sms-reverso`: o cliente envia o código por SMS para SMS_GATEWAY_NUMBER
+  /// e o app Android da operação repassa ao servidor. Sem custo de envio.
+  OTP_PROVIDER: z.enum(['whatsapp', 'sms', 'sms-reverso', 'console']).default('console'),
+  /// Número do celular com o app gateway (recebe os SMS dos clientes).
+  SMS_GATEWAY_NUMBER: z.preprocess(vazioComoAusente, z.string().optional()),
+  /// Segredo compartilhado com o app gateway. Mínimo de 32 caracteres.
+  SMS_GATEWAY_TOKEN: z.preprocess(vazioComoAusente, z.string().min(32).optional()),
+  /// Login do app gateway: com e-mail e senha o app busca o token sozinho.
+  SMS_APP_EMAIL: z.preprocess(vazioComoAusente, z.string().email().optional()),
+  /// SHA-256 (hex) da senha do app. A senha em si fica só no secret do GitHub.
+  SMS_APP_SENHA_SHA256: z.preprocess(
+    vazioComoAusente,
+    z
+      .string()
+      .regex(/^[0-9a-f]{64}$/i)
+      .optional(),
+  ),
   OTP_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(300),
   OTP_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
 
@@ -90,6 +111,9 @@ export function parseServerEnv(source: NodeJS.ProcessEnv = process.env): ServerE
   }
   if (env.PAYMENT_PROVIDER === 'asaas' && !env.ASAAS_API_KEY) {
     throw new Error('PAYMENT_PROVIDER=asaas exige ASAAS_API_KEY');
+  }
+  if (env.OTP_PROVIDER === 'sms-reverso' && (!env.SMS_GATEWAY_NUMBER || !env.SMS_GATEWAY_TOKEN)) {
+    throw new Error('OTP_PROVIDER=sms-reverso exige SMS_GATEWAY_NUMBER e SMS_GATEWAY_TOKEN');
   }
   if (env.WHATSAPP_PROVIDER === 'evolution' && !env.EVOLUTION_API_URL) {
     throw new Error('WHATSAPP_PROVIDER=evolution exige EVOLUTION_API_URL e EVOLUTION_API_KEY');
