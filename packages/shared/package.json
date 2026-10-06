@@ -14,7 +14,8 @@
     "./utils": "./src/utils/index.ts",
     "./realtime": "./src/realtime/index.ts",
     "./realtime/token": "./src/realtime/token.ts",
-    "./security": "./src/security/csp.ts"
+    "./security": "./src/security/csp.ts",
+    "./senha": "./src/security/senha.ts"
   },
   "scripts": {
     "lint": "eslint .",

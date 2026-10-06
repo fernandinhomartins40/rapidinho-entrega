@@ -39,8 +39,10 @@ O app já vem apontando para `https://rapidinhoentrega.com.br`.
 1. Instale o APK no celular do número da operação. Em aparelhos recentes no
    Brasil, a permissão de SMS fica bloqueada para APK instalado pelo próprio
    celular; instale pelo computador (`adb install`), que não tem essa trava.
-2. Abra o app e entre com o e-mail e a senha do app gateway. O app recebe o
-   token do servidor; a senha não fica guardada no celular.
+2. Abra o app e entre com o e-mail e a senha do operador, um usuário admin da
+   plataforma criado pelo seed essencial (`fuseagencia10@gmail.com`, senha
+   provisória `Admin@123`). O app recebe o token do servidor; a senha não fica
+   guardada no celular.
 3. Toque em **Permitir receber SMS** e em **Tirar da economia de bateria**. Os
    três itens precisam ficar verdes. Em Xiaomi, ligue também o **Início
    automático** e deixe a bateria do app **Sem restrições**.
@@ -53,16 +55,16 @@ cada 15 minutos, e o painel avisa quando o celular some.
 
 ## Ligar em produção
 
-1. No GitHub, em **Settings → Secrets and variables → Actions**, crie:
-   - `SMS_GATEWAY_NUMBER`: o número deste celular, por exemplo `44999998888`;
-   - `SMS_APP_SENHA`: a senha do login do app.
+1. No GitHub, em **Settings → Secrets and variables → Actions**, crie o secret
+   `SMS_GATEWAY_NUMBER` com o número deste celular, por exemplo `44999998888`.
 2. Faça um deploy. O script `preparar-env.sh` gera `SMS_GATEWAY_TOKEN` uma única
-   vez (sem regerar depois), muda `OTP_PROVIDER` para `sms-reverso` e grava o
-   SHA-256 da senha em `SMS_APP_SENHA_SHA256`. O e-mail do app fica em
-   `SMS_APP_EMAIL` no `.env` da VPS.
+   vez (sem regerar depois) e muda `OTP_PROVIDER` para `sms-reverso`. O seed
+   essencial cria o operador do app, com a senha provisória, se ele ainda não
+   existir.
 3. Siga "Instalar e configurar" acima.
 
-Para trocar a senha, mude o secret e faça um deploy. Para desligar o login por
+A senha provisória só é gravada quando o operador ainda não tem senha: o
+deploy seguinte não desfaz uma troca. Para desligar o login por
 SMS, apague `SMS_GATEWAY_NUMBER` e troque `OTP_PROVIDER` no `.env` da VPS.
 
 ## Compilar
@@ -86,7 +88,7 @@ desinstale o app antes de instalar a nova versão.
   foi encerrado à força. Abra o app uma vez.
 - **"Acesso expirou" no app:** o token mudou no servidor; entre de novo.
 - **"O servidor respondeu 404/500" ao entrar:** o login do app não está ligado;
-  confira o secret `SMS_APP_SENHA` e faça um deploy.
+  confira se o deploy rodou o seed essencial e se `SMS_GATEWAY_TOKEN` existe.
 - **SMS chegou e nada aconteceu:** veja "Últimos acontecimentos" no app. Se
   aparecer "guardado para reenviar", faltou internet, e o app reenvia sozinho
   quando a conexão volta.

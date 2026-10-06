@@ -352,6 +352,9 @@ model User {
   phoneVerified DateTime?
   email         String?       @unique
   emailVerified DateTime?
+  /// Só para quem entra com e-mail e senha (operador do app gateway de SMS).
+  /// scrypt, ver @rapidinho/shared/senha. Clientes entram por OTP e não têm.
+  passwordHash  String?
   name          String?
   document      String?
   documentType  DocumentType?

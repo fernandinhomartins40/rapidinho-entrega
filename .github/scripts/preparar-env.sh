@@ -150,13 +150,6 @@ if [ -n "${SMS_GATEWAY_NUMBER:-}" ]; then
   gravar_env "OTP_PROVIDER" "sms-reverso"
 fi
 
-# Login do app gateway (e-mail + senha no lugar de colar o token). A senha
-# chega já como SHA-256, calculado no runner a partir do secret SMS_APP_SENHA;
-# reescrita a cada deploy para que trocar o secret troque a senha.
-garantir_env "SMS_APP_EMAIL" "${SMS_APP_EMAIL:-fuseagencia10@gmail.com}"
-if [ -n "${SMS_APP_SENHA_SHA256:-}" ]; then
-  gravar_env "SMS_APP_SENHA_SHA256" "$SMS_APP_SENHA_SHA256"
-fi
 
 # Telefone do super admin. Sem ele o seed essencial não cria administrador
 # nenhum, e é assim de propósito: cair para um número fixo daria acesso ao

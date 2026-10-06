@@ -39,7 +39,9 @@ export const POST = apiHandler(async (request: Request) => {
   }
 
   const dados = loginSchema.safeParse(await request.json().catch(() => ({})));
-  const token = dados.success ? tokenParaLoginDoApp(dados.data.email, dados.data.senha) : null;
+  const token = dados.success
+    ? await tokenParaLoginDoApp(dados.data.email, dados.data.senha)
+    : null;
 
   if (!token) {
     logger.warn({ ip }, '[sms-gateway] login do app recusado');

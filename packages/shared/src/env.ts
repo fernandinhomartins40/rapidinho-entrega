@@ -50,16 +50,6 @@ const serverEnvSchema = z.object({
   SMS_GATEWAY_NUMBER: z.preprocess(vazioComoAusente, z.string().optional()),
   /// Segredo compartilhado com o app gateway. Mínimo de 32 caracteres.
   SMS_GATEWAY_TOKEN: z.preprocess(vazioComoAusente, z.string().min(32).optional()),
-  /// Login do app gateway: com e-mail e senha o app busca o token sozinho.
-  SMS_APP_EMAIL: z.preprocess(vazioComoAusente, z.string().email().optional()),
-  /// SHA-256 (hex) da senha do app. A senha em si fica só no secret do GitHub.
-  SMS_APP_SENHA_SHA256: z.preprocess(
-    vazioComoAusente,
-    z
-      .string()
-      .regex(/^[0-9a-f]{64}$/i)
-      .optional(),
-  ),
   OTP_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(300),
   OTP_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
 

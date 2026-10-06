@@ -2,6 +2,7 @@ import path from 'node:path';
 import { config as loadEnv } from 'dotenv';
 import { PrismaClient, type Prisma } from '../../generated/client';
 import { normalizePhoneBR, slugify } from '@rapidinho/shared';
+import { gerarHashDeSenha } from '@rapidinho/shared/senha';
 import {
   BOOST_PACKAGES,
   COMPLEMENT_GROUPS,
@@ -204,6 +205,42 @@ async function seedSuperAdmin(phone: string, name = 'Administrador da Plataforma
       acceptedPrivacyAt: new Date(),
     },
   });
+}
+
+/**
+ * Operador do app gateway de SMS: entra no app Android com e-mail e senha, e
+ * o servidor devolve o token do gateway. A senha provisória só é gravada
+ * quando o usuário ainda não tem senha — trocar depois não é desfeito pelo
+ * próximo deploy.
+ */
+const OPERADOR_DO_GATEWAY = { email: 'fuseagencia10@gmail.com', senhaProvisoria: 'Admin@123' };
+
+async function seedOperadorDoGateway() {
+  const email = OPERADOR_DO_GATEWAY.email;
+  const existente = await prisma.user.findUnique({ where: { email } });
+
+  if (!existente) {
+    return prisma.user.create({
+      data: {
+        email,
+        emailVerified: new Date(),
+        name: 'Operador do Rapidinho SMS',
+        role: 'SUPER_ADMIN',
+        passwordHash: gerarHashDeSenha(OPERADOR_DO_GATEWAY.senhaProvisoria),
+        acceptedTermsAt: new Date(),
+        acceptedPrivacyAt: new Date(),
+      },
+    });
+  }
+
+  if (!existente.passwordHash) {
+    return prisma.user.update({
+      where: { id: existente.id },
+      data: { passwordHash: gerarHashDeSenha(OPERADOR_DO_GATEWAY.senhaProvisoria) },
+    });
+  }
+
+  return existente;
 }
 
 async function seedPlatformUsers() {
@@ -602,6 +639,10 @@ async function seedEssencial() {
 
   console.warn('› Semeando planos e pacotes de impulsionamento…');
   const plans = await seedPlans();
+
+  console.warn('› Garantindo o operador do app de SMS…');
+  const operador = await seedOperadorDoGateway();
+  console.warn(`› Operador do app de SMS: ${operador.email}`);
 
   return { city, categories, plans };
 }

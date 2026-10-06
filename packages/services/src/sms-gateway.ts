@@ -1,5 +1,7 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { prisma } from '@rapidinho/database';
 import { parseServerEnv } from '@rapidinho/shared';
+import { gerarHashDeSenha, senhaConfere } from '@rapidinho/shared/senha';
 import { getRedis } from './redis';
 
 /**
@@ -25,22 +27,34 @@ export function gatewayAutorizado(headers: Headers): boolean {
 
 /**
  * Login do app gateway com e-mail e senha: devolve o token quando confere, ou
- * null. A senha chega em texto (HTTPS) e é comparada pelo SHA-256 guardado no
- * ambiente, também em tempo constante.
+ * null. O usuário é do banco (criado pelo seed essencial), ativo, admin e com
+ * senha; quem entra ganha o poder de confirmar login de qualquer número.
  */
-export function tokenParaLoginDoApp(email: string, senha: string): string | null {
-  const env = parseServerEnv();
-  if (!env.SMS_GATEWAY_TOKEN || !env.SMS_APP_EMAIL || !env.SMS_APP_SENHA_SHA256) return null;
+export async function tokenParaLoginDoApp(email: string, senha: string): Promise<string | null> {
+  const token = parseServerEnv().SMS_GATEWAY_TOKEN;
+  if (!token) return null;
 
-  const emailConfere = timingSafeEqual(
-    hash(email.trim().toLowerCase()),
-    hash(env.SMS_APP_EMAIL.trim().toLowerCase()),
-  );
-  const senhaConfere = timingSafeEqual(
-    hash(senha),
-    Buffer.from(env.SMS_APP_SENHA_SHA256.toLowerCase(), 'hex'),
-  );
-  return emailConfere && senhaConfere ? env.SMS_GATEWAY_TOKEN : null;
+  const usuario = await prisma.user.findUnique({
+    where: { email: email.trim().toLowerCase() },
+    select: { passwordHash: true, role: true, status: true, deletedAt: true },
+  });
+
+  const autorizado =
+    usuario != null &&
+    usuario.status === 'ACTIVE' &&
+    usuario.deletedAt == null &&
+    (usuario.role === 'SUPER_ADMIN' || usuario.role === 'ADMIN');
+
+  // Confere a senha mesmo sem usuário, para o tempo de resposta não revelar
+  // quais e-mails existem.
+  const senhaCerta = senhaConfere(senha, usuario?.passwordHash ?? hashDeEnchimento());
+  return autorizado && senhaCerta ? token : null;
+}
+
+let enchimento: string | undefined;
+function hashDeEnchimento(): string {
+  enchimento ??= gerarHashDeSenha(randomBytes(16).toString('hex'));
+  return enchimento;
 }
 
 const CHAVE_DO_SINAL = 'sms-gateway:sinal';
