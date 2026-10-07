@@ -31,6 +31,7 @@ const ACAO_LABEL: Record<string, string> = {
   'user.blocked': 'Bloqueou usuário',
   'user.unblocked': 'Desbloqueou usuário',
   'user.role_changed': 'Alterou papel',
+  'user.password_changed': 'Trocou a própria senha',
   'courier.approved': 'Aprovou entregador',
   'courier.rejected': 'Recusou entregador',
   'plan.created': 'Criou plano',

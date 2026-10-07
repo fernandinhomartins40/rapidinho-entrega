@@ -44,6 +44,7 @@ export const AUDIT_ACTIONS = {
   userBlocked: 'user.blocked',
   userUnblocked: 'user.unblocked',
   userRoleChanged: 'user.role_changed',
+  userPasswordChanged: 'user.password_changed',
   courierApproved: 'courier.approved',
   courierRejected: 'courier.rejected',
   planCreated: 'plan.created',

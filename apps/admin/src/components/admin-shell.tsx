@@ -11,6 +11,7 @@ import {
   Building2,
   ClipboardList,
   Image as ImageIcon,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   MapPin,
@@ -41,6 +42,7 @@ const NAV = [
   { href: '/admin/cupons', label: 'Cupons', icon: BadgePercent },
   { href: '/admin/financeiro', label: 'Financeiro', icon: Wallet },
   { href: '/admin/auditoria', label: 'Auditoria', icon: ClipboardList },
+  { href: '/admin/senha', label: 'Minha senha', icon: KeyRound },
 ] as const;
 
 interface AdminShellProps {
