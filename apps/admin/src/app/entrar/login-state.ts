@@ -8,8 +8,10 @@
  */
 
 export interface LoginState {
-  step: 'phone' | 'code' | 'sms';
+  step: 'phone' | 'code' | 'sms' | 'senha';
   phone?: string;
+  /// Login por senha: o e-mail volta preenchido depois de um erro.
+  email?: string;
   error?: string;
   /// Em desenvolvimento o código volta aqui, para não depender do WhatsApp.
   devCode?: string;

@@ -1,13 +1,8 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { apiHandler } from '@rapidinho/auth';
-import {
-  clientIpFromHeaders,
-  consumeRateLimit,
-  logger,
-  tokenParaLoginDoApp,
-} from '@rapidinho/services';
-import { RATE_LIMITS } from '@rapidinho/shared';
+import { apiHandler, autenticarPorSenha } from '@rapidinho/auth';
+import { clientIpFromHeaders, consumeRateLimit, logger } from '@rapidinho/services';
+import { parseServerEnv, RATE_LIMITS } from '@rapidinho/shared';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,8 +23,8 @@ export const POST = apiHandler(async (request: Request) => {
   const ip = clientIpFromHeaders(request.headers);
   const limite = await consumeRateLimit(
     `sms-app-login:${ip}`,
-    RATE_LIMITS.smsAppLogin.points,
-    RATE_LIMITS.smsAppLogin.durationSeconds,
+    RATE_LIMITS.senhaLogin.points,
+    RATE_LIMITS.senhaLogin.durationSeconds,
   );
   if (!limite.allowed) {
     return NextResponse.json(
@@ -39,9 +34,11 @@ export const POST = apiHandler(async (request: Request) => {
   }
 
   const dados = loginSchema.safeParse(await request.json().catch(() => ({})));
-  const token = dados.success
-    ? await tokenParaLoginDoApp(dados.data.email, dados.data.senha)
+  const userId = dados.success
+    ? await autenticarPorSenha(dados.data.email, dados.data.senha)
     : null;
+  // O token só existe com o login por SMS configurado no servidor.
+  const token = userId ? parseServerEnv().SMS_GATEWAY_TOKEN : null;
 
   if (!token) {
     logger.warn({ ip }, '[sms-gateway] login do app recusado');

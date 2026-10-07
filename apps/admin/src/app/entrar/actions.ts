@@ -3,6 +3,7 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import {
+  autenticarPorSenha,
   cancelarLoginPorSms,
   conferirLoginPorSms,
   createDatabaseSession,
@@ -45,6 +46,9 @@ export async function autenticar(previous: LoginState, formData: FormData): Prom
     await cancelarLoginPorSms();
     return LOGIN_INITIAL_STATE;
   }
+
+  if (intencao === 'usar-senha') return { step: 'senha' };
+  if (intencao === 'entrar-com-senha') return entrarComSenha(formData);
 
   return intencao === 'verificar' ? verificarCodigo(previous, formData) : solicitarCodigo(formData);
 }
@@ -141,6 +145,48 @@ async function verificarCodigo(previous: LoginState, formData: FormData): Promis
   // `//evil.com` começa com "/" e o navegador trata como URL absoluta de
   // mesmo protocolo: sem a segunda checagem isto seria um redirecionamento
   // aberto para quem montasse o link de login.
+  const destino = String(formData.get('destino') ?? '/');
+  redirect(destino.startsWith('/') && !destino.startsWith('//') ? destino : '/');
+}
+
+/**
+ * E-mail e senha: só para a equipe da plataforma, que não depende de receber
+ * código. Limite por IP e por e-mail, como no código.
+ */
+async function entrarComSenha(formData: FormData): Promise<LoginState> {
+  const email = String(formData.get('email') ?? '')
+    .trim()
+    .toLowerCase();
+  const senha = String(formData.get('senha') ?? '');
+
+  if (!email || !senha) {
+    return { step: 'senha', email, error: 'Preencha e-mail e senha.' };
+  }
+
+  const chaves = [`senha:ip:${await currentIp()}`, `senha:email:${email}`];
+  for (const chave of chaves) {
+    const limit = await consumeRateLimit(
+      chave,
+      RATE_LIMITS.senhaLogin.points,
+      RATE_LIMITS.senhaLogin.durationSeconds,
+    );
+    if (!limit.allowed) {
+      return {
+        step: 'senha',
+        email,
+        error: `Muitas tentativas. Tente de novo em ${Math.ceil(limit.retryAfterSeconds / 60)} minutos.`,
+      };
+    }
+  }
+
+  const userId = await autenticarPorSenha(email, senha);
+  if (!userId) {
+    return { step: 'senha', email, error: 'E-mail ou senha incorretos.' };
+  }
+
+  await createDatabaseSession(userId);
+  for (const chave of chaves) await resetRateLimit(chave);
+
   const destino = String(formData.get('destino') ?? '/');
   redirect(destino.startsWith('/') && !destino.startsWith('//') ? destino : '/');
 }

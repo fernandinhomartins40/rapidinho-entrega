@@ -46,3 +46,6 @@ playwright-report/
 # Snapshot do Redis. Aparece na raiz quando se roda o redis-server local e
 # não tem nada que ver com o código — entrou por descuido no commit dos E2E.
 dump.rdb
+
+# Credenciais locais (nunca versionar)
+CREDENCIAIS.md

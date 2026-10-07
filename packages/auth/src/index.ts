@@ -17,3 +17,4 @@ export {
   type InboundSmsResult,
 } from './otp';
 export * from './sms-login';
+export * from './senha';

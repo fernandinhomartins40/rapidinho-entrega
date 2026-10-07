@@ -1,7 +1,5 @@
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { prisma } from '@rapidinho/database';
+import { createHash, timingSafeEqual } from 'node:crypto';
 import { parseServerEnv } from '@rapidinho/shared';
-import { gerarHashDeSenha, senhaConfere } from '@rapidinho/shared/senha';
 import { getRedis } from './redis';
 
 /**
@@ -23,38 +21,6 @@ export function gatewayAutorizado(headers: Headers): boolean {
 
   const recebido = headers.get('authorization')?.replace(/^Bearer\s+/i, '') ?? '';
   return timingSafeEqual(hash(recebido), hash(esperado));
-}
-
-/**
- * Login do app gateway com e-mail e senha: devolve o token quando confere, ou
- * null. O usuário é do banco (criado pelo seed essencial), ativo, admin e com
- * senha; quem entra ganha o poder de confirmar login de qualquer número.
- */
-export async function tokenParaLoginDoApp(email: string, senha: string): Promise<string | null> {
-  const token = parseServerEnv().SMS_GATEWAY_TOKEN;
-  if (!token) return null;
-
-  const usuario = await prisma.user.findUnique({
-    where: { email: email.trim().toLowerCase() },
-    select: { passwordHash: true, role: true, status: true, deletedAt: true },
-  });
-
-  const autorizado =
-    usuario != null &&
-    usuario.status === 'ACTIVE' &&
-    usuario.deletedAt == null &&
-    (usuario.role === 'SUPER_ADMIN' || usuario.role === 'ADMIN');
-
-  // Confere a senha mesmo sem usuário, para o tempo de resposta não revelar
-  // quais e-mails existem.
-  const senhaCerta = senhaConfere(senha, usuario?.passwordHash ?? hashDeEnchimento());
-  return autorizado && senhaCerta ? token : null;
-}
-
-let enchimento: string | undefined;
-function hashDeEnchimento(): string {
-  enchimento ??= gerarHashDeSenha(randomBytes(16).toString('hex'));
-  return enchimento;
 }
 
 const CHAVE_DO_SINAL = 'sms-gateway:sinal';
