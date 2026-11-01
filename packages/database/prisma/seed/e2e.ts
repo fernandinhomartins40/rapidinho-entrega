@@ -1,8 +1,15 @@
 import path from 'node:path';
 import { config as loadEnv } from 'dotenv';
-import { PrismaClient, type Prisma } from '../../generated/client';
+import { normalizePhoneBR } from '@rapidinho/shared';
+import {
+  PrismaClient,
+  type Prisma,
+  type StoreStaffRole,
+  type UserRole,
+  type UserStatus,
+} from '../../generated/client';
 
-loadEnv({ path: path.resolve(__dirname, '../../../../.env'), quiet: true });
+loadEnv({ path: path.resolve(import.meta.dirname, '../../../../.env'), quiet: true });
 
 /**
  * Deixa todas as lojas abertas o dia inteiro, todos os dias — só para o e2e.
@@ -16,6 +23,54 @@ loadEnv({ path: path.resolve(__dirname, '../../../../.env'), quiet: true });
  * Roda depois do `db:seed`. Recusa-se a rodar em produção.
  */
 const DIA_INTEIRO = { opensAt: 0, closesAt: 24 * 60 } as const;
+
+/**
+ * Perfis que a matriz de permissões precisa e o seed principal não cria
+ * (docs/revisao/MATRIZ-DE-PERMISSOES.md). Equipe vinculada à loja do lojista
+ * do e2e, (44) 99000-0000.
+ */
+const PERFIS: {
+  telefone: string;
+  nome: string;
+  papel: UserRole;
+  status?: UserStatus;
+  equipe?: StoreStaffRole;
+}[] = [
+  { telefone: '44 99800-0001', nome: 'Cliente B do e2e', papel: 'CUSTOMER' },
+  { telefone: '44 99800-0002', nome: 'Gerente do e2e', papel: 'STORE_STAFF', equipe: 'MANAGER' },
+  { telefone: '44 99800-0003', nome: 'Operador do e2e', papel: 'STORE_STAFF', equipe: 'OPERATOR' },
+  { telefone: '44 99800-0004', nome: 'Admin do e2e', papel: 'ADMIN' },
+  { telefone: '44 99800-0005', nome: 'Bloqueado do e2e', papel: 'CUSTOMER', status: 'BLOCKED' },
+];
+
+async function semearPerfis(prisma: PrismaClient) {
+  const dono = await prisma.user.findUnique({
+    where: { phone: normalizePhoneBR('44 99000-0000') ?? '' },
+    select: { storeStaff: { where: { role: 'OWNER' }, select: { storeId: true }, take: 1 } },
+  });
+  const lojaId = dono?.storeStaff[0]?.storeId;
+  if (!lojaId) throw new Error('Rode o db:seed antes: loja do lojista do e2e não encontrada.');
+
+  for (const perfil of PERFIS) {
+    const phone = normalizePhoneBR(perfil.telefone);
+    if (!phone) throw new Error(`Telefone inválido no seed: ${perfil.telefone}`);
+
+    const dados = { role: perfil.papel, status: perfil.status ?? 'ACTIVE', name: perfil.nome };
+    const usuario = await prisma.user.upsert({
+      where: { phone },
+      update: dados,
+      create: { ...dados, phone, phoneVerified: new Date() },
+    });
+
+    if (perfil.equipe) {
+      await prisma.storeStaff.upsert({
+        where: { storeId_userId: { storeId: lojaId, userId: usuario.id } },
+        update: { role: perfil.equipe, isActive: true },
+        create: { storeId: lojaId, userId: usuario.id, role: perfil.equipe },
+      });
+    }
+  }
+}
 
 async function main() {
   if (process.env.NODE_ENV === 'production') {
@@ -45,6 +100,9 @@ async function main() {
     ]);
 
     console.warn(`✔ ${lojas.length} lojas abertas 24h para o e2e`);
+
+    await semearPerfis(prisma);
+    console.warn(`✔ ${PERFIS.length} perfis extras da matriz de permissões (44 99800-000x)`);
   } finally {
     await prisma.$disconnect();
   }

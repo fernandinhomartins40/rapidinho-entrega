@@ -28,7 +28,7 @@ const RAIZES = [
   'packages',
 ];
 const IGNORAR =
-  /node_modules|[\\/]\.next[\\/]|[\\/]dist[\\/]|prisma[\\/]seed|[\\/]migrations[\\/]|\.test\.ts$/;
+  /node_modules|[\\/]\.next[\\/]|[\\/]dist[\\/]|[\\/]generated[\\/]|prisma[\\/]seed|[\\/]migrations[\\/]|\.test\.ts$/;
 
 function listar(dir) {
   if (!fs.existsSync(dir)) return [];
