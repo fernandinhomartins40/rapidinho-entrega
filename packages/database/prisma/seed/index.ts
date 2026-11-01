@@ -13,7 +13,7 @@ import {
   STORES,
 } from './data/catalog';
 
-loadEnv({ path: path.resolve(__dirname, '../../../../.env'), quiet: true });
+loadEnv({ path: path.resolve(import.meta.dirname, '../../../../.env'), quiet: true });
 
 const prisma = new PrismaClient();
 

@@ -33,7 +33,7 @@ import {
   type SecaoDemo,
 } from './dados';
 
-loadEnv({ path: path.resolve(__dirname, '../../../../../.env'), quiet: true });
+loadEnv({ path: path.resolve(import.meta.dirname, '../../../../../.env'), quiet: true });
 
 /**
  * Seed de DEMONSTRAÇÃO para Palmital/PR.

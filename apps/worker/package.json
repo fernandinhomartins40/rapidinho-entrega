@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/main.ts",
+    "dev": "tsx watch --env-file-if-exists=../../.env src/main.ts",
     "build": "node ../../scripts/empacotar-servico.mjs src/main.ts dist/main.js sharp bullmq ioredis @prisma/client @sentry/node && node ../../scripts/empacotar-servico.mjs src/saude.ts dist/saude.js sharp bullmq ioredis @prisma/client @sentry/node",
     "start": "node dist/main.js",
     "lint": "eslint .",
