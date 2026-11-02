@@ -30,7 +30,9 @@ export function createWebPushProvider(config: Config): PushProvider {
           JSON.stringify(payload),
           // TTL: se o aparelho estiver desligado por mais de uma hora, a
           // notificação de "saiu para entrega" já não serve para nada.
-          { TTL: 3600, urgency: 'high' },
+          // timeout: o envio roda dentro da ação do lojista, que não pode
+          // ficar presa num serviço de push que não responde.
+          { TTL: 3600, urgency: 'high', timeout: 10_000 },
         );
 
         return { ok: true };

@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { prisma } from '@rapidinho/database';
 import { getCurrentUser } from '@rapidinho/auth';
+import { pixPeloGatewayDisponivel } from '@rapidinho/services';
 import { CARTAO_ONLINE_DISPONIVEL } from '@rapidinho/shared';
 import { carregarCarrinho } from '@/lib/cart';
 import { calcularCheckout } from '@/lib/checkout';
@@ -33,6 +34,8 @@ export default async function CheckoutPage({
         cityId: true,
         acceptsPickup: true,
         acceptsPix: true,
+        pixKey: true,
+        settlementMode: true,
         acceptsCardOnline: true,
         acceptsCashOnDelivery: true,
         acceptsCardOnDelivery: true,
@@ -95,7 +98,11 @@ export default async function CheckoutPage({
         slug: loja.slug,
         aceitaRetirada: loja.acceptsPickup,
         pagamentos: {
-          PIX: loja.acceptsPix,
+          // Pix só quando dá para pagar: chave da própria loja ou gateway real.
+          PIX:
+            loja.acceptsPix &&
+            ((loja.settlementMode === 'STORE_COLLECTS' && !!loja.pixKey) ||
+              pixPeloGatewayDisponivel()),
           CREDIT_CARD_ONLINE: CARTAO_ONLINE_DISPONIVEL && loja.acceptsCardOnline,
           CASH_ON_DELIVERY: loja.acceptsCashOnDelivery,
           CARD_ON_DELIVERY: loja.acceptsCardOnDelivery,

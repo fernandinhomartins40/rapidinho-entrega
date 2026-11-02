@@ -62,6 +62,9 @@ export function createMercadoPagoGateway(config: Config): PaymentGateway {
         'Content-Type': 'application/json',
         ...(init?.headers ?? {}),
       },
+      // O checkout espera por esta chamada: sem prazo, um Mercado Pago lento
+      // prendia o cliente na tela de "finalizando" indefinidamente.
+      signal: init?.signal ?? AbortSignal.timeout(15_000),
     });
 
     const corpo = await resposta.json().catch(() => null);

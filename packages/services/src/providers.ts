@@ -117,6 +117,17 @@ export function getPaymentGateway(): PaymentGateway {
   return paymentGatewayInstance;
 }
 
+/**
+ * Pix pelo gateway da plataforma pode ser pago de verdade? Em produção só com
+ * gateway real: o falso nem gera cobrança, e o cliente ficaria com um pedido
+ * "aguardando pagamento" sem QR até expirar. Loja com chave Pix própria não
+ * depende disto.
+ */
+export function pixPeloGatewayDisponivel(): boolean {
+  const env = parseServerEnv();
+  return env.PAYMENT_PROVIDER === 'mercadopago' || env.NODE_ENV !== 'production';
+}
+
 export function getEmail(): EmailProvider {
   if (emailInstance) return emailInstance;
 

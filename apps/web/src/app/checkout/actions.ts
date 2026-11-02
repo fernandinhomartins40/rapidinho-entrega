@@ -8,6 +8,7 @@ import {
   agendarLembreteDaLoja,
   capturarErro,
   getPaymentGateway,
+  pixPeloGatewayDisponivel,
   publishRealtime,
 } from '@rapidinho/services';
 import {
@@ -182,7 +183,9 @@ export async function finalizarPedido(
     }
 
     const aceita: Record<string, boolean> = {
-      PIX: loja.acceptsPix,
+      PIX:
+        loja.acceptsPix &&
+        ((loja.settlementMode === 'STORE_COLLECTS' && !!loja.pixKey) || pixPeloGatewayDisponivel()),
       CREDIT_CARD_ONLINE: CARTAO_ONLINE_DISPONIVEL && loja.acceptsCardOnline,
       CASH_ON_DELIVERY: loja.acceptsCashOnDelivery,
       CARD_ON_DELIVERY: loja.acceptsCardOnDelivery,
