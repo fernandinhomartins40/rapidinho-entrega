@@ -58,3 +58,30 @@ A aprovação **não** significa segurança absoluta nem conformidade jurídica 
 2. Depois de um login real, `otp_codes.requestIp` deve mostrar IPs públicos distintos, e não o gateway do Docker (A2).
 3. Abrir o site no celular com o APK 1.1: abre direto nas lojas; foto da receita sobe; "Exportar meus dados" baixa (A14, A18).
 4. Painel: um lojista sem senha aparece com o cartão "Acesso do dono ao painel" na tela da loja (A11).
+
+## 4. Resultado da verificação pós-deploy (2026-11-02, run 41469055654, commit `10219f6`)
+
+O deploy publicou com sucesso, com todos os jobs verdes:
+
+- lint, tipos e testes;
+- e2e;
+- os 6 builds de imagem;
+- publicação na VPS.
+
+Sondas públicas, só GET:
+
+| Verificação                        | Resultado                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A6: `/uploads`                     | **Comprovado o comportamento.** `/uploads/public/nao-existe.webp` → `404 NoSuchKey`, `BucketName: rapidinho`, `Resource: /rapidinho/public/…`. O proxy chega ao bucket certo; antes, toda requisição dava `400 invalid hostname`. `/uploads/` e `/uploads/privado/…` → `403 AccessDenied`, sem listagem nem leitura fora de `public/`. O 200 com imagem real não pôde ser medido, porque a produção ainda não tem nenhuma foto enviada |
+| A14: app fora da landing           | `GET /` com user-agent do app → `307 /app`                                                                                                                                                                                                                                                                                                                                                                                             |
+| R2-020: landing                    | Nenhuma ocorrência de "+10 mil"                                                                                                                                                                                                                                                                                                                                                                                                        |
+| A17: iPhone                        | "O app para iPhone ainda não saiu"                                                                                                                                                                                                                                                                                                                                                                                                     |
+| A11/R2-005: painel                 | Orientação "Peça à equipe…" presente                                                                                                                                                                                                                                                                                                                                                                                                   |
+| APK 1.1                            | `200`, 102 543 bytes                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| Saúde                              | site `{"status":"ok"}`, painel `{"status":"ok"}`                                                                                                                                                                                                                                                                                                                                                                                       |
+| `/api/auth/otp/request` (removida) | Responde `400 "Bad request."` e não processa nada. Não é um 404 puro; investigar a origem dessa resposta se for relevante                                                                                                                                                                                                                                                                                                              |
+
+**Continuam NÃO COMPROVADOS** (exigem um login real ou acesso à VPS):
+
+- A2: o IP real em `otp_codes.requestIp`;
+- A18: o APK num aparelho.
