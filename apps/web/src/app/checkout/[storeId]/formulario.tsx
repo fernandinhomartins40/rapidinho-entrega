@@ -403,9 +403,13 @@ export function FormularioDeCheckout({
         {!cliente.nome ? (
           <Card>
             <CardContent className="space-y-3 pt-5">
-              <p className="font-semibold">Como a loja te chama?</p>
+              <Label htmlFor="customerName" className="font-semibold">
+                Como a loja te chama?
+              </Label>
               <Input
+                id="customerName"
                 name="customerName"
+                autoComplete="name"
                 placeholder="Seu nome"
                 required
                 error={estado.fieldErrors?.customerName}

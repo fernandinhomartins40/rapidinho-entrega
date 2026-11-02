@@ -19,7 +19,7 @@ import {
   whatsappLink,
   type OrderStatus,
 } from '@rapidinho/shared';
-import { responderTroca } from '../actions';
+import { cancelarMeuPedido, responderTroca } from '../actions';
 
 interface Props {
   pedido: {
@@ -428,7 +428,62 @@ export function AcompanhamentoDoPedido({ pedido, realtime }: Props) {
           <Link href="/pedidos">Meus pedidos</Link>
         </Button>
       </div>
+
+      {(status === 'RECEIVED' || status === 'PENDING_PAYMENT') &&
+      pedido.payment?.status !== 'PAID' ? (
+        <CancelarPedido orderId={pedido.id} />
+      ) : null}
     </main>
+  );
+}
+
+/**
+ * Enquanto a loja não aceitou, o cliente pode desistir. Dois toques: o
+ * primeiro pergunta, o segundo cancela — um toque sem querer não derruba o
+ * pedido.
+ */
+function CancelarPedido({ orderId }: { orderId: string }) {
+  const router = useRouter();
+  const [confirmando, setConfirmando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+  const [pendente, iniciar] = useTransition();
+
+  if (!confirmando) {
+    return (
+      <Button variant="ghost" className="text-destructive" onClick={() => setConfirmando(true)}>
+        Cancelar pedido
+      </Button>
+    );
+  }
+
+  return (
+    <Card>
+      <CardContent className="space-y-3 pt-5">
+        <p className="font-medium">Cancelar este pedido?</p>
+        <p className="text-muted-foreground text-sm">
+          A loja ainda não aceitou. Depois de cancelar, se quiser, é só fazer outro pedido.
+        </p>
+        {erro ? <p className="text-destructive text-sm">{erro}</p> : null}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant="destructive"
+            isLoading={pendente}
+            onClick={() =>
+              iniciar(async () => {
+                const resultado = await cancelarMeuPedido(orderId);
+                if (resultado.ok) router.refresh();
+                else setErro(resultado.message ?? 'Não deu para cancelar.');
+              })
+            }
+          >
+            Sim, cancelar
+          </Button>
+          <Button variant="outline" disabled={pendente} onClick={() => setConfirmando(false)}>
+            Não, manter o pedido
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

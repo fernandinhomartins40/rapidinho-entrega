@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { Prisma, prisma } from '@rapidinho/database';
 import { destroyCurrentSession, revokeAllSessions } from '@rapidinho/auth';
 import { runAuthedAction, type ActionResult } from '@/lib/action';
+import { reunirDadosDoTitular } from '@/lib/dados-do-titular';
 
 /**
  * Direitos do titular (LGPD, art. 18).
@@ -17,59 +18,15 @@ export interface DadosExportados extends ActionResult {
 }
 
 /**
- * Reúne tudo o que guardamos sobre a pessoa.
- *
- * Inclui os pedidos, que são dados dela — mas com o snapshot do que foi
- * comprado, não o catálogo da loja, que é dado de terceiro.
+ * Reúne tudo o que guardamos sobre a pessoa (ver `reunirDadosDoTitular`).
+ * No app nativo o download vai por `/api/conta/exportar`, porque a WebView
+ * não salva o arquivo gerado no navegador.
  */
 export async function exportarMeusDados(): Promise<DadosExportados> {
   return runAuthedAction(async (user) => {
-    const dados = await prisma.user.findUnique({
-      where: { id: user.id },
-      select: {
-        id: true,
-        name: true,
-        phone: true,
-        email: true,
-        createdAt: true,
-        acceptedTermsAt: true,
-        acceptedPrivacyAt: true,
-        addresses: {
-          select: {
-            street: true,
-            number: true,
-            complement: true,
-            neighborhood: true,
-            referencePoint: true,
-            zipCode: true,
-            createdAt: true,
-            city: { select: { name: true, state: true } },
-          },
-        },
-        orders: {
-          select: {
-            number: true,
-            status: true,
-            createdAt: true,
-            totalCents: true,
-            store: { select: { name: true } },
-            items: {
-              select: { productName: true, quantity: true, totalCents: true },
-            },
-          },
-        },
-        reviews: { select: { rating: true, comment: true, createdAt: true } },
-        consents: { select: { kind: true, version: true, granted: true, createdAt: true } },
-      },
-    });
-
-    if (!dados) return { ok: false, message: 'Conta não encontrada.' };
-
-    return {
-      ok: true,
-      message: 'Seus dados foram reunidos.',
-      json: JSON.stringify(dados, null, 2),
-    };
+    const json = await reunirDadosDoTitular(user.id);
+    if (!json) return { ok: false, message: 'Conta não encontrada.' };
+    return { ok: true, message: 'Seus dados foram reunidos.', json };
   });
 }
 

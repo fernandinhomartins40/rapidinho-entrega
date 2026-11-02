@@ -18,6 +18,13 @@ export function MeusDados() {
   function exportar() {
     setErro(null);
 
+    // No app nativo, o arquivo gerado no navegador não é salvo pela WebView:
+    // o download vai pela rota, que o app entrega ao gerenciador do Android.
+    if (window.navigator.userAgent.includes('RapidinhoApp/')) {
+      window.location.href = '/api/conta/exportar';
+      return;
+    }
+
     iniciarTransicao(async () => {
       const resultado = await exportarMeusDados();
 

@@ -2,14 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { prisma } from '@rapidinho/database';
+import { desfazerReservasDoPedido, prisma } from '@rapidinho/database';
 import { publishRealtimeMany } from '@rapidinho/services';
 import { cuidSchema, REALTIME_CHANNELS, REALTIME_EVENTS, reviewSchema } from '@rapidinho/shared';
 import { runAuthedAction, type ActionResult } from '@/lib/action';
 import { validarItem } from '@/lib/regras-do-item';
 
 /**
- * Ações sobre pedidos já feitos: repetir e avaliar.
+ * Ações sobre pedidos já feitos: repetir, avaliar e cancelar antes do aceite.
  */
 
 /**
@@ -341,5 +341,83 @@ export async function responderTroca(entrada: unknown): Promise<ActionResult> {
       ok: true,
       message: dados.aceita ? 'Troca aceita. A loja já foi avisada.' : 'Item retirado do pedido.',
     };
+  });
+}
+
+/**
+ * O cliente desiste do pedido enquanto a loja ainda não aceitou.
+ *
+ * Errou o endereço ou o pagamento? Antes, a única saída era o WhatsApp da
+ * loja. Depois do aceite a comida já pode estar sendo feita, e aí cancelar é
+ * conversa com a loja. Pagamento online já confirmado também não se cancela
+ * por aqui: o dinheiro precisa voltar, e isso é com a loja.
+ */
+export async function cancelarMeuPedido(orderId: unknown): Promise<ActionResult> {
+  return runAuthedAction(async (user) => {
+    const id = cuidSchema.parse(orderId);
+
+    const pedido = await prisma.order.findFirst({
+      where: { id, userId: user.id },
+      select: {
+        id: true,
+        number: true,
+        status: true,
+        storeId: true,
+        payment: { select: { status: true } },
+      },
+    });
+
+    if (!pedido) return { ok: false, message: 'Pedido não encontrado.' };
+
+    if (pedido.payment?.status === 'PAID') {
+      return {
+        ok: false,
+        message: 'Este pedido já foi pago. Fale com a loja para cancelar e receber o dinheiro.',
+      };
+    }
+
+    const cancelado = await prisma.$transaction(async (tx) => {
+      // Condicional: se a loja aceitou no mesmo instante, o aceite vale.
+      const { count } = await tx.order.updateMany({
+        where: { id: pedido.id, status: { in: ['PENDING_PAYMENT', 'RECEIVED'] } },
+        data: {
+          status: 'CANCELLED',
+          cancelledAt: new Date(),
+          cancelReason: 'Cancelado pelo cliente',
+          cancelledBy: user.id,
+        },
+      });
+      if (count === 0) return false;
+
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: pedido.id,
+          status: 'CANCELLED',
+          note: 'Cancelado pelo cliente',
+          changedById: user.id,
+        },
+      });
+      // Estoque, cupom e corrida voltam: o pedido não aconteceu.
+      await desfazerReservasDoPedido(tx, pedido.id);
+      return true;
+    });
+
+    if (!cancelado) {
+      return {
+        ok: false,
+        message: 'A loja já aceitou o pedido. Para cancelar agora, fale com a loja.',
+      };
+    }
+
+    await publishRealtimeMany(
+      [REALTIME_CHANNELS.store(pedido.storeId), REALTIME_CHANNELS.order(pedido.id)],
+      REALTIME_EVENTS.orderCancelled,
+      { orderId: pedido.id, number: pedido.number, reason: 'Cancelado pelo cliente' },
+    );
+
+    revalidatePath(`/pedidos/${pedido.id}`);
+    revalidatePath('/pedidos');
+
+    return { ok: true, message: `Pedido #${pedido.number} cancelado.` };
   });
 }

@@ -1,18 +1,23 @@
 package br.com.rapidinhoentrega.app;
 
 import android.app.Activity;
+import android.app.DownloadManager;
 import android.content.ActivityNotFoundException;
+import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.CookieManager;
+import android.webkit.URLUtil;
+import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
 
 import java.net.URISyntaxException;
 
@@ -21,7 +26,7 @@ import java.net.URISyntaxException;
  *
  * O login fica no cookie de sessão, que o CookieManager grava no aparelho.
  * Por isso o cliente confirma o número por SMS uma vez e continua dentro do
- * app enquanto a sessão do servidor valer (30 dias, renovados a cada uso).
+ * app enquanto a sessão do servidor valer (400 dias, renovados a cada uso).
  *
  * Link de fora do Rapidinho (WhatsApp, telefone, Pix, mapas) abre no app
  * certo do celular, e não dentro desta tela.
@@ -31,7 +36,11 @@ public class MainActivity extends Activity {
     private static final String SITE = BuildConfig.SITE_URL;
     private static final String HOST = Uri.parse(SITE).getHost();
 
+    private static final int ESCOLHER_ARQUIVO = 1;
+
     private WebView web;
+    /** Resposta pendente do seletor de arquivo (foto da receita, imagem). */
+    private ValueCallback<Uri[]> arquivoEscolhido;
 
     @Override
     protected void onCreate(Bundle estado) {
@@ -51,8 +60,9 @@ public class MainActivity extends Activity {
         CookieManager.getInstance().setAcceptCookie(true);
         CookieManager.getInstance().setAcceptThirdPartyCookies(web, true);
 
-        web.setWebChromeClient(new WebChromeClient());
+        web.setWebChromeClient(new Janelas());
         web.setWebViewClient(new Navegacao());
+        web.setDownloadListener(this::baixar);
 
         if (estado != null) {
             web.restoreState(estado);
@@ -91,6 +101,63 @@ public class MainActivity extends Activity {
     protected void onSaveInstanceState(Bundle estado) {
         super.onSaveInstanceState(estado);
         web.saveState(estado);
+    }
+
+    @Override
+    protected void onActivityResult(int pedido, int resultado, Intent dados) {
+        super.onActivityResult(pedido, resultado, dados);
+        if (pedido != ESCOLHER_ARQUIVO || arquivoEscolhido == null) return;
+        // Cancelar também precisa responder (com null), senão o campo de
+        // arquivo do site fica travado até recarregar.
+        arquivoEscolhido.onReceiveValue(
+            WebChromeClient.FileChooserParams.parseResult(resultado, dados));
+        arquivoEscolhido = null;
+    }
+
+    /**
+     * Sem isto o botão de arquivo do site não faz nada dentro do app: a WebView
+     * só abre o seletor se a Activity pedir. É por ele que vai a foto da
+     * receita na farmácia.
+     */
+    private class Janelas extends WebChromeClient {
+        @Override
+        public boolean onShowFileChooser(
+            WebView view, ValueCallback<Uri[]> callback, FileChooserParams parametros) {
+            if (arquivoEscolhido != null) arquivoEscolhido.onReceiveValue(null);
+            arquivoEscolhido = callback;
+            try {
+                startActivityForResult(parametros.createIntent(), ESCOLHER_ARQUIVO);
+                return true;
+            } catch (ActivityNotFoundException e) {
+                arquivoEscolhido = null;
+                return false;
+            }
+        }
+    }
+
+    /**
+     * Download (ex.: "Exportar meus dados") pelo gerenciador do Android, com o
+     * cookie da sessão: o arquivo é da conta de quem está logado. Só endereço
+     * do próprio Rapidinho, e o aviso de concluído abre o arquivo.
+     */
+    private void baixar(String url, String userAgent, String disposicao, String tipo, long tamanho) {
+        Uri uri = Uri.parse(url);
+        boolean ehWeb = "https".equals(uri.getScheme()) || "http".equals(uri.getScheme());
+        if (!ehWeb || !doRapidinho(uri)) {
+            return;
+        }
+        String nome = URLUtil.guessFileName(url, disposicao, tipo);
+        DownloadManager.Request pedido = new DownloadManager.Request(uri)
+            .setMimeType(tipo)
+            .addRequestHeader("Cookie", CookieManager.getInstance().getCookie(url))
+            .addRequestHeader("User-Agent", userAgent)
+            .setTitle(nome)
+            .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
+        DownloadManager gerenciador = (DownloadManager) getSystemService(Context.DOWNLOAD_SERVICE);
+        if (gerenciador != null) {
+            gerenciador.enqueue(pedido);
+            Toast.makeText(this, "Baixando " + nome, Toast.LENGTH_SHORT).show();
+        }
     }
 
     private String enderecoDoIntent(Intent intent) {

@@ -477,6 +477,12 @@ export async function finalizarPedido(
       expiraSozinho: statusInicial === 'PENDING_PAYMENT' && !pixNaChaveDaLoja,
     });
 
+    // Nome digitado no primeiro pedido vai para o perfil: no próximo, o
+    // checkout não pergunta de novo, e a loja e o painel deixam de ver "Sem nome".
+    if (!user.name && dados.customerName) {
+      await prisma.user.update({ where: { id: user.id }, data: { name: dados.customerName } });
+    }
+
     revalidatePath('/carrinho');
     revalidatePath('/pedidos');
 
