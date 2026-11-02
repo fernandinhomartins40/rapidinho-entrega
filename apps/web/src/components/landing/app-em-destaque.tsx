@@ -1,7 +1,7 @@
 import Image from 'next/image';
 import { Check, ChevronRight, Download } from 'lucide-react';
 import { MEDIDAS_DA_LANDING } from './medidas';
-import { ANCORA_PEDIR, Etiqueta } from './pecas';
+import { LINK_BAIXAR, Etiqueta } from './pecas';
 
 const DESTAQUES = [
   'Variedade de lojas parceiras',
@@ -46,7 +46,8 @@ export function AppEmDestaque() {
           </ul>
 
           <a
-            href={ANCORA_PEDIR}
+            href={LINK_BAIXAR}
+            download
             className="group mt-9 inline-flex h-16 w-full max-w-[20rem] items-center justify-between gap-4 rounded-2xl bg-gradient-to-r from-[#FFCB24] to-[#FFB900] px-7 text-lg font-extrabold text-[#101112] shadow-[0_18px_36px_-16px_rgba(255,160,0,0.9)] transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#101112] focus-visible:ring-offset-2 active:translate-y-0"
           >
             <span className="flex items-center gap-3">

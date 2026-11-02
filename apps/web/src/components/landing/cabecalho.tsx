@@ -3,7 +3,7 @@
 import { useEffect, useId, useState } from 'react';
 import { Download, Menu, X } from 'lucide-react';
 import { NAVEGACAO } from './conteudo';
-import { ANCORA_PEDIR } from './pecas';
+import { LINK_BAIXAR } from './pecas';
 
 /**
  * Barra do topo, sobre o fundo escuro do hero.
@@ -57,7 +57,8 @@ export function Cabecalho({ logo }: { logo: React.ReactNode }) {
 
       <div className="flex items-center gap-2">
         <a
-          href={ANCORA_PEDIR}
+          href={LINK_BAIXAR}
+          download
           className="hidden h-12 items-center gap-2 rounded-xl bg-[#FFCB24] px-5 text-sm font-bold text-[#101112] shadow-[0_10px_30px_-10px_rgba(255,203,36,0.7)] transition-colors hover:bg-[#FFB900] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#101112] sm:inline-flex"
         >
           <Download className="h-4 w-4" aria-hidden />
@@ -100,7 +101,8 @@ export function Cabecalho({ logo }: { logo: React.ReactNode }) {
           ))}
           <li className="mt-2 sm:hidden">
             <a
-              href={ANCORA_PEDIR}
+              href={LINK_BAIXAR}
+              download
               onClick={() => setAberto(false)}
               className="min-h-touch flex items-center justify-center gap-2 rounded-xl bg-[#FFCB24] px-4 text-base font-bold text-[#101112]"
             >

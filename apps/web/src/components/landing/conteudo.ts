@@ -2,9 +2,8 @@
  * Conteúdo publicitário da landing.
  *
  * Fica separado dos componentes porque é o que muda sem mexer em layout — e
- * porque parte dele ainda é PROVISÓRIO: números e depoimentos vieram da arte
- * de referência e precisam ser confirmados antes de valerem como afirmação ao
- * consumidor (CDC, art. 37).
+ * porque números e depoimentos só entram quando forem reais: afirmação ao
+ * consumidor sem lastro é publicidade enganosa (CDC, art. 37).
  */
 
 /** Links âncora da navegação, na ordem da arte. */
@@ -12,16 +11,16 @@ export const NAVEGACAO = [
   { rotulo: 'Início', href: '#inicio' },
   { rotulo: 'Vantagens', href: '#vantagens' },
   { rotulo: 'Como funciona', href: '#como-funciona' },
-  { rotulo: 'Depoimentos', href: '#depoimentos' },
+  // "Depoimentos" volta para cá quando houver depoimento real publicado.
   { rotulo: 'Contato', href: '#contato' },
 ] as const;
 
-/** PROVISÓRIO: números da arte de referência, ainda sem apuração. */
-export const NUMEROS = [
-  { valor: '+10 mil', rotulo: 'usuários' },
-  { valor: '+500', rotulo: 'lojas parceiras' },
-  { valor: '+50 mil', rotulo: 'entregas realizadas' },
-] as const;
+/**
+ * Números da plataforma no topo da landing. Vazio até haver números apurados:
+ * os da arte de referência ("+10 mil usuários", "+500 lojas") eram afirmação
+ * ao consumidor sem lastro (CDC, art. 37). Preencha com dados reais.
+ */
+export const NUMEROS: readonly { valor: string; rotulo: string }[] = [];
 
 export interface Depoimento {
   texto: string;
@@ -31,17 +30,11 @@ export interface Depoimento {
 }
 
 /**
- * PROVISÓRIO: depoimento da arte de referência. Publicar só com autorização
- * de quem falou. Com mais de um item, o carrossel mostra setas e indicadores.
+ * Depoimentos reais, publicados com autorização de quem falou. Vazio, a seção
+ * não aparece: o da arte de referência era de uma pessoa que não existe. Com
+ * mais de um item, o carrossel mostra setas e indicadores.
  */
-export const DEPOIMENTOS: Depoimento[] = [
-  {
-    texto: 'O Rapidinho facilitou minha rotina! Peço tudo pelo app e sempre chega rápido.',
-    nome: 'Ana Paula Souza',
-    papel: 'Usuária do Rapidinho',
-    nota: 5,
-  },
-];
+export const DEPOIMENTOS: Depoimento[] = [];
 
 /**
  * Lojas de aplicativo. Hoje o app é um PWA instalado pelo próprio site; quando

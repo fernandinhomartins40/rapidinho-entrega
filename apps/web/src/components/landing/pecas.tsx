@@ -1,8 +1,15 @@
 import { cn } from '@rapidinho/ui/lib/utils';
+import { LINK_DO_APK } from '@rapidinho/shared';
 import { LOJAS_DE_APPS } from './conteudo';
 
-/** Destino dos selos e do "Baixar agora" enquanto não houver app nas lojas. */
+/** Destino dos links de "pedir pelo site" (a chamada final, com as cidades). */
 export const ANCORA_PEDIR = '#pedir';
+
+/**
+ * Destino do "Baixar agora": o APK servido pelo próprio site. Antes levava a
+ * #pedir, e o app que já existe nunca era oferecido.
+ */
+export const LINK_BAIXAR = LINK_DO_APK;
 
 /** Etiqueta em pílula que abre cada seção ("ENTREGAS MAIS RÁPIDAS"). */
 export function Etiqueta({
@@ -71,15 +78,34 @@ const SELOS = [
 export function SelosDasLojas({ className }: { className?: string }) {
   return (
     <ul className={cn('flex flex-wrap gap-3', className)}>
+      {/* Selo de loja só com publicação de verdade: "Disponível na App Store"
+          sem app para iPhone era promessa falsa. Enquanto isso, o APK. */}
+      {!LOJAS_DE_APPS.googlePlay ? (
+        <li>
+          <a
+            href={LINK_BAIXAR}
+            download
+            className="flex h-[3.25rem] items-center gap-2.5 rounded-xl border border-white/70 bg-black px-4 text-white transition-colors hover:border-[#FFCB24] hover:bg-[#1b1c1e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCB24] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+          >
+            <IconeGooglePlay className="h-6 w-6 shrink-0" />
+            <span className="leading-none">
+              <span className="block text-[0.625rem] font-medium">Baixe o app para</span>
+              <span className="mt-0.5 block text-lg font-semibold tracking-tight">Android</span>
+            </span>
+          </a>
+        </li>
+      ) : null}
       {SELOS.map(({ chave, topo, nome, Icone }) => {
         const url = LOJAS_DE_APPS[chave];
+        if (!url) return null;
 
         return (
           <li key={chave}>
             <a
-              href={url ?? ANCORA_PEDIR}
-              {...(url ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-              aria-label={url ? `${topo} ${nome}` : `${nome}: em breve. Peça agora pelo site`}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${topo} ${nome}`}
               className="flex h-[3.25rem] items-center gap-2.5 rounded-xl border border-white/70 bg-black px-4 text-white transition-colors hover:border-[#FFCB24] hover:bg-[#1b1c1e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCB24] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
             >
               <Icone className="h-6 w-6 shrink-0" />
