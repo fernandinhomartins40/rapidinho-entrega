@@ -43,8 +43,9 @@ test.describe('aprovação de loja', () => {
     await page.getByLabel('WhatsApp').fill(`(44) 98${marca.slice(0, 3)}-${marca.slice(3)}1`);
     // E-mail e senha são o acesso do lojista ao painel.
     await page.getByLabel('E-mail').fill(`lojista-${marca}@e2e.rapidinho.test`);
-    await page.getByLabel('Senha', { exact: true }).fill('Senha@teste1');
-    await page.getByLabel('Repita a senha').fill('Senha@teste1');
+    // Pelo id: o rótulo "Senha" também casaria com "Repita a senha".
+    await page.locator('#senha').fill('Senha@teste1');
+    await page.locator('#confirmacao').fill('Senha@teste1');
     // Índice, e não rótulo: o `select` não tem opção vazia, então a primeira
     // cidade já vem marcada — escolher por nome só amarraria o teste ao seed.
     await page.getByLabel('Cidade').selectOption({ index: 0 });
