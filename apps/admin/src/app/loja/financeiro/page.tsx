@@ -94,7 +94,21 @@ export default async function FinanceiroPage({
 }: {
   searchParams: Promise<{ meses?: string }>;
 }) {
-  const { store } = await getStoreContext();
+  const { store, access } = await getStoreContext();
+
+  // Vendas, comissão e repasses são do dono. O funcionário opera pedidos e
+  // cardápio, mas não vê quanto a loja fatura.
+  if (!access.isPlatformAdmin && access.staffRole !== 'OWNER') {
+    return (
+      <div className="space-y-2">
+        <h1 className="text-2xl font-bold tracking-tight">Financeiro</h1>
+        <p className="text-muted-foreground">
+          Só o dono da loja vê o financeiro. Peça a ele, se precisar de algum número.
+        </p>
+      </div>
+    );
+  }
+
   const { meses } = await searchParams;
   const janela = Math.min(12, Math.max(0, Number(meses ?? 0)));
   const dados = await carregar(store.id, janela);

@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers';
 import { completeReverseOtp, requestReverseOtp } from './otp';
 import { createDatabaseSession } from './session';
+import { registrarAceiteDosTermos } from './consentimento';
 
 /**
  * Login por confirmação reversa, do ponto de vista do navegador.
@@ -55,6 +56,7 @@ export async function conferirLoginPorSms(): Promise<ConferenciaDoLoginPorSms> {
   if (resultado.status === 'erro') return resultado;
 
   await createDatabaseSession(resultado.userId);
+  await registrarAceiteDosTermos(resultado.userId);
   return { status: 'ok' };
 }
 

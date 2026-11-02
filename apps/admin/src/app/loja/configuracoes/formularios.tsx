@@ -12,7 +12,7 @@ import {
   Label,
   SwitchField,
 } from '@rapidinho/ui';
-import { formatDocument, maskPhoneBR } from '@rapidinho/shared';
+import { CARTAO_ONLINE_DISPONIVEL, formatDocument, maskPhoneBR } from '@rapidinho/shared';
 import {
   salvarImagensDaLoja,
   salvarOperacao,
@@ -263,12 +263,14 @@ function Pagamentos({ loja }: { loja: Loja }) {
       <CardContent>
         <form action={acao} className="space-y-4">
           <SwitchField name="acceptsPix" defaultChecked={loja.acceptsPix} label="Pix" />
-          <SwitchField
-            name="acceptsCardOnline"
-            defaultChecked={loja.acceptsCardOnline}
-            label="Cartão pelo app"
-            description="O cliente paga na hora do pedido."
-          />
+          {CARTAO_ONLINE_DISPONIVEL ? (
+            <SwitchField
+              name="acceptsCardOnline"
+              defaultChecked={loja.acceptsCardOnline}
+              label="Cartão pelo app"
+              description="O cliente paga na hora do pedido."
+            />
+          ) : null}
           <SwitchField
             name="acceptsCashOnDelivery"
             defaultChecked={loja.acceptsCashOnDelivery}

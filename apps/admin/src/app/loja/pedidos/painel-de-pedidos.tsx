@@ -31,6 +31,7 @@ import {
 import {
   aceitarPedido,
   cancelarPedido,
+  confirmarPixDaLoja,
   mudarStatusDoPedido,
   pausarProdutosDoPedido,
 } from './actions';
@@ -91,7 +92,14 @@ export function PainelDePedidos({ pedidos, loja, realtime }: Props) {
     () => pedidos.filter((p) => isActiveStatus(p.status) && p.status !== 'RECEIVED'),
     [pedidos],
   );
-  const encerrados = useMemo(() => pedidos.filter((p) => !isActiveStatus(p.status)), [pedidos]);
+  const pixParaConferir = useMemo(
+    () => pedidos.filter((p) => p.status === 'PENDING_PAYMENT' && pixNaChaveDaLoja(p)),
+    [pedidos],
+  );
+  const encerrados = useMemo(
+    () => pedidos.filter((p) => !isActiveStatus(p.status) && p.status !== 'PENDING_PAYMENT'),
+    [pedidos],
+  );
 
   // Guarda o total anterior para distinguir "chegou pedido" de "a lista foi
   // recarregada". Sem isso o alerta tocaria a cada revalidação.
@@ -191,6 +199,12 @@ export function PainelDePedidos({ pedidos, loja, realtime }: Props) {
         </div>
       </header>
 
+      <Secao titulo="Pix para conferir" total={pixParaConferir.length}>
+        {pixParaConferir.map((pedido) => (
+          <CartaoDePix key={pedido.id} pedido={pedido} />
+        ))}
+      </Secao>
+
       <Secao titulo="Aguardando você" destaque total={novos.length}>
         {novos.map((pedido) => (
           <CartaoDePedido
@@ -222,6 +236,65 @@ export function PainelDePedidos({ pedidos, loja, realtime }: Props) {
         />
       ) : null}
     </div>
+  );
+}
+
+function pixNaChaveDaLoja(pedido: PedidoNaTela): boolean {
+  return pedido.payment?.method === 'PIX' && pedido.payment.provider === 'OFFLINE';
+}
+
+/**
+ * Pix pago na chave da loja: nenhum gateway avisa, então o lojista confere o
+ * extrato e confirma aqui. Sem esta tela o pedido ficava parado para sempre.
+ */
+function CartaoDePix({ pedido }: { pedido: PedidoNaTela }) {
+  const [pendente, iniciar] = useTransition();
+  const [erro, setErro] = useState<string | null>(null);
+
+  function executar(acao: () => Promise<{ ok: boolean; message?: string }>) {
+    setErro(null);
+    iniciar(async () => {
+      const resultado = await acao();
+      if (!resultado.ok) setErro(resultado.message ?? 'Não deu certo. Tente de novo.');
+    });
+  }
+
+  return (
+    <Card className="border-warning border-2">
+      <CardContent className="space-y-3 pt-6">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-bold">Pedido #{pedido.number}</p>
+            <p className="text-muted-foreground text-sm">{pedido.customerName}</p>
+          </div>
+          <p className="text-lg font-bold">{formatCents(pedido.totalCents)}</p>
+        </div>
+        <p className="text-sm">
+          Confira no extrato da sua conta se o Pix de {formatCents(pedido.totalCents)} chegou. Só
+          depois o pedido entra para preparo.
+        </p>
+        {erro ? <p className="text-destructive text-sm">{erro}</p> : null}
+        <div className="flex flex-wrap gap-2">
+          <Button
+            isLoading={pendente}
+            onClick={() => executar(() => confirmarPixDaLoja(pedido.id))}
+          >
+            Recebi o Pix
+          </Button>
+          <Button
+            variant="outline"
+            disabled={pendente}
+            onClick={() =>
+              executar(() =>
+                cancelarPedido({ orderId: pedido.id, reason: 'O Pix não foi recebido pela loja' }),
+              )
+            }
+          >
+            Não recebi
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 

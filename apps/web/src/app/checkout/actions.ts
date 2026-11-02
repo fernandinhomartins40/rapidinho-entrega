@@ -11,6 +11,7 @@ import {
   publishRealtime,
 } from '@rapidinho/services';
 import {
+  CARTAO_ONLINE_DISPONIVEL,
   buildPixBrCode,
   checkoutSchema,
   isStoreOpen,
@@ -182,7 +183,7 @@ export async function finalizarPedido(
 
     const aceita: Record<string, boolean> = {
       PIX: loja.acceptsPix,
-      CREDIT_CARD_ONLINE: loja.acceptsCardOnline,
+      CREDIT_CARD_ONLINE: CARTAO_ONLINE_DISPONIVEL && loja.acceptsCardOnline,
       CASH_ON_DELIVERY: loja.acceptsCashOnDelivery,
       CARD_ON_DELIVERY: loja.acceptsCardOnDelivery,
     };
@@ -434,7 +435,11 @@ export async function finalizarPedido(
 
     // Pedido aguardando pagamento ainda não é trabalho para a loja: o aviso
     // sai quando o webhook confirmar.
-    if (statusInicial !== 'PENDING_PAYMENT') {
+    // Exceção: Pix na chave da loja não tem webhook, quem confirma é o lojista
+    // ("Pix para conferir" no painel), então a loja precisa saber já.
+    const pixNaChaveDaLoja =
+      dados.paymentMethod === 'PIX' && loja.settlementMode === 'STORE_COLLECTS' && !!loja.pixKey;
+    if (statusInicial !== 'PENDING_PAYMENT' || pixNaChaveDaLoja) {
       await publishRealtime(REALTIME_CHANNELS.store(loja.id), REALTIME_EVENTS.orderCreated, {
         orderId: pedido.id,
         number: pedido.number,
@@ -447,9 +452,7 @@ export async function finalizarPedido(
       // Pix direto na chave da loja é confirmado à mão pelo lojista: cancelar
       // sozinho poderia derrubar um pedido já pago. Só o gateway, que avisa
       // pelo webhook, tem prazo automático.
-      expiraSozinho:
-        statusInicial === 'PENDING_PAYMENT' &&
-        !(dados.paymentMethod === 'PIX' && loja.settlementMode === 'STORE_COLLECTS' && loja.pixKey),
+      expiraSozinho: statusInicial === 'PENDING_PAYMENT' && !pixNaChaveDaLoja,
     });
 
     revalidatePath('/carrinho');

@@ -46,12 +46,12 @@ export async function resetRateLimit(key: string): Promise<void> {
   await getRedis().del(`ratelimit:${key}`);
 }
 
-/** IP real do cliente, considerando que o tráfego passa pelo Nginx. */
+/**
+ * IP real do cliente. Vem do `X-Real-IP`, que o Nginx da aplicação sempre
+ * reescreve (com `real_ip_header` confiando só no Nginx do host). O
+ * `X-Forwarded-For` não serve: o primeiro valor é o que o cliente mandou, e
+ * um cabeçalho forjado por requisição furaria todo limite por IP.
+ */
 export function clientIpFromHeaders(headers: Headers): string {
-  const forwarded = headers.get('x-forwarded-for');
-  if (forwarded) {
-    const first = forwarded.split(',')[0]?.trim();
-    if (first) return first;
-  }
-  return headers.get('x-real-ip') ?? 'desconhecido';
+  return headers.get('x-real-ip')?.trim() || 'desconhecido';
 }

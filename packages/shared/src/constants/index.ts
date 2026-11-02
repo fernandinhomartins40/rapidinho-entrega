@@ -36,6 +36,21 @@ export function isStoreMember(role: UserRole | null | undefined): boolean {
   return role != null && STORE_ROLES.includes(role);
 }
 
+/**
+ * Versão vigente dos termos de uso e da política de privacidade — a data da
+ * "Última atualização" das páginas /termos e /privacidade. Mudou o texto,
+ * mude aqui: o próximo login de cada pessoa grava o aceite da versão nova.
+ */
+export const VERSAO_DOS_TERMOS = '2026-09';
+
+/**
+ * Cartão de crédito pelo app ainda não existe de ponta a ponta: falta a tela
+ * que gera o token do cartão no navegador, e sem ele toda cobrança falha. Até
+ * existir, a opção não aparece para a loja nem para o cliente, mesmo que o
+ * campo `acceptsCardOnline` esteja ligado no banco.
+ */
+export const CARTAO_ONLINE_DISPONIVEL = false;
+
 export const PAYMENT_METHOD_LABEL = {
   PIX: 'Pix',
   CREDIT_CARD_ONLINE: 'Cartão de crédito (online)',

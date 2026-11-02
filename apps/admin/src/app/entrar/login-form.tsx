@@ -7,6 +7,9 @@ import { formatPhoneBR, maskPhoneBR } from '@rapidinho/shared';
 import { autenticar, conferirSms } from './actions';
 import { LOGIN_INITIAL_STATE, LOGIN_POR_SENHA } from './login-state';
 
+/** Termos e privacidade moram no site do cliente, não no painel. */
+const SITE = (process.env.NEXT_PUBLIC_WEB_URL ?? '').replace(/\/$/, '');
+
 /**
  * E-mail e senha para lojista, funcionário e equipe. Telefone e código só para
  * o entregador, e só dentro do app nativo — fora dele a etapa nem aparece.
@@ -146,6 +149,23 @@ export function LoginForm({
             <Button type="submit" block isLoading={enviando}>
               {porSms ? 'Continuar' : 'Receber código'}
             </Button>
+
+            <p className="text-muted-foreground text-center text-xs leading-relaxed">
+              Ao continuar você aceita os{' '}
+              <a href={`${SITE}/termos`} className="underline" target="_blank" rel="noreferrer">
+                termos de uso
+              </a>{' '}
+              e a{' '}
+              <a
+                href={`${SITE}/privacidade`}
+                className="underline"
+                target="_blank"
+                rel="noreferrer"
+              >
+                política de privacidade
+              </a>
+              .
+            </p>
           </form>
 
           <form action={enviar} className="mt-2">

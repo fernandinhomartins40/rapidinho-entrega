@@ -18,3 +18,4 @@ export {
 } from './otp';
 export * from './sms-login';
 export * from './senha';
+export * from './consentimento';

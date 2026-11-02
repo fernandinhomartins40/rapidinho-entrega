@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { desfazerReservasDoPedido, prisma } from '@rapidinho/database';
+import { desfazerReservasDoPedido, Prisma, prisma } from '@rapidinho/database';
 import { logger, notificarUsuario, publishRealtimeMany } from '@rapidinho/services';
 import {
   avisoDeStatusAoCliente,
@@ -142,30 +142,45 @@ export async function mudarStatusDoPedido(entrada: unknown): Promise<ActionResul
 
     const sincronizarCorrida = corridaAposStatus(corrida, dados.status);
 
-    await prisma.$transaction([
-      ...sincronizarCorrida,
-      prisma.order.update({
-        where: { id: pedido.id },
-        data: {
-          status: dados.status,
-          ...carimboDoStatus(dados.status),
-          ...(dados.prepMinutes != null
-            ? {
-                estimatedPrepMinutes: dados.prepMinutes,
-                estimatedReadyAt: new Date(Date.now() + dados.prepMinutes * 60_000),
-              }
-            : {}),
-        },
-      }),
-      prisma.orderStatusHistory.create({
-        data: {
-          orderId: pedido.id,
-          status: dados.status,
-          note: dados.note ?? null,
-          changedById: access.user.id,
-        },
-      }),
-    ]);
+    try {
+      await prisma.$transaction([
+        // Primeiro, e condicionado ao status lido: se o cliente cancelou ou
+        // outro aparelho da loja mudou o pedido nesse meio-tempo, o update não
+        // acha a linha (P2025) e a transação inteira — corrida incluída — volta.
+        prisma.order.update({
+          where: { id: pedido.id, status: atual },
+          data: {
+            status: dados.status,
+            ...carimboDoStatus(dados.status),
+            ...(dados.prepMinutes != null
+              ? {
+                  estimatedPrepMinutes: dados.prepMinutes,
+                  estimatedReadyAt: new Date(Date.now() + dados.prepMinutes * 60_000),
+                }
+              : {}),
+          },
+        }),
+        ...sincronizarCorrida,
+        prisma.orderStatusHistory.create({
+          data: {
+            orderId: pedido.id,
+            status: dados.status,
+            note: dados.note ?? null,
+            changedById: access.user.id,
+          },
+        }),
+      ]);
+    } catch (erro) {
+      if (erro instanceof Prisma.PrismaClientKnownRequestError && erro.code === 'P2025') {
+        return {
+          result: {
+            ok: false,
+            message: 'O pedido mudou enquanto você agia. Confira e tente de novo.',
+          },
+        };
+      }
+      throw erro;
+    }
 
     // A corrida entra na fila quando o pedido fica pronto, não antes: corrida
     // aberta cedo demais faz o entregador chegar e esperar na loja.
@@ -308,9 +323,11 @@ export async function cancelarPedido(entrada: unknown): Promise<ActionResult> {
       };
     }
 
-    await prisma.$transaction(async (tx) => {
-      await tx.order.update({
-        where: { id: pedido.id },
+    const cancelado = await prisma.$transaction(async (tx) => {
+      // Condicional: um pedido que andou (ou já foi entregue) nesse meio-tempo
+      // não é cancelado por cima, nem tem estoque e cupom devolvidos duas vezes.
+      const { count } = await tx.order.updateMany({
+        where: { id: pedido.id, status: atual },
         data: {
           status: destino,
           cancelledAt: new Date(),
@@ -318,6 +335,7 @@ export async function cancelarPedido(entrada: unknown): Promise<ActionResult> {
           cancelledBy: access.user.id,
         },
       });
+      if (count === 0) return false;
       await tx.orderStatusHistory.create({
         data: {
           orderId: pedido.id,
@@ -329,7 +347,17 @@ export async function cancelarPedido(entrada: unknown): Promise<ActionResult> {
       // Estoque de volta à prateleira, corrida do entregador cancelada e
       // cupom devolvido ao cliente.
       await desfazerReservasDoPedido(tx, pedido.id);
+      return true;
     });
+
+    if (!cancelado) {
+      return {
+        result: {
+          ok: false,
+          message: 'O pedido mudou enquanto você agia. Confira e tente de novo.',
+        },
+      };
+    }
 
     await publishRealtimeMany(canaisDoPedido(pedido), REALTIME_EVENTS.orderCancelled, {
       orderId: pedido.id,
@@ -491,4 +519,92 @@ async function abrirCorrida(orderId: string, storeId: string): Promise<void> {
     // Índice único recusou: outra chamada simultânea já criou a corrida.
     logger.info({ err: error, orderId }, '[pedidos] corrida já existia');
   }
+}
+
+/**
+ * Pix pago direto na chave da loja: o dinheiro não passa pela plataforma, então
+ * nenhum webhook avisa. Quem confere o extrato é o lojista, e é este botão que
+ * tira o pedido de "aguardando pagamento" e o põe na fila de aceite. Pix do
+ * gateway não passa por aqui: lá quem confirma é o webhook.
+ */
+export async function confirmarPixDaLoja(orderId: unknown): Promise<ActionResult> {
+  return runStoreAction(async (access) => {
+    const id = cuidSchema.parse(orderId);
+
+    const pedido = await prisma.order.findFirst({
+      where: {
+        id,
+        storeId: access.storeId,
+        status: 'PENDING_PAYMENT',
+        payment: { is: { method: 'PIX', provider: 'OFFLINE' } },
+      },
+      select: { id: true, number: true, storeId: true, userId: true },
+    });
+
+    if (!pedido) {
+      return { result: { ok: false, message: 'Este pedido não está aguardando Pix.' } };
+    }
+
+    const confirmado = await prisma.$transaction(async (tx) => {
+      // Condicional: dois cliques (ou dois aparelhos) não confirmam duas vezes,
+      // e um pedido cancelado no meio-tempo não volta.
+      const { count } = await tx.order.updateMany({
+        where: { id: pedido.id, status: 'PENDING_PAYMENT' },
+        data: { status: 'RECEIVED' },
+      });
+      if (count === 0) return false;
+
+      await tx.payment.update({
+        where: { orderId: pedido.id },
+        data: { status: 'PAID', paidAt: new Date() },
+      });
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: pedido.id,
+          status: 'RECEIVED',
+          note: 'Pix conferido pela loja',
+          changedById: access.user.id,
+        },
+      });
+      return true;
+    });
+
+    if (!confirmado) {
+      return {
+        result: { ok: false, message: 'Este pedido já foi atualizado. Recarregue a tela.' },
+      };
+    }
+
+    await publishRealtimeMany(
+      [REALTIME_CHANNELS.store(pedido.storeId), REALTIME_CHANNELS.order(pedido.id)],
+      REALTIME_EVENTS.orderStatusChanged,
+      { orderId: pedido.id, number: pedido.number, status: 'RECEIVED' },
+    );
+
+    if (pedido.userId) {
+      await notificarUsuario({
+        userId: pedido.userId,
+        title: `Pix do pedido #${pedido.number} confirmado`,
+        body: 'A loja recebeu seu pagamento. Agora é só aguardar o preparo.',
+        url: `/pedidos/${pedido.id}`,
+        canais: ['PUSH'],
+        entity: { type: 'Order', id: pedido.id },
+        tag: `pedido-${pedido.id}`,
+      });
+    }
+
+    revalidatePath('/loja/pedidos');
+    revalidatePath('/loja');
+
+    return {
+      result: { ok: true, message: `Pix do pedido #${pedido.number} confirmado.` },
+      audit: {
+        action: 'order.pix_confirmed',
+        entityType: 'Order',
+        entityId: pedido.id,
+        before: { status: 'PENDING_PAYMENT' },
+        after: { status: 'RECEIVED' },
+      },
+    };
+  });
 }

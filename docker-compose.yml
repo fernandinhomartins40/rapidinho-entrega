@@ -31,6 +31,7 @@ services:
     environment:
       WEB_DOMAIN: ${WEB_DOMAIN:-rapidinhoentrega.com.br}
       ADMIN_DOMAIN: ${ADMIN_DOMAIN:-painel.rapidinhoentrega.com.br}
+      S3_BUCKET: ${S3_BUCKET:-rapidinho}
     depends_on:
       web:
         condition: service_healthy
@@ -74,7 +75,13 @@ services:
       minio:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'node', '-e', "require('http').get('http://127.0.0.1:3000/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://127.0.0.1:3000/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
+        ]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -105,7 +112,13 @@ services:
       minio:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'node', '-e', "require('http').get('http://127.0.0.1:3001/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://127.0.0.1:3001/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
+        ]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -131,7 +144,13 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ['CMD', 'node', '-e', "require('http').get('http://127.0.0.1:3002/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "require('http').get('http://127.0.0.1:3002/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))",
+        ]
       interval: 30s
       timeout: 5s
       retries: 5
@@ -235,7 +254,11 @@ services:
     pids_limit: 128
     logging: *log
     restart: unless-stopped
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    # noeviction, exigido pelo BullMQ: com allkeys-lru o Redis cheio apagaria
+    # jobs agendados (expiração do Pix, cobrança do plano) em silêncio. Cheio,
+    # agora ele recusa escrita com erro visível. O resto (limites de taxa) já
+    # expira sozinho por TTL.
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy noeviction
     volumes:
       - redis-data:/data
     healthcheck:

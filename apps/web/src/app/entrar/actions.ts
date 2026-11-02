@@ -7,6 +7,7 @@ import {
   conferirLoginPorSms,
   createDatabaseSession,
   iniciarLoginPorSms,
+  registrarAceiteDosTermos,
   requestOtp,
   verifyOtp,
 } from '@rapidinho/auth';
@@ -83,10 +84,20 @@ async function solicitarCodigo(formData: FormData): Promise<LoginState> {
     RATE_LIMITS.otpRequest.durationSeconds,
   );
 
-  if (!limit.allowed) {
+  // Por IP também: o limite por telefone sozinho deixa quem varre vários
+  // números do mesmo lugar gastar SMS à vontade. Teto folgado porque, no
+  // interior, a operadora põe muitos celulares atrás do mesmo IP (CGNAT).
+  const limitePorIp = await consumeRateLimit(
+    `otp:request:ip:${await currentIp()}`,
+    RATE_LIMITS.otpRequest.points * 10,
+    RATE_LIMITS.otpRequest.durationSeconds,
+  );
+
+  if (!limit.allowed || !limitePorIp.allowed) {
+    const espera = Math.max(limit.retryAfterSeconds, limitePorIp.retryAfterSeconds);
     return {
       step: 'phone',
-      error: `Muitas tentativas. Tente de novo em ${Math.ceil(limit.retryAfterSeconds / 60)} minutos.`,
+      error: `Muitas tentativas. Tente de novo em ${Math.ceil(espera / 60)} minutos.`,
     };
   }
 
@@ -153,6 +164,7 @@ async function verificarCodigo(previous: LoginState, formData: FormData): Promis
   }
 
   await createDatabaseSession(result.userId);
+  await registrarAceiteDosTermos(result.userId, await currentIp());
   await resetRateLimit(limitKey);
 
   // Só caminho interno: um destino absoluto viraria redirecionamento aberto,

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@rapidinho/database';
+import { Prisma, prisma } from '@rapidinho/database';
 import {
   agendarLembreteDaLoja,
   capturarErro,
@@ -60,48 +60,64 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, ignored: 'pagamento desconhecido' });
   }
 
+  // Evento, pagamento e pedido mudam juntos. Se a deduplicação fosse gravada
+  // antes e o resto falhasse, o reenvio do gateway cairia como "duplicado" e
+  // a confirmação do dinheiro se perderia para sempre.
+  let pedidoLiberado = false;
   try {
-    await prisma.paymentEvent.create({
-      data: {
-        paymentId: pagamento.id,
-        provider: evento.provider.toUpperCase() as 'MERCADOPAGO' | 'ASAAS' | 'FAKE',
-        eventType: evento.eventType,
-        dedupeKey: evento.dedupeKey,
-        payload: evento.raw as object,
-      },
+    pedidoLiberado = await prisma.$transaction(async (tx) => {
+      await tx.paymentEvent.create({
+        data: {
+          paymentId: pagamento.id,
+          provider: evento.provider.toUpperCase() as 'MERCADOPAGO' | 'ASAAS' | 'FAKE',
+          eventType: evento.eventType,
+          dedupeKey: evento.dedupeKey,
+          payload: evento.raw as object,
+        },
+      });
+
+      if (pagamento.status === evento.status) return false;
+
+      await tx.payment.update({
+        where: { id: pagamento.id },
+        data: {
+          status: evento.status,
+          paidAt: evento.status === 'PAID' ? (evento.paidAt ?? new Date()) : null,
+          ...(evento.status === 'REFUNDED' ? { refundedAt: new Date() } : {}),
+        },
+      });
+
+      if (evento.status !== 'PAID') return false;
+
+      // Pedido preso em "aguardando pagamento" só anda quando o dinheiro
+      // entra. Condicional: se a expiração do Pix cancelou no mesmo instante,
+      // o cancelamento vale e o pedido não ressuscita.
+      const liberado = await tx.order.updateMany({
+        where: { id: pagamento.orderId, status: 'PENDING_PAYMENT' },
+        data: { status: 'RECEIVED' },
+      });
+      if (liberado.count === 0) return false;
+
+      await tx.orderStatusHistory.create({
+        data: { orderId: pagamento.orderId, status: 'RECEIVED', note: 'Pagamento confirmado' },
+      });
+      return true;
     });
-  } catch {
-    // A chave única de deduplicação recusou: este evento já foi processado.
-    return NextResponse.json({ ok: true, duplicate: true });
+  } catch (erro) {
+    if (erro instanceof Prisma.PrismaClientKnownRequestError && erro.code === 'P2002') {
+      // A chave única de deduplicação recusou: este evento já foi processado.
+      return NextResponse.json({ ok: true, duplicate: true });
+    }
+    // Qualquer outra falha devolve erro para o gateway reenviar.
+    throw erro;
   }
 
   if (pagamento.status === evento.status) {
     return NextResponse.json({ ok: true, unchanged: true });
   }
 
-  await prisma.payment.update({
-    where: { id: pagamento.id },
-    data: {
-      status: evento.status,
-      paidAt: evento.status === 'PAID' ? (evento.paidAt ?? new Date()) : null,
-      ...(evento.status === 'REFUNDED' ? { refundedAt: new Date() } : {}),
-    },
-  });
-
-  // Pedido preso em "aguardando pagamento" só anda quando o dinheiro entra.
-  // É aqui que ele aparece na tela do lojista.
-  if (evento.status === 'PAID' && pagamento.order.status === 'PENDING_PAYMENT') {
-    await prisma.$transaction([
-      prisma.order.update({ where: { id: pagamento.orderId }, data: { status: 'RECEIVED' } }),
-      prisma.orderStatusHistory.create({
-        data: {
-          orderId: pagamento.orderId,
-          status: 'RECEIVED',
-          note: 'Pagamento confirmado',
-        },
-      }),
-    ]);
-
+  // É aqui que o pedido aparece na tela do lojista.
+  if (pedidoLiberado) {
     await publishRealtimeMany(
       [
         REALTIME_CHANNELS.store(pagamento.order.storeId),

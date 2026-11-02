@@ -7,6 +7,7 @@ import {
   cancelarLoginPorSms,
   conferirLoginPorSms,
   createDatabaseSession,
+  registrarAceiteDosTermos,
   iniciarLoginPorSms,
   requestOtp,
   verifyOtp,
@@ -180,6 +181,8 @@ async function verificarCodigo(previous: LoginState, formData: FormData): Promis
   }
 
   await createDatabaseSession(result.userId);
+  // O entregador vê o aviso dos termos nesta tela: é aqui que o aceite é dele.
+  await registrarAceiteDosTermos(result.userId, await currentIp());
   await resetRateLimit(limitKey);
 
   // O destino chega do formulário, mas quem decide o que o usuário pode ver é

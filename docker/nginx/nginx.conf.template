@@ -66,6 +66,17 @@ http {
     ''      close;
   }
 
+  # IP real do cliente. Em produção quem conecta aqui é o Nginx do host, pela
+  # rede do Docker: sem isto, $remote_addr seria o gateway da bridge e todos
+  # os clientes dividiriam o mesmo balde do limit_req (e o X-Real-IP repassado
+  # ao app seria o mesmo para todos). Só endereços privados são confiáveis, e
+  # um cliente da internet não chega daí.
+  set_real_ip_from 127.0.0.1;
+  set_real_ip_from 10.0.0.0/8;
+  set_real_ip_from 172.16.0.0/12;
+  set_real_ip_from 192.168.0.0/16;
+  real_ip_header X-Real-IP;
+
   # Proteção contra força bruta no OTP e abuso da busca.
   limit_req_zone $binary_remote_addr zone=otp_zone:10m rate=6r/m;
   limit_req_zone $binary_remote_addr zone=api_zone:10m rate=30r/s;
@@ -95,11 +106,17 @@ http {
     }
 
     location /uploads/ {
-      proxy_pass http://minio_upstream/;
+      # O bucket entra no caminho: a chave é `public/...` e o MinIO usa
+      # path-style. Host fixo porque qualquer proxy_set_header aqui descarta
+      # os herdados do bloco http, e sem ele o MinIO recebe o nome do
+      # upstream (com sublinhado) e responde 400 "invalid hostname".
+      proxy_pass http://minio_upstream/${S3_BUCKET}/;
+      proxy_set_header Host minio:9000;
       proxy_set_header Connection '';
+      proxy_hide_header Set-Cookie;
       # Nome de arquivo carrega hash: o conteúdo nunca muda sob a mesma URL.
-      proxy_cache_valid 200 30d;
-      add_header Cache-Control 'public, max-age=31536000, immutable';
+      add_header Cache-Control 'public, max-age=31536000, immutable' always;
+      add_header X-Content-Type-Options nosniff always;
     }
 
     location /api/auth/otp {
@@ -133,9 +150,17 @@ http {
     }
 
     location /uploads/ {
-      proxy_pass http://minio_upstream/;
+      # O bucket entra no caminho: a chave é `public/...` e o MinIO usa
+      # path-style. Host fixo porque qualquer proxy_set_header aqui descarta
+      # os herdados do bloco http, e sem ele o MinIO recebe o nome do
+      # upstream (com sublinhado) e responde 400 "invalid hostname".
+      proxy_pass http://minio_upstream/${S3_BUCKET}/;
+      proxy_set_header Host minio:9000;
       proxy_set_header Connection '';
-      add_header Cache-Control 'public, max-age=31536000, immutable';
+      proxy_hide_header Set-Cookie;
+      # Nome de arquivo carrega hash: o conteúdo nunca muda sob a mesma URL.
+      add_header Cache-Control 'public, max-age=31536000, immutable' always;
+      add_header X-Content-Type-Options nosniff always;
     }
 
     # A tela de pedidos do lojista depende de WebSocket: polling não atende.
@@ -168,9 +193,17 @@ http {
     }
 
     location /uploads/ {
-      proxy_pass http://minio_upstream/;
+      # O bucket entra no caminho: a chave é `public/...` e o MinIO usa
+      # path-style. Host fixo porque qualquer proxy_set_header aqui descarta
+      # os herdados do bloco http, e sem ele o MinIO recebe o nome do
+      # upstream (com sublinhado) e responde 400 "invalid hostname".
+      proxy_pass http://minio_upstream/${S3_BUCKET}/;
+      proxy_set_header Host minio:9000;
       proxy_set_header Connection '';
-      add_header Cache-Control 'public, max-age=31536000, immutable';
+      proxy_hide_header Set-Cookie;
+      # Nome de arquivo carrega hash: o conteúdo nunca muda sob a mesma URL.
+      add_header Cache-Control 'public, max-age=31536000, immutable' always;
+      add_header X-Content-Type-Options nosniff always;
     }
 
     location /api/auth/otp {

@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { prisma } from '@rapidinho/database';
+import { Prisma, prisma } from '@rapidinho/database';
 import { destroyCurrentSession, revokeAllSessions } from '@rapidinho/auth';
 import { runAuthedAction, type ActionResult } from '@/lib/action';
 
@@ -125,7 +125,12 @@ export async function excluirMinhaConta(): Promise<ActionResult> {
       // Os pedidos guardam o nome e o telefone como snapshot; também saem.
       await tx.order.updateMany({
         where: { userId: user.id },
-        data: { customerName: 'Cliente excluído', customerPhone: '', addressSnapshot: undefined },
+        // `undefined` não mexe no campo: o JSON nulo é o que apaga o endereço.
+        data: {
+          customerName: 'Cliente excluído',
+          customerPhone: '',
+          addressSnapshot: Prisma.JsonNull,
+        },
       });
 
       await tx.dataRequest.create({

@@ -362,12 +362,24 @@ jobs:
       - name: Preparar configuração da aplicação
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}
+          SUPER_ADMIN_PHONE: ${{ secrets.SUPER_ADMIN_PHONE }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          SMS_GATEWAY_NUMBER: ${{ secrets.SMS_GATEWAY_NUMBER }}
+          SMSDEV_API_KEY: ${{ secrets.SMSDEV_API_KEY }}
         run: |
           RELEASE_DIR="$APP_ROOT/releases/${{ steps.release.outputs.version }}"
-          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
-            "APP_ROOT='$APP_ROOT' GHCR_OWNER='${GITHUB_REPOSITORY_OWNER,,}' SUPER_ADMIN_PHONE='${{ secrets.SUPER_ADMIN_PHONE }}' SENTRY_DSN='${{ secrets.SENTRY_DSN }}' SMS_GATEWAY_NUMBER='${{ secrets.SMS_GATEWAY_NUMBER }}' SMSDEV_API_KEY='${{ secrets.SMSDEV_API_KEY }}' \
+          # Os segredos vão pelo stdin, escapados com %q, e não na linha de
+          # comando do ssh: lá eles apareceriam no `ps` da VPS (compartilhada
+          # com outros projetos) e uma aspa no valor quebraria o comando.
+          {
+            for nome in SUPER_ADMIN_PHONE SENTRY_DSN SMS_GATEWAY_NUMBER SMSDEV_API_KEY; do
+              printf 'export %s=%q\n' "$nome" "${!nome}"
+            done
+          } | sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
+            "APP_ROOT='$APP_ROOT' GHCR_OWNER='${GITHUB_REPOSITORY_OWNER,,}' \
              CANONICAL_URL='$CANONICAL_URL' PRIMARY_DOMAIN='$PRIMARY_DOMAIN' ADMIN_DOMAIN='$ADMIN_DOMAIN' SSL_EMAIL='$SSL_EMAIL' \
-             PORT_RANGE_START='$PORT_RANGE_START' PORT_RANGE_END='$PORT_RANGE_END' bash '$RELEASE_DIR/.github/scripts/preparar-env.sh'"
+             PORT_RANGE_START='$PORT_RANGE_START' PORT_RANGE_END='$PORT_RANGE_END' \
+             bash -c 'set -e; source /dev/stdin; exec bash \"\$0\"' '$RELEASE_DIR/.github/scripts/preparar-env.sh'"
       - name: Fazer pull do GHCR e subir a release
         env:
           SSHPASS: ${{ secrets.VPS_PASSWORD }}

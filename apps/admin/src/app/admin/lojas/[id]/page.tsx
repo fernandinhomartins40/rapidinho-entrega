@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
+import { requireAdmin } from '@rapidinho/auth';
 import { prisma } from '@rapidinho/database';
 import {
   DELIVERY_FEE_MODE_LABEL,
@@ -13,6 +14,7 @@ import {
 } from '@rapidinho/shared';
 import { Badge, Card, CardContent, CardHeader, CardTitle } from '@rapidinho/ui';
 import { AcoesDaLoja } from './acoes-da-loja';
+import { SenhaDoDono } from './senha-do-dono';
 import { dataHora } from '../../pedidos/formatos';
 
 export const dynamic = 'force-dynamic';
@@ -34,6 +36,7 @@ function Campo({ rotulo, children }: { rotulo: string; children: React.ReactNode
 
 export default async function LojaDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const admin = await requireAdmin();
 
   const loja = await prisma.store.findUnique({
     where: { id },
@@ -43,7 +46,9 @@ export default async function LojaDetalhePage({ params }: { params: Promise<{ id
       subscription: { include: { plan: { select: { name: true, commissionRate: true } } } },
       hours: { orderBy: [{ weekday: 'asc' }, { opensAt: 'asc' }] },
       staff: {
-        include: { user: { select: { id: true, name: true, phone: true, role: true } } },
+        include: {
+          user: { select: { id: true, name: true, phone: true, role: true, passwordHash: true } },
+        },
         orderBy: { role: 'asc' },
       },
       documents: { include: { file: { select: { mediumKey: true } } } },
@@ -54,6 +59,8 @@ export default async function LojaDetalhePage({ params }: { params: Promise<{ id
   if (!loja) notFound();
 
   const dono = loja.staff.find((membro) => membro.role === 'OWNER');
+  // Só o booleano sai daqui: o hash nunca vai para o componente do navegador.
+  const donoSemSenha = Boolean(dono && !dono.user.passwordHash);
 
   const [faturamento, ultimosPedidos] = await Promise.all([
     prisma.order.aggregate({
@@ -97,6 +104,13 @@ export default async function LojaDetalhePage({ params }: { params: Promise<{ id
           }}
         />
       </header>
+
+      {donoSemSenha && dono && admin.role === 'SUPER_ADMIN' ? (
+        <SenhaDoDono
+          dono={{ id: dono.user.id, nome: dono.user.name }}
+          emailDoCadastro={loja.email}
+        />
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>

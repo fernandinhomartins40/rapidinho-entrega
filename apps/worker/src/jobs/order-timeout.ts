@@ -31,15 +31,22 @@ export async function expirarPedido(orderId: string): Promise<void> {
     return;
   }
 
-  await prisma.$transaction(async (tx) => {
-    await tx.order.update({
-      where: { id: pedido.id },
+  const cancelado = await prisma.$transaction(async (tx) => {
+    // Condicional: se o webhook confirmou o pagamento entre a leitura acima e
+    // agora, o pedido já saiu de PENDING_PAYMENT e não é cancelado.
+    const { count } = await tx.order.updateMany({
+      where: {
+        id: pedido.id,
+        status: 'PENDING_PAYMENT',
+        NOT: { payment: { is: { status: 'PAID' } } },
+      },
       data: {
         status: 'CANCELLED',
         cancelledAt: new Date(),
         cancelReason: 'Pagamento não confirmado no prazo',
       },
     });
+    if (count === 0) return false;
 
     await tx.orderStatusHistory.create({
       data: {
@@ -51,7 +58,10 @@ export async function expirarPedido(orderId: string): Promise<void> {
 
     // Devolve estoque, corrida e cupom: o pedido não aconteceu.
     await desfazerReservasDoPedido(tx, pedido.id);
+    return true;
   });
+
+  if (!cancelado) return;
 
   await publishRealtimeMany(
     [REALTIME_CHANNELS.order(pedido.id), REALTIME_CHANNELS.store(pedido.storeId)],

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { prisma } from '@rapidinho/database';
+import { Prisma, prisma } from '@rapidinho/database';
 import { capturarErro, notificarUsuario, publishRealtimeMany } from '@rapidinho/services';
 import { AuthorizationError, requireCourier } from '@rapidinho/auth';
 import { avisoDeStatusAoCliente, REALTIME_CHANNELS, REALTIME_EVENTS } from '@rapidinho/shared';
@@ -48,8 +48,24 @@ export async function aceitarCorrida(entrada: unknown): Promise<ActionResult> {
   return comEntregador(async (courierId) => {
     const { deliveryId } = idSchema.parse(entrada);
 
+    // Mesmo recorte da lista de corridas: entregador de loja só pega corrida
+    // da própria loja, e o da plataforma, só da sua cidade. Sem isto, um id
+    // de corrida de outra cidade (ou de outra loja) era aceito direto.
+    const entregador = await prisma.courier.findUniqueOrThrow({
+      where: { id: courierId },
+      select: { cityId: true, storeId: true },
+    });
+
     const entrega = await prisma.delivery.findFirst({
-      where: { id: deliveryId, status: 'PENDING', courierId: null },
+      where: {
+        id: deliveryId,
+        status: 'PENDING',
+        courierId: null,
+        order: {
+          cityId: entregador.cityId,
+          ...(entregador.storeId ? { storeId: entregador.storeId } : {}),
+        },
+      },
       select: { id: true, orderId: true, order: { select: { storeId: true, number: true } } },
     });
 
@@ -117,33 +133,46 @@ export async function avancarCorrida(entrada: unknown): Promise<ActionResult> {
     // a corrida, e os dois não podem contar histórias diferentes.
     const statusDoPedido = dados.status === 'PICKED_UP' ? 'OUT_FOR_DELIVERY' : 'DELIVERED';
 
-    await prisma.$transaction([
-      prisma.delivery.update({
-        where: { id: entrega.id },
-        data: {
-          status: dados.status,
-          ...(dados.status === 'PICKED_UP' ? { pickedUpAt: agora } : { deliveredAt: agora }),
-        },
-      }),
-      prisma.order.update({
-        where: { id: entrega.orderId },
-        data: {
-          status: statusDoPedido,
-          ...(dados.status === 'PICKED_UP' ? { dispatchedAt: agora } : { deliveredAt: agora }),
-        },
-      }),
-      prisma.orderStatusHistory.create({
-        data: { orderId: entrega.orderId, status: statusDoPedido },
-      }),
-      ...(dados.status === 'DELIVERED'
-        ? [
-            prisma.courier.update({
-              where: { id: courierId },
-              data: { deliveryCount: { increment: 1 } },
-            }),
-          ]
-        : []),
-    ]);
+    // Corrida e pedido condicionados ao que foi lido: dois toques não contam a
+    // entrega duas vezes, e um pedido cancelado pela loja não vira entregue.
+    // Sem a linha, o update falha (P2025) e a transação inteira volta.
+    try {
+      await prisma.$transaction([
+        prisma.delivery.update({
+          where: { id: entrega.id, status: entrega.status },
+          data: {
+            status: dados.status,
+            ...(dados.status === 'PICKED_UP' ? { pickedUpAt: agora } : { deliveredAt: agora }),
+          },
+        }),
+        prisma.order.update({
+          where: {
+            id: entrega.orderId,
+            status: { notIn: ['CANCELLED', 'REJECTED', 'DELIVERED'] },
+          },
+          data: {
+            status: statusDoPedido,
+            ...(dados.status === 'PICKED_UP' ? { dispatchedAt: agora } : { deliveredAt: agora }),
+          },
+        }),
+        prisma.orderStatusHistory.create({
+          data: { orderId: entrega.orderId, status: statusDoPedido },
+        }),
+        ...(dados.status === 'DELIVERED'
+          ? [
+              prisma.courier.update({
+                where: { id: courierId },
+                data: { deliveryCount: { increment: 1 } },
+              }),
+            ]
+          : []),
+      ]);
+    } catch (erro) {
+      if (erro instanceof Prisma.PrismaClientKnownRequestError && erro.code === 'P2025') {
+        return { ok: false, message: 'Este pedido mudou (talvez foi cancelado). Atualize a tela.' };
+      }
+      throw erro;
+    }
 
     await publishRealtimeMany(
       [

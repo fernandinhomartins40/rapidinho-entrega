@@ -28,6 +28,9 @@ async function carregarPedidos(storeId: string) {
       OR: [
         { status: { in: [...STATUS_EM_ABERTO, 'OUT_FOR_DELIVERY'] } },
         { createdAt: { gte: inicioDoDia } },
+        // Pix na chave da loja espera o lojista conferir o extrato: fica na
+        // tela até ser confirmado ou cancelado, mesmo que vire o dia.
+        { status: 'PENDING_PAYMENT', payment: { is: { method: 'PIX', provider: 'OFFLINE' } } },
       ],
     },
     orderBy: { createdAt: 'desc' },

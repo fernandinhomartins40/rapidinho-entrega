@@ -100,26 +100,34 @@ export async function verifyOtp(options: VerifyOtpOptions): Promise<VerifyOtpRes
     return { ok: false, reason: 'Código expirado. Peça um novo.' };
   }
 
-  if (record.attempts >= options.maxAttempts) {
-    await prisma.otpCode.update({
-      where: { id: record.id },
+  // A tentativa é reservada no banco ANTES de comparar, com a condição no
+  // próprio update: palpites disparados em paralelo não leem todos o mesmo
+  // `attempts` antigo, então o limite vale mesmo sob concorrência.
+  const reserva = await prisma.otpCode.updateMany({
+    where: { id: record.id, consumedAt: null, attempts: { lt: options.maxAttempts } },
+    data: { attempts: { increment: 1 } },
+  });
+
+  if (reserva.count === 0) {
+    await prisma.otpCode.updateMany({
+      where: { id: record.id, consumedAt: null },
       data: { consumedAt: new Date() },
     });
     return { ok: false, reason: 'Muitas tentativas. Peça um novo código.' };
   }
 
   if (!safeCompare(record.codeHash, hashCode(options.phone, options.code))) {
-    await prisma.otpCode.update({
-      where: { id: record.id },
-      data: { attempts: { increment: 1 } },
-    });
     return { ok: false, reason: 'Código incorreto.' };
   }
 
-  await prisma.otpCode.update({
-    where: { id: record.id },
+  // Só um pedido consome o código; um segundo acerto simultâneo não entra.
+  const consumo = await prisma.otpCode.updateMany({
+    where: { id: record.id, consumedAt: null },
     data: { consumedAt: new Date() },
   });
+  if (consumo.count === 0) {
+    return { ok: false, reason: 'Código expirado. Peça um novo.' };
+  }
 
   return entrarComTelefoneConfirmado(options.phone);
 }

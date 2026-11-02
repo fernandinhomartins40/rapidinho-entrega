@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 import { prisma } from '@rapidinho/database';
 import { getCurrentUser } from '@rapidinho/auth';
+import { CARTAO_ONLINE_DISPONIVEL } from '@rapidinho/shared';
 import { carregarCarrinho } from '@/lib/cart';
 import { calcularCheckout } from '@/lib/checkout';
 import { FormularioDeCheckout } from './formulario';
@@ -95,7 +96,7 @@ export default async function CheckoutPage({
         aceitaRetirada: loja.acceptsPickup,
         pagamentos: {
           PIX: loja.acceptsPix,
-          CREDIT_CARD_ONLINE: loja.acceptsCardOnline,
+          CREDIT_CARD_ONLINE: CARTAO_ONLINE_DISPONIVEL && loja.acceptsCardOnline,
           CASH_ON_DELIVERY: loja.acceptsCashOnDelivery,
           CARD_ON_DELIVERY: loja.acceptsCardOnDelivery,
         },

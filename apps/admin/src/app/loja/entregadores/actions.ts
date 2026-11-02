@@ -62,8 +62,8 @@ export async function convidarEntregador(
         phone: telefone,
         name: dados.name,
         role: 'COURIER',
-        acceptedTermsAt: new Date(),
-        acceptedPrivacyAt: new Date(),
+        // Sem aceite de termos aqui: quem convida é a loja, e o aceite tem de
+        // ser do entregador. Ele é gravado no primeiro login dele.
       },
       select: { id: true, role: true },
     });
