@@ -1,6 +1,10 @@
 import Link from 'next/link';
 import { prisma } from '@rapidinho/database';
-import { formatCents, inicioDoMes as inicioDoMesEmBrasilia } from '@rapidinho/shared';
+import {
+  COMISSAO_HABILITADA,
+  formatCents,
+  inicioDoMes as inicioDoMesEmBrasilia,
+} from '@rapidinho/shared';
 import {
   Badge,
   Card,
@@ -15,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@rapidinho/ui';
+import { BaixaDeFatura } from './baixa-de-fatura';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Financeiro' };
@@ -28,8 +33,6 @@ export const metadata = { title: 'Financeiro' };
 async function carregar() {
   // Mês de Brasília: o servidor roda em UTC.
   const inicioDoMes = inicioDoMesEmBrasilia();
-
-  const agora = new Date();
 
   const [resumoMes, porLoja, faturasVencidas, repassesPendentes, receitaBoost] = await Promise.all([
     prisma.order.aggregate({
@@ -47,11 +50,12 @@ async function carregar() {
       take: 20,
     }),
 
+    // Abertas e vencidas: é aqui que se dá baixa, inclusive antes de vencer.
     prisma.planInvoice.findMany({
-      where: { status: { in: ['OPEN', 'OVERDUE'] }, dueDate: { lt: agora } },
+      where: { status: { in: ['OPEN', 'OVERDUE'] } },
       include: { store: { select: { id: true, name: true } } },
       orderBy: { dueDate: 'asc' },
-      take: 20,
+      take: 50,
     }),
 
     prisma.payout.aggregate({
@@ -97,10 +101,14 @@ async function carregar() {
 export default async function FinanceiroPage() {
   const dados = await carregar();
 
-  const inadimplenciaCents = dados.faturasVencidas.reduce(
-    (soma, fatura) => soma + fatura.amountCents + fatura.commissionCents,
-    0,
-  );
+  const agora = new Date();
+  const inadimplenciaCents = dados.faturasVencidas
+    .filter((fatura) => fatura.dueDate < agora)
+    .reduce(
+      (soma, fatura) =>
+        soma + fatura.amountCents + (COMISSAO_HABILITADA ? fatura.commissionCents : 0),
+      0,
+    );
 
   return (
     <div className="space-y-6">
@@ -117,15 +125,19 @@ export default async function FinanceiroPage() {
             <p className="text-muted-foreground text-xs">{dados.pedidos} pedidos entregues</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="pt-5">
-            <p className="text-muted-foreground text-sm">Comissão a receber</p>
-            <p className="text-success mt-1 text-2xl font-bold">
-              {formatCents(dados.comissaoCents)}
-            </p>
-            <p className="text-muted-foreground text-xs">Sobre a mercadoria, não sobre a entrega</p>
-          </CardContent>
-        </Card>
+        {COMISSAO_HABILITADA ? (
+          <Card>
+            <CardContent className="pt-5">
+              <p className="text-muted-foreground text-sm">Comissão a receber</p>
+              <p className="text-success mt-1 text-2xl font-bold">
+                {formatCents(dados.comissaoCents)}
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Sobre a mercadoria, não sobre a entrega
+              </p>
+            </CardContent>
+          </Card>
+        ) : null}
         <Card>
           <CardContent className="pt-5">
             <p className="text-muted-foreground text-sm">Repasses a fazer</p>
@@ -162,7 +174,7 @@ export default async function FinanceiroPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Comissão por loja</CardTitle>
+          <CardTitle>{COMISSAO_HABILITADA ? 'Comissão por loja' : 'Vendas por loja'}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -171,7 +183,7 @@ export default async function FinanceiroPage() {
                 <TableHead>Loja</TableHead>
                 <TableHead>Pedidos</TableHead>
                 <TableHead>Faturamento</TableHead>
-                <TableHead>Comissão</TableHead>
+                {COMISSAO_HABILITADA ? <TableHead>Comissão</TableHead> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -190,9 +202,11 @@ export default async function FinanceiroPage() {
                     </TableCell>
                     <TableCell>{linha.pedidos}</TableCell>
                     <TableCell>{formatCents(linha.gmvCents)}</TableCell>
-                    <TableCell className="font-medium">
-                      {formatCents(linha.comissaoCents)}
-                    </TableCell>
+                    {COMISSAO_HABILITADA ? (
+                      <TableCell className="font-medium">
+                        {formatCents(linha.comissaoCents)}
+                      </TableCell>
+                    ) : null}
                   </TableRow>
                 ))
               )}
@@ -203,7 +217,7 @@ export default async function FinanceiroPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Faturas vencidas</CardTitle>
+          <CardTitle>Faturas em aberto</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
@@ -212,13 +226,14 @@ export default async function FinanceiroPage() {
                 <TableHead>Loja</TableHead>
                 <TableHead>Vencimento</TableHead>
                 <TableHead>Mensalidade</TableHead>
-                <TableHead>Comissão do período</TableHead>
+                {COMISSAO_HABILITADA ? <TableHead>Comissão do período</TableHead> : null}
                 <TableHead>Situação</TableHead>
+                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
               {dados.faturasVencidas.length === 0 ? (
-                <TableEmpty colSpan={5}>Nenhuma fatura vencida. Tudo em dia.</TableEmpty>
+                <TableEmpty colSpan={6}>Nenhuma fatura em aberto. Tudo em dia.</TableEmpty>
               ) : (
                 dados.faturasVencidas.map((fatura) => (
                   <TableRow key={fatura.id}>
@@ -234,9 +249,18 @@ export default async function FinanceiroPage() {
                       {fatura.dueDate.toLocaleDateString('pt-BR')}
                     </TableCell>
                     <TableCell>{formatCents(fatura.amountCents)}</TableCell>
-                    <TableCell>{formatCents(fatura.commissionCents)}</TableCell>
+                    {COMISSAO_HABILITADA ? (
+                      <TableCell>{formatCents(fatura.commissionCents)}</TableCell>
+                    ) : null}
                     <TableCell>
-                      <Badge variant="destructive">Vencida</Badge>
+                      {fatura.dueDate < agora ? (
+                        <Badge variant="destructive">Vencida</Badge>
+                      ) : (
+                        <Badge variant="secondary">A vencer</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <BaixaDeFatura faturaId={fatura.id} loja={fatura.store.name} />
                     </TableCell>
                   </TableRow>
                 ))

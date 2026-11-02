@@ -1,6 +1,6 @@
 import { prisma } from '@rapidinho/database';
 import { Badge, Card, CardContent, CardHeader, CardTitle } from '@rapidinho/ui';
-import { formatCents } from '@rapidinho/shared';
+import { COMISSAO_HABILITADA, formatCents } from '@rapidinho/shared';
 import { getStoreContext } from '@/lib/store-context';
 import { imagemExibivel, SELECT_IMAGEM } from '@/lib/media';
 import { FormulariosDeConfiguracao } from './formularios';
@@ -74,10 +74,13 @@ export default async function ConfiguracoesPage() {
                 {loja.subscription.plan.monthlyPriceCents === 0
                   ? 'Sem mensalidade'
                   : `${formatCents(loja.subscription.plan.monthlyPriceCents)} por mês`}{' '}
-                ·{' '}
-                {Number(loja.subscription.plan.commissionRate) === 0
-                  ? 'sem comissão por pedido'
-                  : `comissão de ${Number(loja.subscription.plan.commissionRate)}% por pedido`}
+                {COMISSAO_HABILITADA
+                  ? ` · ${
+                      Number(loja.subscription.plan.commissionRate) === 0
+                        ? 'sem comissão por pedido'
+                        : `comissão de ${Number(loja.subscription.plan.commissionRate)}% por pedido`
+                    }`
+                  : null}
               </p>
               {loja.subscription.currentPeriodEnd ? (
                 <p className="text-muted-foreground text-sm">

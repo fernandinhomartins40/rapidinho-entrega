@@ -1,0 +1,103 @@
+
+> rapidinho-entrega@0.1.0 test C:\FuseDev\rapidinho-entrega
+> turbo run test
+
+• turbo 2.10.12
+
+   • Packages in scope: @rapidinho/admin, @rapidinho/auth, @rapidinho/config, @rapidinho/database, @rapidinho/realtime, @rapidinho/services, @rapidinho/shared, @rapidinho/ui, @rapidinho/web, @rapidinho/worker
+   • Running test in 10 packages
+   • Remote caching disabled
+
+@rapidinho/shared:test: cache miss, executing 194febccb5e267ba
+@rapidinho/services:test: cache miss, executing a75d2fda53410a2f
+@rapidinho/auth:test: cache miss, executing 6a6b94c96108cbd9
+@rapidinho/admin:test: cache miss, executing f9cb795d89d28968
+@rapidinho/web:test: cache miss, executing 2b372b2c5f29f41d
+@rapidinho/shared:test: 
+@rapidinho/shared:test: > @rapidinho/shared@0.1.0 test C:\FuseDev\rapidinho-entrega\packages\shared
+@rapidinho/shared:test: > vitest run
+@rapidinho/shared:test: 
+@rapidinho/services:test: 
+@rapidinho/services:test: > @rapidinho/services@0.1.0 test C:\FuseDev\rapidinho-entrega\packages\services
+@rapidinho/services:test: > vitest run
+@rapidinho/services:test: 
+@rapidinho/auth:test: 
+@rapidinho/auth:test: > @rapidinho/auth@0.1.0 test C:\FuseDev\rapidinho-entrega\packages\auth
+@rapidinho/auth:test: > vitest run --passWithNoTests
+@rapidinho/auth:test: 
+@rapidinho/admin:test: 
+@rapidinho/admin:test: > @rapidinho/admin@0.1.0 test C:\FuseDev\rapidinho-entrega\apps\admin
+@rapidinho/admin:test: > vitest run --passWithNoTests
+@rapidinho/admin:test: 
+@rapidinho/web:test: 
+@rapidinho/web:test: > @rapidinho/web@0.1.0 test C:\FuseDev\rapidinho-entrega\apps\web
+@rapidinho/web:test: > vitest run --passWithNoTests
+@rapidinho/web:test: 
+@rapidinho/admin:test: 
+@rapidinho/admin:test: [1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/FuseDev/rapidinho-entrega/apps/admin[39m
+@rapidinho/admin:test: 
+@rapidinho/auth:test: 
+@rapidinho/auth:test: [1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/FuseDev/rapidinho-entrega/packages/auth[39m
+@rapidinho/auth:test: 
+@rapidinho/admin:test: [2minclude: [22m[33m**/*.{test,spec}.?(c|m)[jt]s?(x)[39m
+@rapidinho/admin:test: [2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[2m, [22m**/cypress/**[2m, [22m**/.{idea,git,cache,output,temp}/**[2m, [22m**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*[39m
+@rapidinho/admin:test: No test files found, exiting with code 0
+@rapidinho/admin:test: 
+@rapidinho/auth:test: [2minclude: [22m[33m**/*.{test,spec}.?(c|m)[jt]s?(x)[39m
+@rapidinho/auth:test: [2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[2m, [22m**/cypress/**[2m, [22m**/.{idea,git,cache,output,temp}/**[2m, [22m**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*[39m
+@rapidinho/auth:test: No test files found, exiting with code 0
+@rapidinho/auth:test: 
+@rapidinho/services:test: [33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+@rapidinho/shared:test: 
+@rapidinho/shared:test: [1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/FuseDev/rapidinho-entrega/packages/shared[39m
+@rapidinho/shared:test: 
+@rapidinho/services:test: 
+@rapidinho/services:test: [1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/FuseDev/rapidinho-entrega/packages/services[39m
+@rapidinho/services:test: 
+@rapidinho/web:test: 
+@rapidinho/web:test: [1m[7m[36m RUN [39m[27m[22m [36mv2.1.9 [39m[90mC:/FuseDev/rapidinho-entrega/apps/web[39m
+@rapidinho/web:test: 
+@rapidinho/web:test: [2minclude: [22m[33m**/*.{test,spec}.?(c|m)[jt]s?(x)[39m
+@rapidinho/web:test: [2mexclude:  [22m[33m**/node_modules/**[2m, [22m**/dist/**[2m, [22m**/cypress/**[2m, [22m**/.{idea,git,cache,output,temp}/**[2m, [22m**/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*[39m
+@rapidinho/web:test: No test files found, exiting with code 0
+@rapidinho/web:test: 
+@rapidinho/shared:test:  [32m✓[39m src/domain/notification-segment.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 45[2mms[22m[39m
+@rapidinho/shared:test:  [32m✓[39m src/domain/shopping-list.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 24[2mms[22m[39m
+@rapidinho/shared:test:  [32m✓[39m src/domain/cravings.test.ts [2m([22m[2m26 tests[22m[2m)[22m[90m 40[2mms[22m[39m
+@rapidinho/shared:test:  [32m✓[39m src/domain/separacao.test.ts [2m([22m[2m22 tests[22m[2m)[22m[90m 23[2mms[22m[39m
+@rapidinho/shared:test:  [32m✓[39m src/utils/utils.test.ts [2m([22m[2m12 tests[22m[2m)[22m[90m 18[2mms[22m[39m
+@rapidinho/shared:test:  [32m✓[39m src/domain/product-import.test.ts [2m([22m[2m14 tests[22m[2m)[22m[90m 35[2mms[22m[39m
+@rapidinho/shared:test:  [32m✓[39m src/domain/domain.test.ts [2m([22m[2m33 tests[22m[2m)[22m[90m 44[2mms[22m[39m
+@rapidinho/shared:test:  [32m✓[39m src/domain/pix.test.ts [2m([22m[2m10 tests[22m[2m)[22m[90m 16[2mms[22m[39m
+@rapidinho/shared:test:  [32m✓[39m src/security/csp.test.ts [2m([22m[2m11 tests[22m[2m)[22m[90m 20[2mms[22m[39m
+@rapidinho/shared:test:  [32m✓[39m src/utils/calendario.test.ts [2m([22m[2m6 tests[22m[2m)[22m[90m 68[2mms[22m[39m
+@rapidinho/shared:test:  [32m✓[39m src/utils/sms-reverso.test.ts [2m([22m[2m5 tests[22m[2m)[22m[90m 11[2mms[22m[39m
+@rapidinho/services:test:  [32m✓[39m src/queues.test.ts [2m([22m[2m1 test[22m[2m)[22m[90m 7[2mms[22m[39m
+@rapidinho/shared:test:  [32m✓[39m src/security/senha.test.ts [2m([22m[2m3 tests[22m[2m)[22m[33m 817[2mms[22m[39m
+@rapidinho/shared:test:    [33m[2m✓[22m[39m hash de senha[2m > [22mconfere a senha certa e recusa as erradas [33m547[2mms[22m[39m
+@rapidinho/shared:test: 
+@rapidinho/shared:test: [2m Test Files [22m [1m[32m12 passed[39m[22m[90m (12)[39m
+@rapidinho/shared:test: [2m      Tests [22m [1m[32m163 passed[39m[22m[90m (163)[39m
+@rapidinho/shared:test: [2m   Start at [22m 01:39:21
+@rapidinho/shared:test: [2m   Duration [22m 5.46s[2m (transform 5.45s, setup 0ms, collect 6.63s, tests 1.16s, environment 8ms, prepare 6.90s)[22m
+@rapidinho/shared:test: 
+@rapidinho/services:test:  [32m✓[39m src/notifications/campaign.test.ts [2m([22m[2m8 tests[22m[2m)[22m[90m 10[2mms[22m[39m
+@rapidinho/services:test:  [32m✓[39m src/images/processor.test.ts [2m([22m[2m10 tests[22m[2m)[22m[33m 1676[2mms[22m[39m
+@rapidinho/services:test:    [33m[2m✓[22m[39m processamento de imagem[2m > [22mgera as três variantes mais o original [33m472[2mms[22m[39m
+@rapidinho/services:test:    [33m[2m✓[22m[39m processamento de imagem[2m > [22mrespeita o tamanho máximo de cada variante [33m443[2mms[22m[39m
+@rapidinho/services:test: 
+@rapidinho/services:test: [2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+@rapidinho/services:test: [2m      Tests [22m [1m[32m19 passed[39m[22m[90m (19)[39m
+@rapidinho/services:test: [2m   Start at [22m 01:39:21
+@rapidinho/services:test: [2m   Duration [22m 6.35s[2m (transform 3.41s, setup 0ms, collect 10.21s, tests 1.69s, environment 2ms, prepare 1.65s)[22m
+@rapidinho/services:test: 
+
+ Tasks:    5 successful, 5 total
+Cached:    0 cached, 5 total
+  Time:    11.575s 
+
+ WARNING  no output files found for task @rapidinho/admin#test. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @rapidinho/auth#test. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @rapidinho/services#test. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @rapidinho/shared#test. Please check your `outputs` key in `turbo.json`
+ WARNING  no output files found for task @rapidinho/web#test. Please check your `outputs` key in `turbo.json`

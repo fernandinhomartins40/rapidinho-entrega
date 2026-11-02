@@ -1,0 +1,60 @@
+
+> rapidinho-entrega@0.1.0 typecheck C:\FuseDev\rapidinho-entrega
+> turbo run typecheck
+
+• turbo 2.10.12
+
+   • Packages in scope: @rapidinho/admin, @rapidinho/auth, @rapidinho/config, @rapidinho/database, @rapidinho/realtime, @rapidinho/services, @rapidinho/shared, @rapidinho/ui, @rapidinho/web, @rapidinho/worker
+   • Running typecheck in 10 packages
+   • Remote caching disabled
+
+@rapidinho/web:typecheck: cache miss, executing afa755bc31d1f058
+@rapidinho/database:typecheck: cache miss, executing 67d31f71f1d621f3
+@rapidinho/worker:typecheck: cache miss, executing a0e4dbb105ce028f
+@rapidinho/auth:typecheck: cache miss, executing 3622b6e6188a9a9b
+@rapidinho/realtime:typecheck: cache miss, executing dc904272e2a5e075
+@rapidinho/services:typecheck: cache miss, executing d3a6fcf30ecf5d87
+@rapidinho/ui:typecheck: cache hit, replaying logs e1fb279edf7470cb
+@rapidinho/shared:typecheck: cache hit, replaying logs e7268b1af15da210
+@rapidinho/ui:typecheck: 
+@rapidinho/ui:typecheck: > @rapidinho/ui@0.1.0 typecheck C:\FuseDev\rapidinho-entrega\packages\ui
+@rapidinho/ui:typecheck: > tsc --noEmit
+@rapidinho/shared:typecheck: 
+@rapidinho/ui:typecheck: 
+@rapidinho/shared:typecheck: > @rapidinho/shared@0.1.0 typecheck C:\FuseDev\rapidinho-entrega\packages\shared
+@rapidinho/shared:typecheck: > tsc --noEmit
+@rapidinho/shared:typecheck: 
+@rapidinho/admin:typecheck: cache miss, executing b1c718ae9ca3918f
+@rapidinho/web:typecheck: 
+@rapidinho/web:typecheck: > @rapidinho/web@0.1.0 typecheck C:\FuseDev\rapidinho-entrega\apps\web
+@rapidinho/web:typecheck: > tsc --noEmit
+@rapidinho/web:typecheck: 
+@rapidinho/database:typecheck: 
+@rapidinho/database:typecheck: > @rapidinho/database@0.1.0 typecheck C:\FuseDev\rapidinho-entrega\packages\database
+@rapidinho/database:typecheck: > tsc --noEmit
+@rapidinho/database:typecheck: 
+@rapidinho/worker:typecheck: 
+@rapidinho/worker:typecheck: > @rapidinho/worker@0.1.0 typecheck C:\FuseDev\rapidinho-entrega\apps\worker
+@rapidinho/worker:typecheck: > tsc --noEmit
+@rapidinho/worker:typecheck: 
+@rapidinho/auth:typecheck: 
+@rapidinho/auth:typecheck: > @rapidinho/auth@0.1.0 typecheck C:\FuseDev\rapidinho-entrega\packages\auth
+@rapidinho/auth:typecheck: > tsc --noEmit
+@rapidinho/auth:typecheck: 
+@rapidinho/realtime:typecheck: 
+@rapidinho/realtime:typecheck: > @rapidinho/realtime@0.1.0 typecheck C:\FuseDev\rapidinho-entrega\apps\realtime
+@rapidinho/realtime:typecheck: > tsc --noEmit
+@rapidinho/realtime:typecheck: 
+@rapidinho/services:typecheck: 
+@rapidinho/services:typecheck: > @rapidinho/services@0.1.0 typecheck C:\FuseDev\rapidinho-entrega\packages\services
+@rapidinho/services:typecheck: > tsc --noEmit
+@rapidinho/services:typecheck: 
+@rapidinho/admin:typecheck: 
+@rapidinho/admin:typecheck: > @rapidinho/admin@0.1.0 typecheck C:\FuseDev\rapidinho-entrega\apps\admin
+@rapidinho/admin:typecheck: > tsc --noEmit
+@rapidinho/admin:typecheck: 
+
+ Tasks:    9 successful, 9 total
+Cached:    2 cached, 9 total
+  Time:    8m33.498s 
+

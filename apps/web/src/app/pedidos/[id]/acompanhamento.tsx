@@ -4,7 +4,7 @@ import { useCallback, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Bike, Check, Copy, MessageCircle, Scale, Wifi, WifiOff } from 'lucide-react';
-import { Badge, Button, Card, CardContent, cn } from '@rapidinho/ui';
+import { Badge, Button, Card, CardContent, ImageUploader, cn } from '@rapidinho/ui';
 import { useRealtime } from '@rapidinho/ui/hooks/use-realtime';
 import {
   formatCents,
@@ -19,7 +19,7 @@ import {
   whatsappLink,
   type OrderStatus,
 } from '@rapidinho/shared';
-import { cancelarMeuPedido, responderTroca } from '../actions';
+import { anexarComprovanteDoPix, cancelarMeuPedido, responderTroca } from '../actions';
 
 interface Props {
   pedido: {
@@ -62,6 +62,8 @@ interface Props {
       pixQrCode: string | null;
       pixQrCodeImage: string | null;
       pixExpiresAt: string | null;
+      provider: string;
+      pixProofImageId: string | null;
     } | null;
     items: {
       id: string;
@@ -231,6 +233,12 @@ export function AcompanhamentoDoPedido({ pedido, realtime }: Props) {
           qrCodeImage={pedido.payment.pixQrCodeImage}
           expiraEm={pedido.payment.pixExpiresAt}
         />
+      ) : null}
+
+      {pedido.status === 'PENDING_PAYMENT' &&
+      pedido.payment?.method === 'PIX' &&
+      pedido.payment.provider === 'OFFLINE' ? (
+        <ComprovanteDoPix orderId={pedido.id} jaEnviado={pedido.payment.pixProofImageId != null} />
       ) : null}
 
       {pedido.delivery?.courier ? (
@@ -482,6 +490,62 @@ function CancelarPedido({ orderId }: { orderId: string }) {
             Não, manter o pedido
           </Button>
         </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Comprovante opcional do Pix pago na chave da loja. Sem ele o pedido segue
+ * igual: a loja confere o extrato. Com ele, ela acha o pagamento mais rápido.
+ */
+function ComprovanteDoPix({ orderId, jaEnviado }: { orderId: string; jaEnviado: boolean }) {
+  const router = useRouter();
+  const [arquivoId, setArquivoId] = useState<string | null>(null);
+  const [mensagem, setMensagem] = useState<string | null>(null);
+  const [pendente, iniciar] = useTransition();
+
+  return (
+    <Card>
+      <CardContent className="space-y-3 pt-5">
+        <div>
+          <p className="font-semibold">
+            {jaEnviado ? 'Comprovante enviado' : 'Já pagou? Envie o comprovante'}
+          </p>
+          <p className="text-muted-foreground text-sm">
+            {jaEnviado
+              ? 'A loja já pode ver. Se precisar, você pode enviar outro.'
+              : 'É opcional, mas ajuda a loja a confirmar seu pagamento mais rápido.'}
+          </p>
+        </div>
+
+        <ImageUploader
+          context="PIX_PROOF"
+          value={arquivoId}
+          onChange={setArquivoId}
+          label="Foto ou print do comprovante"
+        />
+
+        {mensagem ? <p className="text-sm">{mensagem}</p> : null}
+
+        {arquivoId ? (
+          <Button
+            block
+            isLoading={pendente}
+            onClick={() =>
+              iniciar(async () => {
+                const resultado = await anexarComprovanteDoPix({ orderId, mediaId: arquivoId });
+                setMensagem(resultado.message ?? null);
+                if (resultado.ok) {
+                  setArquivoId(null);
+                  router.refresh();
+                }
+              })
+            }
+          >
+            Enviar para a loja
+          </Button>
+        ) : null}
       </CardContent>
     </Card>
   );

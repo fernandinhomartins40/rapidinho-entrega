@@ -273,6 +273,16 @@ function CartaoDePix({ pedido }: { pedido: PedidoNaTela }) {
           Confira no extrato da sua conta se o Pix de {formatCents(pedido.totalCents)} chegou. Só
           depois o pedido entra para preparo.
         </p>
+        {pedido.comprovanteUrl ? (
+          <a
+            href={pedido.comprovanteUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-primary-text inline-block text-sm font-semibold underline"
+          >
+            Ver comprovante enviado pelo cliente
+          </a>
+        ) : null}
         {erro ? <p className="text-destructive text-sm">{erro}</p> : null}
         <div className="flex flex-wrap gap-2">
           <Button

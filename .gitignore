@@ -49,3 +49,4 @@ dump.rdb
 
 # Credenciais locais (nunca versionar)
 CREDENCIAIS.md
+assets/google-play/*.aab

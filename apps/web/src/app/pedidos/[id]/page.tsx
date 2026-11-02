@@ -52,6 +52,8 @@ export default async function PedidoPage({ params }: { params: Promise<{ id: str
           pixQrCode: true,
           pixQrCodeImage: true,
           pixExpiresAt: true,
+          provider: true,
+          pixProofImageId: true,
         },
       },
       items: {

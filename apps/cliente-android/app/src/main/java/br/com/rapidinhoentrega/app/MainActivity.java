@@ -1,13 +1,19 @@
 package br.com.rapidinhoentrega.app;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.DownloadManager;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Insets;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.view.View;
+import android.view.WindowInsets;
 import android.webkit.CookieManager;
 import android.webkit.URLUtil;
 import android.webkit.ValueCallback;
@@ -17,7 +23,10 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.FrameLayout;
 import android.widget.Toast;
+
+import org.json.JSONObject;
 
 import java.net.URISyntaxException;
 
@@ -37,18 +46,25 @@ public class MainActivity extends Activity {
     private static final String HOST = Uri.parse(SITE).getHost();
 
     private static final int ESCOLHER_ARQUIVO = 1;
+    private static final int COR_DE_FUNDO = Color.parseColor("#0c0c0e");
 
     private WebView web;
     /** Resposta pendente do seletor de arquivo (foto da receita, imagem). */
     private ValueCallback<Uri[]> arquivoEscolhido;
+    /** Há pedido em andamento: ao sair do app, o acompanhamento continua. */
+    private volatile boolean temPedidoEmAndamento;
 
     @Override
     protected void onCreate(Bundle estado) {
         super.onCreate(estado);
 
         web = new WebView(this);
-        web.setBackgroundColor(Color.parseColor("#0c0c0e"));
-        setContentView(web);
+        web.setBackgroundColor(COR_DE_FUNDO);
+        FrameLayout raiz = new FrameLayout(this);
+        raiz.setBackgroundColor(COR_DE_FUNDO);
+        raiz.addView(web);
+        respeitarBarrasDoSistema(raiz);
+        setContentView(raiz);
 
         WebSettings ajustes = web.getSettings();
         ajustes.setJavaScriptEnabled(true);
@@ -69,6 +85,22 @@ public class MainActivity extends Activity {
         } else {
             web.loadUrl(enderecoDoIntent(getIntent()));
         }
+    }
+
+    /**
+     * Do Android 15 em diante o app ocupa a tela inteira e o sistema não
+     * reserva mais espaço: sem este recuo o site ficaria atrás das barras e o
+     * teclado cobriria o campo em que a pessoa digita.
+     */
+    private void respeitarBarrasDoSistema(View raiz) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) return;
+        raiz.setOnApplyWindowInsetsListener((tela, recuos) -> {
+            Insets recuo = recuos.getInsets(WindowInsets.Type.systemBars()
+                | WindowInsets.Type.displayCutout()
+                | WindowInsets.Type.ime());
+            tela.setPadding(recuo.left, recuo.top, recuo.right, recuo.bottom);
+            return WindowInsets.CONSUMED;
+        });
     }
 
     @Override
@@ -95,6 +127,8 @@ public class MainActivity extends Activity {
         // Grava o cookie de sessão no disco já: se o Android fechar o app em
         // segundo plano, o cliente não perde o login.
         CookieManager.getInstance().flush();
+        // Aqui o app ainda conta como aberto, e o Android deixa o serviço subir.
+        if (temPedidoEmAndamento) AcompanhamentoDePedido.iniciar(this);
     }
 
     @Override
@@ -160,6 +194,29 @@ public class MainActivity extends Activity {
         }
     }
 
+    /**
+     * Confere se há pedido em andamento a cada página carregada: é assim que o
+     * app descobre o pedido recém-feito, sem o site precisar avisar. Fora de
+     * pedido, a resposta é falsa e nada mais roda.
+     */
+    private void conferirPedidoEmAndamento() {
+        new Thread(() -> {
+            JSONObject resposta = AcompanhamentoDePedido.consultar();
+            boolean ativo = resposta != null && resposta.optBoolean("ativo", false);
+            temPedidoEmAndamento = ativo;
+            if (ativo) runOnUiThread(this::pedirPermissaoDeAviso);
+        }, "confere-pedido").start();
+    }
+
+    /** Pedida só quando há pedido: é quando a pessoa entende para que serve. */
+    private void pedirPermissaoDeAviso() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+            && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[] {Manifest.permission.POST_NOTIFICATIONS}, 2);
+        }
+    }
+
     private String enderecoDoIntent(Intent intent) {
         Uri dados = intent.getData();
         return dados != null && doRapidinho(dados) ? dados.toString() : SITE;
@@ -171,6 +228,11 @@ public class MainActivity extends Activity {
     }
 
     private class Navegacao extends WebViewClient {
+
+        @Override
+        public void onPageFinished(WebView view, String url) {
+            conferirPedidoEmAndamento();
+        }
 
         @Override
         public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest pedido) {

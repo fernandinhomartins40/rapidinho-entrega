@@ -111,6 +111,8 @@ enum MediaContext {
   PIZZA_FLAVOR
   /// Foto da receita enviada pelo cliente para a farmácia avaliar.
   PRESCRIPTION
+  /// Comprovante do Pix anexado pelo cliente para o lojista conferir.
+  PIX_PROOF
 }
 
 enum OrderStatus {
@@ -507,6 +509,7 @@ model MediaAsset {
   courierDocuments   CourierDocument[]
   storeDocuments     StoreDocument[]
   orderPrescriptions Order[]           @relation("OrderPrescription")
+  paymentPixProofs   Payment[]         @relation("PaymentPixProof")
 
   @@index([context])
   @@index([checksum])
@@ -599,12 +602,15 @@ model Store {
 
   // --- Operação ---------------------------------------------------------
   /// Pausa de emergência ("fechar agora"), independente do horário cadastrado.
-  isPausedUntil     DateTime?
-  pauseReason       String?
+  isPausedUntil            DateTime?
+  /// Suspensa automaticamente por fatura vencida; volta ao dar baixa. Vazio
+  /// numa loja SUSPENDED significa suspensão manual, que a baixa não desfaz.
+  suspendedForNonPaymentAt DateTime?
+  pauseReason              String?
   /// Alerta sonoro na tela de pedidos.
-  soundAlertEnabled Boolean   @default(true)
+  soundAlertEnabled        Boolean   @default(true)
   /// Aceite automático de pedidos (loja com fluxo simples).
-  autoAcceptOrders  Boolean   @default(false)
+  autoAcceptOrders         Boolean   @default(false)
 
   // --- Métricas cacheadas (recalculadas por job) ------------------------
   ratingAverage Decimal @default(0) @db.Decimal(3, 2)
@@ -1310,11 +1316,14 @@ model Payment {
   changeForCents Int?
 
   /// Identificador do pagamento no gateway.
-  externalId     String?
+  externalId      String?
   /// Payload do Pix copia-e-cola e imagem do QR Code.
-  pixQrCode      String?   @db.Text
-  pixQrCodeImage String?   @db.Text
-  pixExpiresAt   DateTime?
+  pixQrCode       String?     @db.Text
+  pixQrCodeImage  String?     @db.Text
+  pixExpiresAt    DateTime?
+  /// Comprovante opcional anexado pelo cliente (Pix na chave da loja).
+  pixProofImageId String?
+  pixProofImage   MediaAsset? @relation("PaymentPixProof", fields: [pixProofImageId], references: [id], onDelete: SetNull)
 
   /// Split: quanto fica com a plataforma neste pagamento.
   platformFeeCents Int?

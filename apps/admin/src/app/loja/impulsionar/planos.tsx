@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { Check, Megaphone, TrendingUp } from 'lucide-react';
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle, cn } from '@rapidinho/ui';
-import { BOOST_PLACEMENT_LABEL, formatCents } from '@rapidinho/shared';
+import { COMISSAO_HABILITADA, BOOST_PLACEMENT_LABEL, formatCents } from '@rapidinho/shared';
 import { contratarImpulsionamento, contratarPlano } from './actions';
 
 interface Plano {
@@ -103,7 +103,11 @@ export function Planos({
 
                     {/* A comissão é o número que mais importa para o lojista e
                         costuma ficar escondido em letra miúda. Aqui não. */}
-                    <p className="font-semibold">{plano.commissionRate}% de comissão por pedido</p>
+                    {COMISSAO_HABILITADA ? (
+                      <p className="font-semibold">
+                        {plano.commissionRate}% de comissão por pedido
+                      </p>
+                    ) : null}
 
                     {plano.description ? (
                       <p className="text-muted-foreground text-sm">{plano.description}</p>

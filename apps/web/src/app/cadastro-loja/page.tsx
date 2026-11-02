@@ -1,15 +1,14 @@
 import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { prisma } from '@rapidinho/database';
-import { formatCents, getPublicEnv } from '@rapidinho/shared';
+import { COMISSAO_HABILITADA, formatCents, getPublicEnv } from '@rapidinho/shared';
 import { Logotipo } from '@/components/marca/logo';
 import { FormularioDeCadastro } from './formulario';
 
 export const dynamic = 'force-dynamic';
 export const metadata = {
   title: 'Cadastre sua loja',
-  description:
-    'Venda pelo Rapidinho Entrega. Sem mensalidade para começar e cadastro em poucos minutos.',
+  description: 'Venda pelo Rapidinho Entrega. Teste grátis e cadastro em poucos minutos.',
 };
 
 export default async function CadastroLojaPage() {
@@ -25,7 +24,10 @@ export default async function CadastroLojaPage() {
       select: { id: true, name: true },
     }),
     prisma.plan.findFirst({
-      where: { isDefault: true, isActive: true },
+      where: COMISSAO_HABILITADA
+        ? { isDefault: true, isActive: true }
+        : { isActive: true, monthlyPriceCents: { gt: 0 } },
+      orderBy: { sortOrder: 'asc' },
       select: { name: true, monthlyPriceCents: true, commissionRate: true, trialDays: true },
     }),
   ]);
@@ -50,7 +52,11 @@ export default async function CadastroLojaPage() {
             planoGratuito.monthlyPriceCents === 0
               ? 'Sem mensalidade para começar'
               : `${formatCents(planoGratuito.monthlyPriceCents)} por mês`,
-            `Você paga ${Number(planoGratuito.commissionRate)}% de comissão só quando vender`,
+            COMISSAO_HABILITADA
+              ? `Você paga ${Number(planoGratuito.commissionRate)}% de comissão só quando vender`
+              : planoGratuito.trialDays > 0
+                ? `${planoGratuito.trialDays} dias grátis para testar, sem comissão por pedido`
+                : 'Sem comissão por pedido',
             'Cadastre um produto em menos de 30 segundos',
             'Tem centenas de itens? Importe de uma planilha',
           ].map((item) => (

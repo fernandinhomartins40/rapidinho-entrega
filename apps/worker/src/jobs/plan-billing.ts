@@ -1,6 +1,11 @@
 import { prisma } from '@rapidinho/database';
 import { capturarErro, logger, notificarUsuario } from '@rapidinho/services';
-import { formatCents } from '@rapidinho/shared';
+import {
+  COMISSAO_HABILITADA,
+  DIAS_ATE_SUSPENDER,
+  formatCents,
+  INICIO_DA_SUSPENSAO,
+} from '@rapidinho/shared';
 
 /**
  * Cobrança mensal dos planos.
@@ -54,17 +59,21 @@ export async function cobrarMensalidades(): Promise<void> {
     // A comissão dos pedidos do período fecha junto com a mensalidade: cobrar
     // as duas coisas em faturas separadas dobraria o trabalho do lojista e a
     // chance de uma ficar esquecida.
-    const comissao = await prisma.order.aggregate({
-      where: {
-        storeId: assinatura.storeId,
-        status: 'DELIVERED',
-        createdAt: {
-          gte: assinatura.currentPeriodStart ?? inicio,
-          lt: inicio,
-        },
-      },
-      _sum: { commissionCents: true },
-    });
+    const comissaoCents = COMISSAO_HABILITADA
+      ? ((
+          await prisma.order.aggregate({
+            where: {
+              storeId: assinatura.storeId,
+              status: 'DELIVERED',
+              createdAt: {
+                gte: assinatura.currentPeriodStart ?? inicio,
+                lt: inicio,
+              },
+            },
+            _sum: { commissionCents: true },
+          })
+        )._sum.commissionCents ?? 0)
+      : 0;
 
     try {
       await prisma.$transaction([
@@ -73,7 +82,7 @@ export async function cobrarMensalidades(): Promise<void> {
             storeId: assinatura.storeId,
             planId: assinatura.planId,
             amountCents: assinatura.plan.monthlyPriceCents,
-            commissionCents: comissao._sum.commissionCents ?? 0,
+            commissionCents: comissaoCents,
             // OPEN, não PENDING: a fatura está emitida e aguardando
             // pagamento, que é o vocabulário do enum do banco.
             status: 'OPEN',
@@ -95,10 +104,12 @@ export async function cobrarMensalidades(): Promise<void> {
           userId: dono.userId,
           title: `Fatura do plano ${assinatura.plan.name}`,
           body:
-            `${formatCents(assinatura.plan.monthlyPriceCents + (comissao._sum.commissionCents ?? 0))} ` +
-            `com vencimento em ${vencimento.toLocaleDateString('pt-BR')} ` +
-            `(mensalidade ${formatCents(assinatura.plan.monthlyPriceCents)} + comissão ` +
-            `${formatCents(comissao._sum.commissionCents ?? 0)}).`,
+            `${formatCents(assinatura.plan.monthlyPriceCents + comissaoCents)} ` +
+            `com vencimento em ${vencimento.toLocaleDateString('pt-BR')}` +
+            (comissaoCents > 0
+              ? ` (mensalidade ${formatCents(assinatura.plan.monthlyPriceCents)} + comissão ` +
+                `${formatCents(comissaoCents)}).`
+              : '.'),
           url: '/loja/financeiro',
           canais: ['WHATSAPP', 'EMAIL'],
           entity: { type: 'Store', id: assinatura.storeId },
@@ -111,4 +122,65 @@ export async function cobrarMensalidades(): Promise<void> {
   }
 
   logger.info({ total: assinaturas.length }, '[cobranca] assinaturas processadas');
+}
+
+/**
+ * Tira do ar a loja com fatura vencida há mais de DIAS_ATE_SUSPENDER dias.
+ *
+ * `suspendedForNonPaymentAt` separa esta suspensão da manual: só ela volta
+ * sozinha ao dar baixa. Fatura anterior a INICIO_DA_SUSPENSAO não conta.
+ */
+export async function suspenderInadimplentes(): Promise<void> {
+  const agora = new Date();
+  const limite = new Date(agora.getTime() - DIAS_ATE_SUSPENDER * 24 * 3600 * 1000);
+
+  await prisma.planInvoice.updateMany({
+    where: { status: 'OPEN', dueDate: { lt: agora }, createdAt: { gte: INICIO_DA_SUSPENSAO } },
+    data: { status: 'OVERDUE' },
+  });
+
+  const vencidas = await prisma.planInvoice.findMany({
+    where: {
+      status: 'OVERDUE',
+      dueDate: { lt: limite },
+      createdAt: { gte: INICIO_DA_SUSPENSAO },
+      store: { status: 'ACTIVE', deletedAt: null },
+    },
+    distinct: ['storeId'],
+    select: {
+      storeId: true,
+      store: {
+        select: {
+          name: true,
+          staff: { where: { role: 'OWNER', isActive: true }, select: { userId: true }, take: 1 },
+        },
+      },
+    },
+  });
+
+  for (const fatura of vencidas) {
+    try {
+      // Condicional: uma baixa no mesmo instante não é atropelada.
+      const { count } = await prisma.store.updateMany({
+        where: { id: fatura.storeId, status: 'ACTIVE' },
+        data: { status: 'SUSPENDED', suspendedForNonPaymentAt: agora },
+      });
+
+      const dono = fatura.store.staff[0];
+      if (count > 0 && dono) {
+        await notificarUsuario({
+          userId: dono.userId,
+          title: 'Sua loja foi suspensa',
+          body: `A ${fatura.store.name} saiu do ar por fatura vencida. Ela volta assim que o pagamento for confirmado.`,
+          url: '/loja/financeiro',
+          canais: ['WHATSAPP', 'EMAIL'],
+          entity: { type: 'Store', id: fatura.storeId },
+        });
+      }
+    } catch (erro) {
+      void capturarErro(erro, { origem: 'suspensao', storeId: fatura.storeId });
+    }
+  }
+
+  logger.info({ total: vencidas.length }, '[cobranca] lojas suspensas por inadimplência');
 }

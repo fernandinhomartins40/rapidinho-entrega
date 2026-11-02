@@ -1,3 +1,4 @@
+import { COMISSAO_HABILITADA } from '@rapidinho/shared';
 import { prisma, type StoreSegment } from '@rapidinho/database';
 import { getStoreContext } from '@/lib/store-context';
 import { Planos } from './planos';
@@ -65,7 +66,9 @@ export default async function ImpulsionarPage() {
       <header>
         <h1 className="text-2xl font-bold tracking-tight">Plano e impulsionamento</h1>
         <p className="text-muted-foreground mt-1">
-          O plano define a comissão por pedido. O impulsionamento coloca sua loja em destaque.
+          {COMISSAO_HABILITADA
+            ? 'O plano define a comissão por pedido. O impulsionamento coloca sua loja em destaque.'
+            : 'O plano define sua mensalidade. O impulsionamento coloca sua loja em destaque.'}
         </p>
       </header>
 

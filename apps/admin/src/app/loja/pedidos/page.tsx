@@ -75,6 +75,7 @@ async function carregarPedidos(storeId: string) {
           amountCents: true,
           refundedCents: true,
           failReason: true,
+          pixProofImage: { select: { largeKey: true, mediumKey: true, originalKey: true } },
         },
       },
       items: {
@@ -131,8 +132,27 @@ export default async function PedidosPage() {
   return (
     <PainelDePedidos
       pedidos={await Promise.all(
-        pedidos.map(async ({ userId, prescriptionImage, delivery, ...pedido }) => ({
+        pedidos.map(async ({ userId, prescriptionImage, delivery, payment, ...pedido }) => ({
           ...pedido,
+          payment: payment
+            ? {
+                method: payment.method,
+                status: payment.status,
+                provider: payment.provider,
+                changeForCents: payment.changeForCents,
+                amountCents: payment.amountCents,
+                refundedCents: payment.refundedCents,
+                failReason: payment.failReason,
+              }
+            : null,
+          // Comprovante traz dados do pagador: como a receita, só link assinado.
+          comprovanteUrl: payment?.pixProofImage
+            ? await getStorage().getSignedUrl(
+                payment.pixProofImage.largeKey ??
+                  payment.pixProofImage.mediumKey ??
+                  payment.pixProofImage.originalKey,
+              )
+            : null,
           entrega: delivery
             ? {
                 status: delivery.status,

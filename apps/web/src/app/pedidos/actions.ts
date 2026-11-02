@@ -9,8 +9,11 @@ import { runAuthedAction, type ActionResult } from '@/lib/action';
 import { validarItem } from '@/lib/regras-do-item';
 
 /**
- * Ações sobre pedidos já feitos: repetir, avaliar e cancelar antes do aceite.
+ * Ações sobre pedidos já feitos: repetir, avaliar, cancelar antes do aceite e
+ * anexar o comprovante do Pix.
  */
+
+const comprovanteSchema = z.object({ orderId: cuidSchema, mediaId: cuidSchema });
 
 /**
  * Recria o carrinho a partir de um pedido anterior — pizza inclusive.
@@ -419,5 +422,52 @@ export async function cancelarMeuPedido(orderId: unknown): Promise<ActionResult>
     revalidatePath('/pedidos');
 
     return { ok: true, message: `Pedido #${pedido.number} cancelado.` };
+  });
+}
+
+/**
+ * Comprovante do Pix pago na chave da loja. É opcional: ajuda o lojista a achar
+ * o pagamento no extrato, mas quem libera o pedido continua sendo ele, ao
+ * conferir. Imagem qualquer não prova pagamento, e por isso nada anda sozinho.
+ */
+export async function anexarComprovanteDoPix(entrada: unknown): Promise<ActionResult> {
+  return runAuthedAction(async (user) => {
+    const { orderId, mediaId } = comprovanteSchema.parse(entrada);
+
+    const pedido = await prisma.order.findFirst({
+      where: {
+        id: orderId,
+        userId: user.id,
+        status: 'PENDING_PAYMENT',
+        payment: { is: { method: 'PIX', provider: 'OFFLINE' } },
+      },
+      select: { id: true, number: true, storeId: true },
+    });
+
+    if (!pedido) return { ok: false, message: 'Este pedido não está aguardando Pix.' };
+
+    // Só o arquivo que esta pessoa acabou de enviar: um id de outro upload
+    // abriria, pelo link assinado do painel, uma imagem privada de terceiro.
+    const arquivo = await prisma.mediaAsset.findFirst({
+      where: { id: mediaId, context: 'PIX_PROOF', uploadedById: user.id },
+      select: { id: true },
+    });
+
+    if (!arquivo) return { ok: false, message: 'Envie a imagem do comprovante de novo.' };
+
+    await prisma.payment.update({
+      where: { orderId: pedido.id },
+      data: { pixProofImageId: arquivo.id },
+    });
+
+    await publishRealtimeMany(
+      [REALTIME_CHANNELS.store(pedido.storeId)],
+      REALTIME_EVENTS.orderUpdated,
+      { orderId: pedido.id, number: pedido.number },
+    );
+
+    revalidatePath(`/pedidos/${pedido.id}`);
+
+    return { ok: true, message: 'Comprovante enviado para a loja.' };
   });
 }

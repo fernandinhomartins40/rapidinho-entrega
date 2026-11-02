@@ -113,7 +113,8 @@ export async function alternarSuspensao(
 
     const loja = await prisma.store.update({
       where: { id: storeId },
-      data: { status: suspendendo ? 'SUSPENDED' : 'ACTIVE' },
+      // Reativar à mão também encerra a suspensão por falta de pagamento.
+      data: { status: suspendendo ? 'SUSPENDED' : 'ACTIVE', suspendedForNonPaymentAt: null },
     });
 
     if (suspendendo) {

@@ -13,6 +13,7 @@ import {
 } from '@rapidinho/services';
 import {
   CARTAO_ONLINE_DISPONIVEL,
+  COMISSAO_HABILITADA,
   buildPixBrCode,
   checkoutSchema,
   isStoreOpen,
@@ -272,7 +273,7 @@ export async function finalizarPedido(
     }
 
     const numero = await gerarNumeroDoPedido();
-    const comissao = Number(loja.subscription?.plan.commissionRate ?? 0);
+    const comissao = COMISSAO_HABILITADA ? Number(loja.subscription?.plan.commissionRate ?? 0) : 0;
 
     // Pagamento online só vira pedido de verdade quando o dinheiro entra: até
     // lá fica em PENDING_PAYMENT e nem aparece na tela do lojista. Pagamento

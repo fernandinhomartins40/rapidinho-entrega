@@ -13,6 +13,7 @@ import {
   TableRow,
 } from '@rapidinho/ui';
 import {
+  COMISSAO_HABILITADA,
   formatCents,
   ORDER_STATUS_LABEL,
   PAYMENT_METHOD_LABEL,
@@ -129,18 +130,22 @@ export default async function FinanceiroPage({
           detalhe={`${dados.entregues} pedidos entregues`}
           icone={TrendingUp}
         />
-        <Indicador
-          titulo="Comissão da plataforma"
-          valor={formatCents(dados.comissao)}
-          detalhe="Já descontada do líquido"
-          icone={Wallet}
-        />
-        <Indicador
-          titulo="Seu líquido"
-          valor={formatCents(dados.liquido)}
-          detalhe="Bruto menos comissão"
-          icone={Wallet}
-        />
+        {COMISSAO_HABILITADA ? (
+          <>
+            <Indicador
+              titulo="Comissão da plataforma"
+              valor={formatCents(dados.comissao)}
+              detalhe="Já descontada do líquido"
+              icone={Wallet}
+            />
+            <Indicador
+              titulo="Seu líquido"
+              valor={formatCents(dados.liquido)}
+              detalhe="Bruto menos comissão"
+              icone={Wallet}
+            />
+          </>
+        ) : null}
         <Indicador
           titulo="Ticket médio"
           valor={formatCents(dados.ticketMedio)}
@@ -156,8 +161,8 @@ export default async function FinanceiroPage({
         <CardContent>
           {dados.repasses.length === 0 ? (
             <p className="text-muted-foreground">
-              Nenhum repasse registrado ainda. Se sua loja recebe direto do cliente (Pix na entrega,
-              dinheiro), não há repasse a fazer — a comissão é cobrada à parte.
+              Nenhum repasse registrado. Sua loja recebe direto do cliente (Pix na sua chave,
+              dinheiro ou cartão na entrega), então não há repasse a fazer.
             </p>
           ) : (
             <Table>
@@ -202,8 +207,12 @@ export default async function FinanceiroPage({
                   <TableHead>Pagamento</TableHead>
                   <TableHead>Situação</TableHead>
                   <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Comissão</TableHead>
-                  <TableHead className="text-right">Líquido</TableHead>
+                  {COMISSAO_HABILITADA ? (
+                    <>
+                      <TableHead className="text-right">Comissão</TableHead>
+                      <TableHead className="text-right">Líquido</TableHead>
+                    </>
+                  ) : null}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -220,12 +229,16 @@ export default async function FinanceiroPage({
                     </TableCell>
                     <TableCell>{ORDER_STATUS_LABEL[pedido.status as OrderStatus]}</TableCell>
                     <TableCell className="text-right">{formatCents(pedido.totalCents)}</TableCell>
-                    <TableCell className="text-right">
-                      {formatCents(pedido.commissionCents)}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCents(pedido.totalCents - pedido.commissionCents)}
-                    </TableCell>
+                    {COMISSAO_HABILITADA ? (
+                      <>
+                        <TableCell className="text-right">
+                          {formatCents(pedido.commissionCents)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCents(pedido.totalCents - pedido.commissionCents)}
+                        </TableCell>
+                      </>
+                    ) : null}
                   </TableRow>
                 ))}
               </TableBody>

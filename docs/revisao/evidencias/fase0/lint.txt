@@ -1,0 +1,60 @@
+
+> rapidinho-entrega@0.1.0 lint C:\FuseDev\rapidinho-entrega
+> turbo run lint
+
+• turbo 2.10.12
+
+   • Packages in scope: @rapidinho/admin, @rapidinho/auth, @rapidinho/config, @rapidinho/database, @rapidinho/realtime, @rapidinho/services, @rapidinho/shared, @rapidinho/ui, @rapidinho/web, @rapidinho/worker
+   • Running lint in 10 packages
+   • Remote caching disabled
+
+@rapidinho/shared:lint: cache miss, executing bdc0063bb462c3a3
+@rapidinho/ui:lint: cache miss, executing 1720c281fab89131
+@rapidinho/database:lint: cache miss, executing 7379dc7a17ae1536
+@rapidinho/realtime:lint: cache miss, executing 73c983eabfc02cfe
+@rapidinho/services:lint: cache miss, executing 15cac9eadca3b522
+@rapidinho/worker:lint: cache miss, executing eb93643f45c9ff7a
+@rapidinho/auth:lint: cache miss, executing 367ff75ad7882e25
+@rapidinho/web:lint: cache miss, executing abfee714c78517f6
+@rapidinho/admin:lint: cache miss, executing 1a2ac3c3b989144f
+@rapidinho/shared:lint: 
+@rapidinho/shared:lint: > @rapidinho/shared@0.1.0 lint C:\FuseDev\rapidinho-entrega\packages\shared
+@rapidinho/shared:lint: > eslint .
+@rapidinho/shared:lint: 
+@rapidinho/ui:lint: 
+@rapidinho/ui:lint: > @rapidinho/ui@0.1.0 lint C:\FuseDev\rapidinho-entrega\packages\ui
+@rapidinho/ui:lint: > eslint .
+@rapidinho/ui:lint: 
+@rapidinho/database:lint: 
+@rapidinho/database:lint: > @rapidinho/database@0.1.0 lint C:\FuseDev\rapidinho-entrega\packages\database
+@rapidinho/database:lint: > eslint .
+@rapidinho/database:lint: 
+@rapidinho/realtime:lint: 
+@rapidinho/realtime:lint: > @rapidinho/realtime@0.1.0 lint C:\FuseDev\rapidinho-entrega\apps\realtime
+@rapidinho/realtime:lint: > eslint .
+@rapidinho/realtime:lint: 
+@rapidinho/services:lint: 
+@rapidinho/services:lint: > @rapidinho/services@0.1.0 lint C:\FuseDev\rapidinho-entrega\packages\services
+@rapidinho/services:lint: > eslint .
+@rapidinho/services:lint: 
+@rapidinho/worker:lint: 
+@rapidinho/worker:lint: > @rapidinho/worker@0.1.0 lint C:\FuseDev\rapidinho-entrega\apps\worker
+@rapidinho/worker:lint: > eslint .
+@rapidinho/worker:lint: 
+@rapidinho/auth:lint: 
+@rapidinho/auth:lint: > @rapidinho/auth@0.1.0 lint C:\FuseDev\rapidinho-entrega\packages\auth
+@rapidinho/auth:lint: > eslint .
+@rapidinho/auth:lint: 
+@rapidinho/web:lint: 
+@rapidinho/web:lint: > @rapidinho/web@0.1.0 lint C:\FuseDev\rapidinho-entrega\apps\web
+@rapidinho/web:lint: > eslint .
+@rapidinho/web:lint: 
+@rapidinho/admin:lint: 
+@rapidinho/admin:lint: > @rapidinho/admin@0.1.0 lint C:\FuseDev\rapidinho-entrega\apps\admin
+@rapidinho/admin:lint: > eslint .
+@rapidinho/admin:lint: 
+
+ Tasks:    9 successful, 9 total
+Cached:    0 cached, 9 total
+  Time:    29.418s 
+

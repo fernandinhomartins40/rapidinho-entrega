@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { prisma } from '@rapidinho/database';
 import { notificarUsuario } from '@rapidinho/services';
-import { isValidDocument, normalizePhoneBR, slugify } from '@rapidinho/shared';
+import { COMISSAO_HABILITADA, isValidDocument, normalizePhoneBR, slugify } from '@rapidinho/shared';
 import { gerarHashDeSenha } from '@rapidinho/shared/senha';
 import { runAction, type ActionResult } from '@/lib/action';
 
@@ -149,12 +149,14 @@ export async function cadastrarLoja(
       : null;
     const segmento = categoria?.segment ?? 'OTHER';
 
-    // Plano de entrada do segmento: restaurante começa no plano com comissão;
-    // mercado, farmácia e outros, no de mensalidade sem comissão.
+    // Plano de entrada do segmento. Com a comissão desligada, o plano grátis
+    // não renderia nada: loja nova entra no primeiro plano pago, com o teste
+    // gratuito dele. Lojas que já estão no grátis ficam onde estão.
     const planoPadrao = await prisma.plan.findFirst({
       where: {
         isActive: true,
         OR: [{ segments: { has: segmento } }, { segments: { isEmpty: true } }],
+        ...(COMISSAO_HABILITADA ? {} : { monthlyPriceCents: { gt: 0 } }),
       },
       orderBy: [{ isDefault: 'desc' }, { sortOrder: 'asc' }],
       select: { id: true, trialDays: true },

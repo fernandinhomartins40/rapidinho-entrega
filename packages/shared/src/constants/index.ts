@@ -44,6 +44,24 @@ export function isStoreMember(role: UserRole | null | undefined): boolean {
 export const VERSAO_DOS_TERMOS = '2026-09';
 
 /**
+ * Comissão por pedido: preparada e desligada. Na fase inicial a plataforma
+ * cobra só a mensalidade. Ligar é trocar para `true`: o checkout volta a gravar
+ * a comissão do plano, a fatura volta a somá-la e as telas voltam a mostrá-la.
+ * O percentual de cada plano segue editável em /admin/planos.
+ */
+export const COMISSAO_HABILITADA = false as boolean;
+
+/** Dias depois do vencimento até a loja sair do ar por falta de pagamento. */
+export const DIAS_ATE_SUSPENDER = 10;
+
+/**
+ * Só fatura emitida a partir desta data suspende loja. As faturas antigas
+ * foram geradas antes de existir como pagar ou dar baixa: suspender por elas
+ * derrubaria lojas sem que tivessem tido chance de pagar.
+ */
+export const INICIO_DA_SUSPENSAO = new Date('2026-11-03T03:00:00.000Z');
+
+/**
  * Cartão de crédito pelo app ainda não existe de ponta a ponta: falta a tela
  * que gera o token do cartão no navegador, e sem ele toda cobrança falha. Até
  * existir, a opção não aparece para a loja nem para o cliente, mesmo que o

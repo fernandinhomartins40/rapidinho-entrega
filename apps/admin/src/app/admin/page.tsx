@@ -3,7 +3,11 @@ import { Indicador } from '@/components/indicador';
 import { Building2, Clock, ShoppingBag, TrendingUp, Users, XCircle } from 'lucide-react';
 import { prisma } from '@rapidinho/database';
 import { Badge, Card, CardContent, CardHeader, CardTitle } from '@rapidinho/ui';
-import { formatCents, inicioDoMes as inicioDoMesEmBrasilia } from '@rapidinho/shared';
+import {
+  COMISSAO_HABILITADA,
+  formatCents,
+  inicioDoMes as inicioDoMesEmBrasilia,
+} from '@rapidinho/shared';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Visão geral' };
@@ -142,12 +146,14 @@ export default async function AdminDashboardPage() {
           detalhe="Pedidos entregues no mês"
           icone={TrendingUp}
         />
-        <Indicador
-          titulo="Comissão da plataforma"
-          valor={formatCents(dados.comissaoCents)}
-          detalhe="A receber dos lojistas"
-          icone={TrendingUp}
-        />
+        {COMISSAO_HABILITADA ? (
+          <Indicador
+            titulo="Comissão da plataforma"
+            valor={formatCents(dados.comissaoCents)}
+            detalhe="A receber dos lojistas"
+            icone={TrendingUp}
+          />
+        ) : null}
         <Indicador
           titulo="Pedidos no mês"
           valor={String(dados.pedidosDoMes)}

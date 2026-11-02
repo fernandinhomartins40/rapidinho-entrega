@@ -9,7 +9,13 @@ import {
 } from 'lucide-react';
 import { prisma } from '@rapidinho/database';
 import { Badge, Card, CardContent, CardHeader, CardTitle } from '@rapidinho/ui';
-import { formatCents, inicioDoDia as inicioDoDiaEmBrasilia } from '@rapidinho/shared';
+import {
+  COMISSAO_HABILITADA,
+  DIAS_ATE_SUSPENDER,
+  INICIO_DA_SUSPENSAO,
+  formatCents,
+  inicioDoDia as inicioDoDiaEmBrasilia,
+} from '@rapidinho/shared';
 import { Indicador } from '@/components/indicador';
 import { ondeParaResponder } from '@/lib/avaliacoes';
 import { getStoreContext, STATUS_EM_ABERTO } from '@/lib/store-context';
@@ -84,7 +90,14 @@ async function carregarResumo(storeId: string) {
 
 export default async function LojaDashboardPage() {
   const { store, abertura, access } = await getStoreContext();
-  const dados = await carregarResumo(store.id);
+  const [dados, fatura] = await Promise.all([
+    carregarResumo(store.id),
+    prisma.planInvoice.findFirst({
+      where: { storeId: store.id, status: { in: ['OPEN', 'OVERDUE'] } },
+      orderBy: { dueDate: 'asc' },
+      select: { amountCents: true, dueDate: true, createdAt: true },
+    }),
+  ]);
   // Faturamento, ticket e comissão são do dono, como no Financeiro. O
   // funcionário vê o que opera: pedidos do dia e os que estão em aberto.
   const veValores = access.isPlatformAdmin || access.staffRole === 'OWNER';
@@ -107,6 +120,28 @@ export default async function LojaDashboardPage() {
                 <Link href="/loja/horarios" className="underline">
                   Conferir horários
                 </Link>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {fatura && veValores ? (
+        <Card className="border-warning bg-warning/10">
+          <CardContent className="flex items-start gap-3 pt-5">
+            <AlertTriangle className="text-warning mt-0.5 h-5 w-5 shrink-0" aria-hidden />
+            <div className="text-sm">
+              <p className="font-semibold">
+                Mensalidade de {formatCents(fatura.amountCents)}: vencimento em{' '}
+                {fatura.dueDate.toLocaleDateString('pt-BR')}.
+              </p>
+              <p className="text-muted-foreground mt-0.5">
+                {fatura.createdAt >= INICIO_DA_SUSPENSAO
+                  ? `Sem pagamento até ${new Date(
+                      fatura.dueDate.getTime() + DIAS_ATE_SUSPENDER * 24 * 3600 * 1000,
+                    ).toLocaleDateString('pt-BR')}, a loja sai do ar. `
+                  : null}
+                Para pagar, fale com a equipe Rapidinho.
               </p>
             </div>
           </CardContent>
@@ -167,7 +202,7 @@ export default async function LojaDashboardPage() {
           detalhe={`${dados.emAberto} em aberto`}
           icone={Clock}
         />
-        {veValores ? (
+        {veValores && COMISSAO_HABILITADA ? (
           <Indicador
             titulo="Comissão da plataforma"
             valor={formatCents(dados.comissaoCents)}

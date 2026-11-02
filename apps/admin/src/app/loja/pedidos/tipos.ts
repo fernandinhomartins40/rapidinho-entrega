@@ -85,6 +85,8 @@ export interface PedidoNaTela {
   ageConfirmedAt: string | null;
   /** Foto da receita (link assinado e temporário). */
   receitaUrl: string | null;
+  /** Comprovante do Pix enviado pelo cliente (link assinado e temporário). */
+  comprovanteUrl: string | null;
   /** Corrida do pedido: existe a partir de "Pronto", em pedido de entrega. */
   entrega: {
     status:

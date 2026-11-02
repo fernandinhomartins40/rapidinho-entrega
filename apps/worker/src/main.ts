@@ -10,7 +10,7 @@ import {
   type JobDeNotificacao,
 } from '@rapidinho/services';
 import { QUEUES } from '@rapidinho/shared';
-import { cobrarMensalidades } from './jobs/plan-billing';
+import { cobrarMensalidades, suspenderInadimplentes } from './jobs/plan-billing';
 import { expirarImpulsionamentos } from './jobs/boost-expiration';
 import { expirarPedido } from './jobs/order-timeout';
 import { lembrarLojaDoPedido } from './jobs/order-reminder';
@@ -57,10 +57,14 @@ const trabalhadores = [
     { connection: conexao, concurrency: 5 },
   ),
 
-  new Worker(QUEUES.planBilling, async () => cobrarMensalidades(), {
-    connection: conexao,
-    concurrency: 1,
-  }),
+  new Worker(
+    QUEUES.planBilling,
+    async () => {
+      await cobrarMensalidades();
+      await suspenderInadimplentes();
+    },
+    { connection: conexao, concurrency: 1 },
+  ),
 
   new Worker(QUEUES.boostExpiration, async () => expirarImpulsionamentos(), {
     connection: conexao,

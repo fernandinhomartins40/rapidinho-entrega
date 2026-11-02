@@ -1,0 +1,105 @@
+
+> rapidinho-entrega@0.1.0 test:e2e C:\FuseDev\rapidinho-entrega
+> playwright test
+
+
+Running 16 tests using 1 worker
+
+  ok  1 [celular] › e2e\tests\aprovacao.spec.ts:36:7 › aprovação de loja › o lojista se cadastra sozinho e a loja nasce fora do ar (17.5s)
+  ok  2 [celular] › e2e\tests\aprovacao.spec.ts:59:7 › aprovação de loja › o super admin aprova e a loja entra no ar (15.2s)
+  ok  3 [celular] › e2e\tests\busca.spec.ts:19:9 › busca na vitrine › "acucar" acha o produto acentuado (2.8s)
+  ok  4 [celular] › e2e\tests\busca.spec.ts:19:9 › busca na vitrine › "feijao" acha o produto acentuado (2.8s)
+  ok  5 [celular] › e2e\tests\busca.spec.ts:19:9 › busca na vitrine › "linguica" acha o produto acentuado (2.8s)
+  ok  6 [celular] › e2e\tests\busca.spec.ts:27:7 › busca na vitrine › com acento também acha — não trocamos um caso pelo outro (3.4s)
+  ok  7 [celular] › e2e\tests\busca.spec.ts:33:7 › busca na vitrine › termo curto demais pede mais letras em vez de varrer o banco (3.3s)
+  ok  8 [celular] › e2e\tests\campanha.spec.ts:17:7 › central de notificações › mostra o alcance antes de enviar (3.7s)
+  ok  9 [celular] › e2e\tests\campanha.spec.ts:31:7 › central de notificações › recusa link para fora do app — é o formato que um golpe imitaria (2.8s)
+  ok 10 [celular] › e2e\tests\loja.spec.ts:16:7 › painel da plataforma › lista as lojas e abre o detalhe (3.7s)
+  ok 11 [celular] › e2e\tests\loja.spec.ts:26:7 › painel da plataforma › o super admin chega ao painel da plataforma pela raiz (7.1s)
+  ok 12 [celular] › e2e\tests\loja.spec.ts:38:7 › fronteira entre papéis › o lojista não alcança o painel da plataforma (6.6s)
+  x  13 [celular] › e2e\tests\pedido.spec.ts:43:7 › pedido do cliente › monta o carrinho e finaliza o pedido (28.3s)
+  ok 14 [celular] › e2e\tests\pedido.spec.ts:137:7 › pedido do cliente › o histórico mostra o pedido recém-criado (14.1s)
+  x  15 [celular] › e2e\tests\produto.spec.ts:16:7 › painel do lojista › cadastra um produto com nome e preço apenas (44.9s)
+  ok 16 [celular] › e2e\tests\produto.spec.ts:31:7 › painel do lojista › pausa e reativa um produto com um clique (28.4s)
+
+
+  1) [celular] › e2e\tests\pedido.spec.ts:43:7 › pedido do cliente › monta o carrinho e finaliza o pedido 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { level: 1 })
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { level: 1 }) with timeout 10000ms
+      - waiting for getByRole('heading', { level: 1 })
+
+
+      67 |     for (let i = 0; i < total; i += 1) {
+      68 |       await lojas.nth(i).click();
+    > 69 |       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+         |                                                             ^
+      70 |
+      71 |       // Um item vendido por unidade: o de peso tem contador em gramas, e subir
+      72 |       // de 100 em 100 até o pedido mínimo levaria dezenas de cliques.
+        at C:\FuseDev\rapidinho-entrega\e2e\tests\pedido.spec.ts:69:61
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\pedido-pedido-do-cliente-m-e8521-arrinho-e-finaliza-o-pedido-celular\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\pedido-pedido-do-cliente-m-e8521-arrinho-e-finaliza-o-pedido-celular\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\pedido-pedido-do-cliente-m-e8521-arrinho-e-finaliza-o-pedido-celular\trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results\pedido-pedido-do-cliente-m-e8521-arrinho-e-finaliza-o-pedido-celular\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [celular] › e2e\tests\produto.spec.ts:16:7 › painel do lojista › cadastra um produto com nome e preço apenas 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('status')
+    Expected pattern: /no cardápio/i
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" getByRole('status') with timeout 10000ms
+      - waiting for getByRole('status')
+
+
+      24 |     await page.getByRole('button', { name: /adicionar ao cardápio/i }).click();
+      25 |
+    > 26 |     await expect(page.getByRole('status')).toContainText(/no cardápio/i);
+         |                                            ^
+      27 |     // `exact` porque a mensagem de sucesso também contém o nome do produto.
+      28 |     await expect(page.getByText(nome, { exact: true })).toBeVisible();
+      29 |   });
+        at C:\FuseDev\rapidinho-entrega\e2e\tests\produto.spec.ts:26:44
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\produto-painel-do-lojista--11e53-uto-com-nome-e-preço-apenas-celular\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\produto-painel-do-lojista--11e53-uto-com-nome-e-preço-apenas-celular\error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results\produto-painel-do-lojista--11e53-uto-com-nome-e-preço-apenas-celular\trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results\produto-painel-do-lojista--11e53-uto-com-nome-e-preço-apenas-celular\trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [celular] › e2e\tests\pedido.spec.ts:43:7 › pedido do cliente › monta o carrinho e finaliza o pedido 
+    [celular] › e2e\tests\produto.spec.ts:16:7 › painel do lojista › cadastra um produto com nome e preço apenas 
+  14 passed (4.1m)
+ ELIFECYCLE  Command failed with exit code 1.
+e2e exit=1

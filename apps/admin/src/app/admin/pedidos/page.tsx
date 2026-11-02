@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { AlertTriangle, Clock, ShoppingBag, TrendingUp, XCircle } from 'lucide-react';
 import { prisma, type Prisma } from '@rapidinho/database';
 import {
+  COMISSAO_HABILITADA,
   formatCents,
   formatPhoneBR,
   ORDER_STATUS_LABEL,
@@ -232,7 +233,9 @@ export default async function PedidosDaPlataformaPage({
           titulo="Faturamento hoje"
           valor={formatCents(indicadores.faturamentoCents)}
           icone={TrendingUp}
-          detalhe={`Comissão: ${formatCents(indicadores.comissaoCents)}`}
+          {...(COMISSAO_HABILITADA
+            ? { detalhe: `Comissão: ${formatCents(indicadores.comissaoCents)}` }
+            : {})}
         />
       </section>
 

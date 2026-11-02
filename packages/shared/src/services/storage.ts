@@ -39,6 +39,8 @@ export const ASPECT_RATIOS = {
   PIZZA_FLAVOR: 1,
   // Receita em papel, em pé.
   PRESCRIPTION: 3 / 4,
+  // Print do comprovante no banco: tela de celular, em pé.
+  PIX_PROOF: 9 / 16,
 } as const;
 
 export type UploadContext = keyof typeof ASPECT_RATIOS;

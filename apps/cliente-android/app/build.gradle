@@ -4,14 +4,14 @@ plugins {
 
 android {
     namespace 'br.com.rapidinhoentrega.app'
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId 'br.com.rapidinhoentrega.app'
         minSdk 23
-        targetSdk 35
-        versionCode 2
-        versionName '1.1'
+        targetSdk 36
+        versionCode 4
+        versionName '1.3'
         // Endereço que o app abre. Para testar contra outro servidor:
         // ./gradlew assembleRelease -PsiteUrl=https://outro.endereco
         buildConfigField 'String', 'SITE_URL',
@@ -22,13 +22,29 @@ android {
         buildConfig true
     }
 
+    signingConfigs {
+        // Chave de envio da Play Store, guardada fora do repositório:
+        // ./gradlew bundleRelease -PchaveDaPlay=/caminho/rapidinho-play.properties
+        if (project.hasProperty('chaveDaPlay')) {
+            def chave = new Properties()
+            file(project.property('chaveDaPlay')).withInputStream { chave.load(it) }
+            play {
+                storeFile file(chave.getProperty('arquivo'))
+                storePassword chave.getProperty('senha')
+                keyAlias chave.getProperty('apelido')
+                keyPassword chave.getProperty('senha')
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
-            // Por enquanto instalado à mão para teste: assinado com a chave de
-            // depuração da máquina que compila. Para a Play Store, trocar por
-            // uma chave própria guardada fora do repositório.
-            signingConfig signingConfigs.debug
+            // Sem a chave da Play, assina com a de depuração da máquina que
+            // compila: é assim que sai o APK baixado do site.
+            signingConfig project.hasProperty('chaveDaPlay')
+                ? signingConfigs.play
+                : signingConfigs.debug
         }
     }
 

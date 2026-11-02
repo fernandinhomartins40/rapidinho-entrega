@@ -2,18 +2,25 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Acompanhar o pedido com o app fechado e avisar quando mudar. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- enableOnBackInvokedCallback: com target 36 o Android 16 deixaria de
+         chamar onBackPressed, e o Voltar fecharia o app em vez de voltar a página. -->
     <application
         android:allowBackup="false"
+        android:enableOnBackInvokedCallback="false"
         android:icon="@drawable/ic_launcher"
         android:label="Rapidinho"
         android:theme="@style/Tema">
 
-        <!-- configChanges: girar a tela ou abrir o teclado não recarrega a
+        <!-- configChanges: girar a tela, abrir o dobrável ou o teclado não recarrega a
              página, senão o cliente perderia o que estava digitando. -->
         <activity
             android:name=".MainActivity"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden|keyboard|uiMode"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|keyboard|uiMode"
             android:exported="true"
             android:launchMode="singleTask"
             android:windowSoftInputMode="adjustResize">
@@ -30,5 +37,10 @@
                 <data android:scheme="https" android:host="www.rapidinhoentrega.com.br" />
             </intent-filter>
         </activity>
+
+        <service
+            android:name=".AcompanhamentoDePedido"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
     </application>
 </manifest>

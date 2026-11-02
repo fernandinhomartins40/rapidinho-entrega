@@ -23,9 +23,23 @@ servidor num teste: `./gradlew assembleRelease -PsiteUrl=https://outro.endereco`
 A cada versão nova, suba `versionCode` e `versionName` em `app/build.gradle`:
 o Android só instala por cima de uma versão menor.
 
+## Gerar o AAB da Play Store
+
+```bash
+cd apps/cliente-android
+./gradlew bundleRelease -PchaveDaPlay=$HOME/.rapidinho-play/rapidinho-play.properties
+```
+
+O arquivo sai em `app/build/outputs/bundle/release/app-release.aab`. Suba
+`versionCode` antes de cada envio: a Play recusa um número já usado.
+
 ## Assinatura
 
-Por enquanto o APK é assinado com a chave de depuração da máquina que compila.
-Isso basta para instalar à mão, mas um APK compilado em outra máquina não
-instala por cima deste (o celular pede para desinstalar antes). Para a Play
-Store, gere uma chave própria e guarde fora do repositório.
+O APK do site é assinado com a chave de depuração da máquina que compila. Isso
+basta para instalar à mão, mas um APK compilado em outra máquina não instala
+por cima deste (o celular pede para desinstalar antes).
+
+O AAB da Play é assinado com a chave de envio, que fica fora do repositório. O
+arquivo `.properties` guarda `arquivo` (caminho do `.jks`), `senha` e `apelido`.
+O app da Play e o APK do site têm assinaturas diferentes: um não instala por
+cima do outro.

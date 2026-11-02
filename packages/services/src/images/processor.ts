@@ -52,6 +52,8 @@ const CONTEXT_PREFIX: Record<UploadContext, string> = {
   STORE_DOCUMENT: 'private/lojas',
   // Receita é dado de saúde (LGPD, dado sensível): só por URL assinada.
   PRESCRIPTION: 'private/receitas',
+  // Comprovante traz nome, CPF parcial e banco do pagador: só por URL assinada.
+  PIX_PROOF: 'private/comprovantes',
 };
 
 export function isPrivateContext(context: UploadContext): boolean {
