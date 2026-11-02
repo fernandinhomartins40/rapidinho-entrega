@@ -15,7 +15,8 @@
     "./realtime": "./src/realtime/index.ts",
     "./realtime/token": "./src/realtime/token.ts",
     "./security": "./src/security/csp.ts",
-    "./senha": "./src/security/senha.ts"
+    "./senha": "./src/security/senha.ts",
+    "./app-api": "./src/app-api/tipos.ts"
   },
   "scripts": {
     "lint": "eslint .",
