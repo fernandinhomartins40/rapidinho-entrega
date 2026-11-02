@@ -385,6 +385,7 @@ model User {
   reviews           Review[]
   carts             Cart[]
   pushSubscriptions PushSubscription[]
+  pushDevices       PushDevice[]
   notifications     NotificationLog[]
   couponRedemptions CouponRedemption[]
   auditLogs         AuditLog[]         @relation("AuditActor")
@@ -429,6 +430,8 @@ model Session {
   expires      DateTime
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  pushDevices PushDevice[]
 
   @@index([userId])
   @@map("sessions")
@@ -1194,7 +1197,11 @@ model Order {
   pickedAt            DateTime?
   /// Total do checkout, guardado quando a separação muda o total.
   estimatedTotalCents Int?
+  /// Chave enviada pelo app nativo: rede ruim que reenvia o mesmo pedido cai no
+  /// índice único e devolve o pedido já criado. Vazia nos pedidos do site.
+  idempotencyKey      String?
 
+  @@unique([userId, idempotencyKey])
   @@index([storeId, status, createdAt])
   @@index([userId, createdAt])
   @@index([cityId, createdAt])
@@ -1756,6 +1763,27 @@ model PushSubscription {
 
   @@index([userId])
   @@map("push_subscriptions")
+}
+
+/// Aparelho com o app nativo, para o aviso via Expo Push.
+model PushDevice {
+  id            String  @id @default(cuid())
+  userId        String
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// O token é do aparelho: outra conta entrando nele assume a linha.
+  expoPushToken String  @unique
+  platform      String
+  /// Sair apaga a sessão e, em cascata, o aparelho: celular deslogado não pode
+  /// continuar recebendo aviso do pedido de quem saiu.
+  sessionId     String
+  session       Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([sessionId])
+  @@map("push_devices")
 }
 
 model NotificationCampaign {

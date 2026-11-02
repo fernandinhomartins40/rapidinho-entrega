@@ -89,12 +89,12 @@ export type FormaDePagamento = 'PIX' | 'CASH_ON_DELIVERY' | 'CARD_ON_DELIVERY';
 
 export type StatusDoPagamento =
   | 'PENDING'
-  | 'PROCESSING'
+  | 'AUTHORIZED'
   | 'PAID'
-  | 'FAILED'
   | 'REFUNDED'
-  | 'PARTIALLY_REFUNDED'
-  | 'CANCELLED';
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'ON_DELIVERY';
 
 export type PoliticaDeSubstituicao = 'SUBSTITUTE_SIMILAR' | 'CONTACT_ME' | 'REMOVE_ITEM';
 
@@ -113,7 +113,7 @@ export interface Usuario {
   email: string | null;
   papel: Papel;
   /** Preenchido para quem tem cadastro de entregador, aprovado ou não. */
-  entregador: { id: string; status: 'PENDING_APPROVAL' | 'ACTIVE' | 'BLOCKED' } | null;
+  entregador: { id: string; status: 'PENDING_APPROVAL' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED' } | null;
 }
 
 export interface EntradaPedirCodigo {
@@ -644,8 +644,8 @@ export interface ItemDoPedido {
   pizzaExtra: string | null;
   complementos: { id: string; nome: string; quantidade: number }[];
   sabores: { id: string; nome: string }[];
-  /** Separação no mercado: PENDING, PICKED, REPLACED, MISSING, AWAITING_CUSTOMER. */
-  statusDaSeparacao: string;
+  /** Separação no mercado; null enquanto a loja não mexeu no item. */
+  statusDaSeparacao: 'PICKED' | 'MISSING' | 'REPLACED' | 'AWAITING_CUSTOMER' | null;
   gramasSeparadas: number | null;
   substituto: { nome: string; precoCents: number } | null;
 }
