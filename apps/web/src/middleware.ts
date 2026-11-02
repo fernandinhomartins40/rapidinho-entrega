@@ -13,6 +13,32 @@ import { gerarNonce, montarCsp } from '@rapidinho/shared/security';
  * encontra e o aplica aos próprios scripts; sem isso a página carregaria com a
  * política bloqueando o código do framework.
  */
+const COOKIES_DE_SESSAO = ['__Secure-authjs.session-token', 'authjs.session-token'];
+const SESSAO_SEGUNDOS = 60 * 60 * 24 * Number(process.env.RAPIDINHO_SESSAO_DIAS ?? 30);
+
+/**
+ * Empurra o vencimento do cookie de sessão a cada página aberta. O Auth.js
+ * renova o prazo no banco, mas não consegue regravar o cookie durante a
+ * renderização; sem isto o cookie venceria contado do login, mesmo com uso
+ * diário. Só em GET: logout é Server Action (POST) e apaga o cookie na mesma
+ * resposta — regravar ali brigaria com a exclusão.
+ */
+function renovarCookieDeSessao(request: NextRequest, resposta: NextResponse): void {
+  if (request.method !== 'GET') return;
+
+  for (const nome of COOKIES_DE_SESSAO) {
+    const valor = request.cookies.get(nome)?.value;
+    if (!valor) continue;
+    resposta.cookies.set(nome, valor, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: nome.startsWith('__Secure-'),
+      path: '/',
+      maxAge: SESSAO_SEGUNDOS,
+    });
+  }
+}
+
 export function middleware(request: NextRequest) {
   const nonce = gerarNonce();
 
@@ -28,6 +54,7 @@ export function middleware(request: NextRequest) {
 
   const resposta = NextResponse.next({ request: { headers: cabecalhos } });
   resposta.headers.set('Content-Security-Policy', csp);
+  renovarCookieDeSessao(request, resposta);
 
   return resposta;
 }

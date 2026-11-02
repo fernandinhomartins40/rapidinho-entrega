@@ -17,6 +17,7 @@ import {
   resetRateLimit,
 } from '@rapidinho/services';
 import {
+  estaNoAppNativo,
   formatPhoneBR,
   linkDoSmsDeConfirmacao,
   parseServerEnv,
@@ -37,10 +38,20 @@ import { LOGIN_INITIAL_STATE, type LoginState } from './login-state';
  * Mesma proteção de força bruta do painel — o limite é por telefone E por IP,
  * porque travar só por IP não protege um número alvo, e o contrário deixa
  * passar quem varre vários números do mesmo lugar.
+ *
+ * Só dentro do app nativo: cada código é um SMS pago, e o app guarda a sessão
+ * para o cliente nunca precisar de outro. A página já mostra o convite para
+ * baixar o app; a checagem aqui cobre quem chama a action direto.
  */
+
+const SO_NO_APP = 'Para entrar, use o app Rapidinho no celular.';
 
 async function currentIp(): Promise<string> {
   return clientIpFromHeaders(await headers());
+}
+
+async function noAppNativo(): Promise<boolean> {
+  return estaNoAppNativo((await headers()).get('user-agent'));
 }
 
 export async function autenticar(previous: LoginState, formData: FormData): Promise<LoginState> {
@@ -55,6 +66,8 @@ export async function autenticar(previous: LoginState, formData: FormData): Prom
 }
 
 async function solicitarCodigo(formData: FormData): Promise<LoginState> {
+  if (!(await noAppNativo())) return { step: 'phone', error: SO_NO_APP };
+
   const parsed = requestOtpSchema.safeParse({ phone: formData.get('phone') });
 
   if (!parsed.success) {
@@ -108,6 +121,8 @@ async function solicitarCodigo(formData: FormData): Promise<LoginState> {
 }
 
 async function verificarCodigo(previous: LoginState, formData: FormData): Promise<LoginState> {
+  if (!(await noAppNativo())) return { ...previous, error: SO_NO_APP };
+
   const parsed = verifyOtpSchema.safeParse({
     phone: previous.phone,
     code: formData.get('code'),
@@ -155,6 +170,8 @@ export async function conferirSms(
 ): Promise<
   { status: 'ok'; destino: string } | { status: 'aguardando' } | { status: 'erro'; reason: string }
 > {
+  if (!(await noAppNativo())) return { status: 'erro', reason: SO_NO_APP };
+
   const resultado = await conferirLoginPorSms();
   if (resultado.status !== 'ok') return resultado;
 

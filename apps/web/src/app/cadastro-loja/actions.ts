@@ -4,14 +4,19 @@ import { z } from 'zod';
 import { prisma } from '@rapidinho/database';
 import { notificarUsuario } from '@rapidinho/services';
 import { isValidDocument, normalizePhoneBR, slugify } from '@rapidinho/shared';
+import { gerarHashDeSenha } from '@rapidinho/shared/senha';
 import { runAction, type ActionResult } from '@/lib/action';
 
 /**
  * Cadastro de loja.
  *
  * Aberto a quem não tem conta: exigir login antes seria pedir que o lojista
- * entenda a plataforma para poder se cadastrar nela. A conta é criada junto, e
- * ele entra depois pelo mesmo telefone.
+ * entenda a plataforma para poder se cadastrar nela. A conta é criada junto,
+ * com e-mail e senha, que é como o lojista entra no painel.
+ *
+ * Senha só em conta nova. Se o telefone já tem conta, este formulário anônimo
+ * não pode definir a senha dela — seria tomar a conta de quem tem o número.
+ * Nesse caso a plataforma libera o acesso com uma senha provisória.
  *
  * A loja nasce em PENDING_APPROVAL e não aparece para ninguém até a plataforma
  * aprovar — é o gargalo que impede cadastro falso de virar loja no ar.
@@ -21,7 +26,9 @@ const cadastroSchema = z.object({
   nome: z.string().min(2, 'Informe o nome da loja').max(120),
   documento: z.string().refine(isValidDocument, 'CPF ou CNPJ inválido'),
   telefone: z.string().min(10, 'Informe o telefone'),
-  email: z.string().email('E-mail inválido').optional().or(z.literal('')),
+  email: z.string().trim().toLowerCase().email('E-mail inválido'),
+  senha: z.string().min(8, 'Use pelo menos 8 caracteres'),
+  confirmacao: z.string(),
   responsavel: z.string().min(3, 'Informe seu nome').max(120),
   cityId: z.string().min(1, 'Escolha a cidade'),
   categoryId: z.string().optional(),
@@ -52,7 +59,7 @@ export async function cadastrarLoja(
   _anterior: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  return runAction(async () => {
+  return runAction(async (): Promise<ActionResult> => {
     const dados = cadastroSchema.parse(Object.fromEntries(formData.entries()));
 
     const telefone = normalizePhoneBR(dados.telefone);
@@ -62,6 +69,14 @@ export async function cadastrarLoja(
         ok: false,
         message: 'Telefone inválido.',
         fieldErrors: { telefone: 'Confira o número com DDD' },
+      };
+    }
+
+    if (dados.senha !== dados.confirmacao) {
+      return {
+        ok: false,
+        message: 'Confira os campos destacados.',
+        fieldErrors: { confirmacao: 'As senhas não são iguais' },
       };
     }
 
@@ -85,19 +100,38 @@ export async function cadastrarLoja(
         message:
           duplicada.status === 'PENDING_APPROVAL'
             ? 'Já recebemos um cadastro com este documento. Estamos analisando.'
-            : 'Já existe uma loja com este CPF/CNPJ. Entre com seu telefone para acessá-la.',
+            : 'Já existe uma loja com este CPF/CNPJ. Entre no painel com seu e-mail e senha.',
       };
     }
 
-    // O usuário é criado (ou reaproveitado) junto: o lojista entra depois com
-    // o mesmo telefone, sem precisar de um segundo cadastro.
+    const existente = await prisma.user.findUnique({
+      where: { phone: telefone },
+      select: { id: true },
+    });
+
+    if (!existente) {
+      const emailEmUso = await prisma.user.findUnique({
+        where: { email: dados.email },
+        select: { id: true },
+      });
+      if (emailEmUso) {
+        return {
+          ok: false,
+          message: 'Confira os campos destacados.',
+          fieldErrors: { email: 'Este e-mail já tem conta. Use outro.' },
+        };
+      }
+    }
+
+    // O usuário é criado (ou reaproveitado) junto, sem segundo cadastro.
     const usuario = await prisma.user.upsert({
       where: { phone: telefone },
       update: { name: dados.responsavel },
       create: {
         phone: telefone,
         name: dados.responsavel,
-        email: dados.email || null,
+        email: dados.email,
+        passwordHash: gerarHashDeSenha(dados.senha),
         role: 'STORE_OWNER',
         acceptedTermsAt: new Date(),
         acceptedPrivacyAt: new Date(),
@@ -138,7 +172,7 @@ export async function cadastrarLoja(
           documentType: documento.length === 11 ? 'CPF' : 'CNPJ',
           phone: telefone,
           whatsapp: telefone,
-          email: dados.email || null,
+          email: dados.email,
           street: dados.rua,
           number: dados.numero || null,
           neighborhood: dados.bairro,
@@ -185,8 +219,9 @@ export async function cadastrarLoja(
 
     return {
       ok: true,
-      message:
-        'Cadastro enviado! Avisamos no seu WhatsApp assim que a loja for aprovada. Depois é só entrar com este telefone.',
+      message: existente
+        ? 'Cadastro enviado! Este telefone já tinha conta: quando a loja for aprovada, a equipe Rapidinho te passa a senha de acesso ao painel.'
+        : 'Cadastro enviado! Avisamos no seu WhatsApp assim que a loja for aprovada. Depois é só entrar no painel com seu e-mail e senha.',
     };
   });
 }

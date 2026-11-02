@@ -8,6 +8,7 @@ import {
   Bike,
   Send,
   Clock,
+  KeyRound,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -49,6 +50,7 @@ const NAV = [
   { href: '/loja/financeiro', label: 'Financeiro', icon: Wallet },
   { href: '/loja/impulsionar', label: 'Plano e destaque', icon: Megaphone },
   { href: '/loja/configuracoes', label: 'Configurações', icon: Settings },
+  { href: '/loja/senha', label: 'Minha senha', icon: KeyRound },
 ] as const;
 
 interface LojaShellProps {

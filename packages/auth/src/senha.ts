@@ -1,10 +1,19 @@
 import { randomBytes } from 'node:crypto';
 import { prisma } from '@rapidinho/database';
+import type { UserRole } from '@rapidinho/shared';
 import { gerarHashDeSenha, senhaConfere } from '@rapidinho/shared/senha';
 
+/** Quem entra no painel por e-mail e senha. Cliente e entregador: SMS no app. */
+export const PAPEIS_COM_SENHA: ReadonlySet<UserRole> = new Set<UserRole>([
+  'SUPER_ADMIN',
+  'ADMIN',
+  'STORE_OWNER',
+  'STORE_STAFF',
+]);
+
 /**
- * Login com e-mail e senha, só para a equipe da plataforma (ADMIN e
- * SUPER_ADMIN). Lojista, motoboy e cliente entram por telefone e código.
+ * Login com e-mail e senha: lojista, funcionário da loja e equipe da
+ * plataforma. Cliente e entregador entram por telefone e código no app.
  *
  * Devolve o id do usuário quando confere, ou null — sem dizer o que falhou,
  * para não revelar quais e-mails existem.
@@ -19,7 +28,7 @@ export async function autenticarPorSenha(email: string, senha: string): Promise<
     usuario != null &&
     usuario.status === 'ACTIVE' &&
     usuario.deletedAt == null &&
-    (usuario.role === 'SUPER_ADMIN' || usuario.role === 'ADMIN');
+    PAPEIS_COM_SENHA.has(usuario.role);
 
   // Confere a senha mesmo sem usuário: o tempo de resposta não revela se o
   // e-mail existe.

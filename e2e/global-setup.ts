@@ -1,6 +1,13 @@
-import { chromium, type FullConfig } from '@playwright/test';
+import { chromium, type FullConfig, type Page } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
-import { ESTADOS_DE_SESSAO, entrarNoFormulario, TELEFONES } from './tests/apoio';
+import {
+  EMAILS,
+  ESTADOS_DE_SESSAO,
+  entrarComSenha,
+  entrarNoFormulario,
+  TELEFONES,
+  USER_AGENT_DO_APP,
+} from './tests/apoio';
 
 /**
  * Autentica uma vez por papel e guarda o estado da sessão.
@@ -23,19 +30,36 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     process.env.E2E_CHROMIUM_PATH ? { executablePath: process.env.E2E_CHROMIUM_PATH } : undefined,
   );
 
+  // Cliente entra por SMS, e só dentro do app nativo; lojista e super admin,
+  // por e-mail e senha no painel.
   const papeis = [
-    { base: web, telefone: TELEFONES.cliente, arquivo: ESTADOS_DE_SESSAO.cliente },
-    { base: admin, telefone: TELEFONES.lojista, arquivo: ESTADOS_DE_SESSAO.lojista },
-    { base: admin, telefone: TELEFONES.superAdmin, arquivo: ESTADOS_DE_SESSAO.superAdmin },
+    {
+      base: web,
+      arquivo: ESTADOS_DE_SESSAO.cliente,
+      userAgent: USER_AGENT_DO_APP,
+      entrar: (pagina: Page) => entrarNoFormulario(pagina, TELEFONES.cliente),
+    },
+    {
+      base: admin,
+      arquivo: ESTADOS_DE_SESSAO.lojista,
+      entrar: (pagina: Page) => entrarComSenha(pagina, EMAILS.lojista),
+    },
+    {
+      base: admin,
+      arquivo: ESTADOS_DE_SESSAO.superAdmin,
+      entrar: (pagina: Page) => entrarComSenha(pagina, EMAILS.superAdmin),
+    },
   ];
 
   try {
     for (const papel of papeis) {
-      const contexto = await navegador.newContext();
+      const contexto = await navegador.newContext(
+        papel.userAgent ? { userAgent: papel.userAgent } : undefined,
+      );
       const pagina = await contexto.newPage();
 
       await pagina.goto(`${papel.base}/entrar`);
-      await entrarNoFormulario(pagina, papel.telefone);
+      await papel.entrar(pagina);
       await contexto.storageState({ path: papel.arquivo });
 
       await contexto.close();

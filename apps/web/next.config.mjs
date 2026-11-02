@@ -17,6 +17,9 @@ const nextConfig = {
     '@rapidinho/services',
   ],
   poweredByHeader: false,
+  // Cliente entra por SMS pago e fica conectado como no WhatsApp; ver
+  // SESSION_MAX_AGE_SECONDS em packages/auth. O painel fica nos 30 dias.
+  env: { RAPIDINHO_SESSAO_DIAS: '400' },
   images: {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [

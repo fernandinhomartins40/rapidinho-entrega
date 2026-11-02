@@ -11,6 +11,7 @@ import {
   requestOtp,
   verifyOtp,
 } from '@rapidinho/auth';
+import { prisma } from '@rapidinho/database';
 import {
   clientIpFromHeaders,
   consumeRateLimit,
@@ -18,6 +19,7 @@ import {
   resetRateLimit,
 } from '@rapidinho/services';
 import {
+  estaNoAppNativo,
   formatPhoneBR,
   linkDoSmsDeConfirmacao,
   parseServerEnv,
@@ -29,14 +31,38 @@ import {
 import { LOGIN_INITIAL_STATE, type LoginState } from './login-state';
 
 /**
- * Login do painel por telefone e código.
+ * Login do painel.
  *
- * Mesma mecânica do app do cliente e a mesma proteção de força bruta: o painel
- * é o alvo mais valioso do sistema, não faz sentido protegê-lo menos.
+ * Lojista, funcionário da loja e equipe da plataforma entram com e-mail e
+ * senha. Telefone e código por SMS só para o entregador, e só dentro do app
+ * nativo: cada código é um SMS pago, e o app guarda a sessão.
+ *
+ * Mesma proteção de força bruta do app do cliente: o painel é o alvo mais
+ * valioso do sistema, não faz sentido protegê-lo menos.
  */
+
+const SO_ENTREGADOR =
+  'Este número não é de entregador cadastrado. Lojista e equipe entram com e-mail e senha.';
 
 async function currentIp(): Promise<string> {
   return clientIpFromHeaders(await headers());
+}
+
+async function noAppNativo(): Promise<boolean> {
+  return estaNoAppNativo((await headers()).get('user-agent'));
+}
+
+/**
+ * Confere antes de mandar o SMS, para não pagar envio a quem não entraria.
+ * Revela se o número é de entregador — aceitável perto do custo, e o limite
+ * por telefone segura quem tentar varrer.
+ */
+async function ehEntregadorAtivo(phone: string): Promise<boolean> {
+  const usuario = await prisma.user.findUnique({
+    where: { phone },
+    select: { role: true, status: true, deletedAt: true },
+  });
+  return usuario?.role === 'COURIER' && usuario.status === 'ACTIVE' && !usuario.deletedAt;
 }
 
 export async function autenticar(previous: LoginState, formData: FormData): Promise<LoginState> {
@@ -54,6 +80,10 @@ export async function autenticar(previous: LoginState, formData: FormData): Prom
 }
 
 async function solicitarCodigo(formData: FormData): Promise<LoginState> {
+  if (!(await noAppNativo())) {
+    return { step: 'senha', error: 'Entregador entra pelo app Rapidinho no celular.' };
+  }
+
   const parsed = requestOtpSchema.safeParse({ phone: formData.get('phone') });
 
   if (!parsed.success) {
@@ -74,6 +104,10 @@ async function solicitarCodigo(formData: FormData): Promise<LoginState> {
       step: 'phone',
       error: `Muitas tentativas. Tente de novo em ${Math.ceil(limit.retryAfterSeconds / 60)} minutos.`,
     };
+  }
+
+  if (!(await ehEntregadorAtivo(phone))) {
+    return { step: 'phone', error: SO_ENTREGADOR };
   }
 
   // Confirmação reversa: o cliente envia o SMS, a operação não paga envio.
@@ -107,6 +141,10 @@ async function solicitarCodigo(formData: FormData): Promise<LoginState> {
 }
 
 async function verificarCodigo(previous: LoginState, formData: FormData): Promise<LoginState> {
+  if (!(await noAppNativo())) {
+    return { step: 'senha', error: 'Entregador entra pelo app Rapidinho no celular.' };
+  }
+
   const parsed = verifyOtpSchema.safeParse({
     phone: previous.phone,
     code: formData.get('code'),
@@ -136,6 +174,11 @@ async function verificarCodigo(previous: LoginState, formData: FormData): Promis
     return { ...previous, error: result.reason };
   }
 
+  // O código só sai para entregador, mas o papel pode ter mudado no meio.
+  if (!(await ehEntregadorAtivo(phone))) {
+    return { step: 'phone', error: SO_ENTREGADOR };
+  }
+
   await createDatabaseSession(result.userId);
   await resetRateLimit(limitKey);
 
@@ -150,8 +193,8 @@ async function verificarCodigo(previous: LoginState, formData: FormData): Promis
 }
 
 /**
- * E-mail e senha: só para a equipe da plataforma, que não depende de receber
- * código. Limite por IP e por e-mail, como no código.
+ * E-mail e senha: lojista, funcionário da loja e equipe da plataforma.
+ * Limite por IP e por e-mail, como no código.
  */
 async function entrarComSenha(formData: FormData): Promise<LoginState> {
   const email = String(formData.get('email') ?? '')

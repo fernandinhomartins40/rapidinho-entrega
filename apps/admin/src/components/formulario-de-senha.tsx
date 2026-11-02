@@ -2,11 +2,19 @@
 
 import { useActionState, useEffect, useRef } from 'react';
 import { Alert, Button, Input, Label } from '@rapidinho/ui';
-import { ACTION_IDLE } from '@/lib/action-state';
-import { trocarSenha } from './actions';
+import { ACTION_IDLE, type ActionResult } from '@/lib/action-state';
 
-export function FormularioDeSenha({ email, temSenha }: { email: string; temSenha: boolean }) {
-  const [state, enviar, enviando] = useActionState(trocarSenha, ACTION_IDLE);
+/** Usado em /admin/senha e /loja/senha; cada um passa a própria action. */
+export function FormularioDeSenha({
+  email,
+  temSenha,
+  acao,
+}: {
+  email: string;
+  temSenha: boolean;
+  acao: (anterior: ActionResult, formData: FormData) => Promise<ActionResult>;
+}) {
+  const [state, enviar, enviando] = useActionState(acao, ACTION_IDLE);
   const form = useRef<HTMLFormElement>(null);
 
   useEffect(() => {

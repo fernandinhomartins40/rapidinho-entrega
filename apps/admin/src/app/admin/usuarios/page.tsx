@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { requireAdmin } from '@rapidinho/auth';
 import { prisma, type Prisma } from '@rapidinho/database';
 import { formatPhoneBR, USER_ROLE_LABEL, type UserRole } from '@rapidinho/shared';
 import {
@@ -22,6 +23,7 @@ const FILTROS = [
   { valor: '', rotulo: 'Todos' },
   { valor: 'CUSTOMER', rotulo: 'Clientes' },
   { valor: 'STORE_OWNER', rotulo: 'Lojistas' },
+  { valor: 'STORE_STAFF', rotulo: 'Funcionários' },
   { valor: 'COURIER', rotulo: 'Entregadores' },
   { valor: 'ADMIN', rotulo: 'Equipe' },
 ] as const;
@@ -32,6 +34,7 @@ export default async function UsuariosPage({
   searchParams: Promise<{ papel?: string; busca?: string }>;
 }) {
   const { papel, busca } = await searchParams;
+  const admin = await requireAdmin();
 
   const where: Prisma.UserWhereInput = {
     deletedAt: null,
@@ -160,7 +163,9 @@ export default async function UsuariosPage({
                             nome: usuario.name,
                             papel: usuario.role,
                             bloqueado: usuario.status !== 'ACTIVE',
+                            email: usuario.email,
                           }}
+                          podeGerarSenha={admin.role === 'SUPER_ADMIN'}
                         />
                       </div>
                     </TableCell>

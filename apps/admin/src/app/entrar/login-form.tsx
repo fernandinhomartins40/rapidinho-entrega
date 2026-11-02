@@ -5,16 +5,27 @@ import { ArrowLeft } from 'lucide-react';
 import { Alert, Button, Card, CardContent, ConfirmacaoPorSms, Input, Label } from '@rapidinho/ui';
 import { formatPhoneBR, maskPhoneBR } from '@rapidinho/shared';
 import { autenticar, conferirSms } from './actions';
-import { LOGIN_INITIAL_STATE } from './login-state';
+import { LOGIN_INITIAL_STATE, LOGIN_POR_SENHA } from './login-state';
 
 /**
- * Login em duas etapas: telefone e código.
- *
- * Lojista entra sem senha de propósito — esquece senha, não esquece o
- * WhatsApp. E-mail e senha ficam como alternativa para a equipe da plataforma.
+ * E-mail e senha para lojista, funcionário e equipe. Telefone e código só para
+ * o entregador, e só dentro do app nativo — fora dele a etapa nem aparece.
  */
-export function LoginForm({ destino, porSms = false }: { destino: string; porSms?: boolean }) {
-  const [state, enviar, enviando] = useActionState(autenticar, LOGIN_INITIAL_STATE);
+export function LoginForm({
+  destino,
+  porSms = false,
+  canal,
+  noApp,
+}: {
+  destino: string;
+  porSms?: boolean;
+  canal: 'SMS' | 'WhatsApp';
+  noApp: boolean;
+}) {
+  const [state, enviar, enviando] = useActionState(
+    autenticar,
+    noApp ? LOGIN_INITIAL_STATE : LOGIN_POR_SENHA,
+  );
   const [phone, setPhone] = useState('');
   const conferir = useCallback(() => conferirSms(destino), [destino]);
 
@@ -83,17 +94,19 @@ export function LoginForm({ destino, porSms = false }: { destino: string; porSms
               Entrar
             </Button>
 
-            <Button
-              type="submit"
-              name="intencao"
-              value="trocar-telefone"
-              variant="ghost"
-              block
-              formNoValidate
-            >
-              <ArrowLeft className="h-4 w-4" aria-hidden />
-              Entrar com telefone
-            </Button>
+            {noApp ? (
+              <Button
+                type="submit"
+                name="intencao"
+                value="trocar-telefone"
+                variant="ghost"
+                block
+                formNoValidate
+              >
+                <ArrowLeft className="h-4 w-4" aria-hidden />
+                Sou entregador: entrar com telefone
+              </Button>
+            ) : null}
           </form>
         </CardContent>
       </Card>
@@ -107,7 +120,7 @@ export function LoginForm({ destino, porSms = false }: { destino: string; porSms
           <form action={enviar} className="space-y-4">
             <div>
               <Label htmlFor="phone" required>
-                Seu telefone
+                Telefone do entregador
               </Label>
               <Input
                 id="phone"
@@ -124,7 +137,7 @@ export function LoginForm({ destino, porSms = false }: { destino: string; porSms
               <p className="text-muted-foreground mt-1.5 text-sm">
                 {porSms
                   ? 'Você confirma com um SMS enviado do seu celular.'
-                  : 'Enviamos um código pelo WhatsApp.'}
+                  : `Enviamos um código por ${canal}.`}
               </p>
             </div>
 
@@ -137,7 +150,7 @@ export function LoginForm({ destino, porSms = false }: { destino: string; porSms
 
           <form action={enviar} className="mt-2">
             <Button type="submit" name="intencao" value="usar-senha" variant="ghost" block>
-              Equipe da plataforma? Entrar com e-mail e senha
+              Lojista ou equipe? Entrar com e-mail e senha
             </Button>
           </form>
         </CardContent>

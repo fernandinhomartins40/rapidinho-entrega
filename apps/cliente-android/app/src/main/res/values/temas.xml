@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mesma cor do manifest do site (theme_color), para a barra do sistema
+         não destoar da página. -->
+    <style name="Tema" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#0c0c0e</item>
+        <item name="android:navigationBarColor">#0c0c0e</item>
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
+</resources>

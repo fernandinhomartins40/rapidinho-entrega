@@ -75,13 +75,56 @@ export function FormularioDeCadastro({
           error={estado.fieldErrors?.telefone}
         />
         <p className="text-muted-foreground mt-1 text-sm">
-          É por aqui que você entra no painel e recebe os avisos.
+          É por aqui que você recebe os avisos dos pedidos.
         </p>
       </div>
 
       <div>
-        <Label htmlFor="email">E-mail (opcional)</Label>
-        <Input id="email" name="email" type="email" error={estado.fieldErrors?.email} />
+        <Label htmlFor="email" required>
+          E-mail
+        </Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="username"
+          required
+          error={estado.fieldErrors?.email}
+        />
+        <p className="text-muted-foreground mt-1 text-sm">
+          Com ele e a senha abaixo você entra no painel da loja.
+        </p>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <Label htmlFor="senha" required>
+            Senha
+          </Label>
+          <Input
+            id="senha"
+            name="senha"
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            required
+            error={estado.fieldErrors?.senha}
+          />
+        </div>
+        <div>
+          <Label htmlFor="confirmacao" required>
+            Repita a senha
+          </Label>
+          <Input
+            id="confirmacao"
+            name="confirmacao"
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            required
+            error={estado.fieldErrors?.confirmacao}
+          />
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

@@ -2,6 +2,7 @@ import { PrismaAdapter } from '@auth/prisma-adapter';
 import { prisma } from '@rapidinho/database';
 import type { UserRole } from '@rapidinho/shared';
 import type { NextAuthConfig } from 'next-auth';
+import { SESSION_MAX_AGE_SECONDS } from './session';
 
 /**
  * Configuração do Auth.js.
@@ -57,7 +58,7 @@ export const authConfig = {
   adapter: PrismaAdapter(prisma as unknown as Parameters<typeof PrismaAdapter>[0]),
   session: {
     strategy: 'database',
-    maxAge: 60 * 60 * 24 * 30,
+    maxAge: SESSION_MAX_AGE_SECONDS,
     updateAge: 60 * 60 * 24,
   },
   pages: {

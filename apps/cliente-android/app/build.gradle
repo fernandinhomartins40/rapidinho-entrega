@@ -1,0 +1,39 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'br.com.rapidinhoentrega.app'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'br.com.rapidinhoentrega.app'
+        minSdk 23
+        targetSdk 35
+        versionCode 1
+        versionName '1.0'
+        // Endereço que o app abre. Para testar contra outro servidor:
+        // ./gradlew assembleRelease -PsiteUrl=https://outro.endereco
+        buildConfigField 'String', 'SITE_URL',
+            "\"${project.findProperty('siteUrl') ?: 'https://rapidinhoentrega.com.br'}\""
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            // Por enquanto instalado à mão para teste: assinado com a chave de
+            // depuração da máquina que compila. Para a Play Store, trocar por
+            // uma chave própria guardada fora do repositório.
+            signingConfig signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

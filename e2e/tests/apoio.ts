@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import { devices, type Page } from '@playwright/test';
 
 /**
  * Apoio dos testes de ponta a ponta.
@@ -16,6 +16,19 @@ export const TELEFONES = {
   superAdmin: '(44) 99999-0001',
 } as const;
 
+/** E-mail e senha do painel, gravados pelo seed:e2e. */
+export const SENHA_DO_E2E = 'E2e@senha123';
+export const EMAILS = {
+  lojista: 'lojista@e2e.rapidinho.test',
+  superAdmin: 'superadmin@e2e.rapidinho.test',
+} as const;
+
+/**
+ * O login por SMS só existe no app nativo, que se identifica no user agent
+ * (MARCA_DO_APP_NATIVO em @rapidinho/shared).
+ */
+export const USER_AGENT_DO_APP = `${devices['Pixel 5'].userAgent} RapidinhoApp/e2e`;
+
 /**
  * Estados de sessão gravados pelo global setup.
  *
@@ -28,8 +41,16 @@ export const ESTADOS_DE_SESSAO = {
   superAdmin: 'e2e/.auth/super-admin.json',
 } as const;
 
+/** Login do painel por e-mail e senha: lojista e equipe da plataforma. */
+export async function entrarComSenha(page: Page, email: string): Promise<void> {
+  await page.getByLabel(/e-mail/i).fill(email);
+  await page.getByLabel(/senha/i).fill(SENHA_DO_E2E);
+  await page.getByRole('button', { name: 'Entrar', exact: true }).click();
+  await page.waitForURL((url) => !url.pathname.startsWith('/entrar'), { timeout: 20_000 });
+}
+
 /**
- * Preenche o formulário de login e espera a sessão existir.
+ * Preenche o formulário de login por telefone e espera a sessão existir.
  *
  * Usado só pelo global setup; os testes já começam autenticados pelo estado
  * salvo, porque o limite de 3 códigos por telefone a cada 15 minutos não

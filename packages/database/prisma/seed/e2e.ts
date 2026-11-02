@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { config as loadEnv } from 'dotenv';
 import { normalizePhoneBR } from '@rapidinho/shared';
+import { gerarHashDeSenha } from '@rapidinho/shared/senha';
 import {
   PrismaClient,
   type Prisma,
@@ -72,6 +73,30 @@ async function semearPerfis(prisma: PrismaClient) {
   }
 }
 
+/**
+ * Lojista e super admin entram no painel por e-mail e senha; o seed principal
+ * cria os dois só com telefone. Mesmos valores de e2e/tests/apoio.ts.
+ */
+const SENHA_DO_E2E = 'E2e@senha123';
+const ACESSOS_POR_SENHA = [
+  { telefone: '44 99000-0000', email: 'lojista@e2e.rapidinho.test' },
+  { telefone: '44 99999-0001', email: 'superadmin@e2e.rapidinho.test' },
+];
+
+async function semearSenhas(prisma: PrismaClient) {
+  const passwordHash = gerarHashDeSenha(SENHA_DO_E2E);
+
+  for (const acesso of ACESSOS_POR_SENHA) {
+    const phone = normalizePhoneBR(acesso.telefone);
+    if (!phone) throw new Error(`Telefone inválido no seed: ${acesso.telefone}`);
+
+    await prisma.user.update({
+      where: { phone },
+      data: { email: acesso.email, passwordHash },
+    });
+  }
+}
+
 async function main() {
   if (process.env.NODE_ENV === 'production') {
     throw new Error('seed:e2e altera o horário de todas as lojas; não rode em produção.');
@@ -103,6 +128,9 @@ async function main() {
 
     await semearPerfis(prisma);
     console.warn(`✔ ${PERFIS.length} perfis extras da matriz de permissões (44 99800-000x)`);
+
+    await semearSenhas(prisma);
+    console.warn('✔ Lojista e super admin com e-mail e senha para o painel');
   } finally {
     await prisma.$disconnect();
   }

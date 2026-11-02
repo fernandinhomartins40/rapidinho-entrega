@@ -5,3 +5,4 @@ export * from './geo';
 export * from './slug';
 export * from './calendario';
 export * from './sms-reverso';
+export * from './app-nativo';

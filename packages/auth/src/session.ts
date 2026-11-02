@@ -11,7 +11,15 @@ import { prisma } from '@rapidinho/database';
  * mesmo cookie que o Auth.js lê — sem fork nem gambiarra de token paralelo.
  */
 
-const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+/**
+ * 30 dias no painel. O site do cliente define RAPIDINHO_SESSAO_DIAS=400 no
+ * next.config: lá o login é por SMS pago, e o cliente deve ficar conectado
+ * como no WhatsApp. 400 dias é o teto que o Chrome aceita para um cookie; o
+ * prazo recomeça a cada uso (renovação do Auth.js no banco, middleware do
+ * site no cookie).
+ */
+export const SESSION_MAX_AGE_SECONDS =
+  60 * 60 * 24 * Number(process.env.RAPIDINHO_SESSAO_DIAS ?? 30);
 
 /** O Auth.js prefixa o cookie com `__Secure-` quando está em HTTPS. */
 export function sessionCookieName(): string {

@@ -1,8 +1,11 @@
 'use server';
 
+import { randomInt } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
 import { AUDIT_ACTIONS, prisma } from '@rapidinho/database';
-import { revokeAllSessions } from '@rapidinho/auth';
+import { PAPEIS_COM_SENHA, revokeAllSessions } from '@rapidinho/auth';
+import { gerarHashDeSenha } from '@rapidinho/shared/senha';
 import { runAdminAction } from '@/lib/admin-action';
 import type { ActionResult } from '@/lib/action-state';
 
@@ -137,6 +140,104 @@ export async function alterarPapel(
         entityId: usuario.id,
         before: { role: anterior.role },
         after: { role: usuario.role },
+      },
+    };
+  });
+}
+
+/** Sem 0/o, 1/l/i: a senha é ditada por telefone ou WhatsApp. */
+const ALFABETO_DA_PROVISORIA = 'abcdefghjkmnpqrstuvwxyz23456789';
+
+function senhaProvisoria(): string {
+  return Array.from(
+    { length: 10 },
+    () => ALFABETO_DA_PROVISORIA[randomInt(ALFABETO_DA_PROVISORIA.length)],
+  ).join('');
+}
+
+/**
+ * Gera uma senha provisória para lojista, funcionário ou admin entrar no
+ * painel — e é também o "esqueci minha senha": quem esqueceu pede à
+ * plataforma. Só o super admin, porque quem gera a senha consegue entrar na
+ * conta. A senha aparece uma vez, nesta resposta; o banco guarda só o hash.
+ */
+export async function gerarSenhaProvisoria(
+  _previous: ActionResult,
+  formData: FormData,
+): Promise<ActionResult> {
+  return runAdminAction(async (admin) => {
+    if (admin.role !== 'SUPER_ADMIN') {
+      return { result: { ok: false, message: 'Apenas um super admin pode fazer isso.' } };
+    }
+
+    const userId = String(formData.get('userId'));
+    const email = z.string().trim().toLowerCase().email().safeParse(formData.get('email'));
+
+    if (!email.success) {
+      return {
+        result: {
+          ok: false,
+          message: 'Confira os campos destacados.',
+          fieldErrors: { email: 'Informe um e-mail válido.' },
+        },
+      };
+    }
+
+    const usuario = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, role: true },
+    });
+
+    if (!usuario) {
+      return { result: { ok: false, message: 'Usuário não encontrado.' } };
+    }
+
+    if (!PAPEIS_COM_SENHA.has(usuario.role)) {
+      return {
+        result: {
+          ok: false,
+          message: 'Cliente e entregador entram por SMS no app, sem senha.',
+        },
+      };
+    }
+
+    const emailEmUso = await prisma.user.findFirst({
+      where: { email: email.data, id: { not: usuario.id } },
+      select: { id: true },
+    });
+
+    if (emailEmUso) {
+      return {
+        result: {
+          ok: false,
+          message: 'Confira os campos destacados.',
+          fieldErrors: { email: 'Este e-mail já é de outra conta.' },
+        },
+      };
+    }
+
+    const senha = senhaProvisoria();
+
+    await prisma.user.update({
+      where: { id: usuario.id },
+      data: { email: email.data, passwordHash: gerarHashDeSenha(senha) },
+    });
+
+    // Quem estava logado com a senha antiga sai: é o caso de senha vazada.
+    await revokeAllSessions(usuario.id);
+
+    revalidatePath('/admin/usuarios');
+
+    return {
+      result: {
+        ok: true,
+        message: `Senha provisória de ${usuario.name ?? email.data}: ${senha} — anote e envie agora, ela não aparece de novo. No painel, a pessoa troca em "Minha senha".`,
+      },
+      // Nunca a senha nem o hash: só o fato.
+      audit: {
+        action: AUDIT_ACTIONS.userPasswordChanged,
+        entityType: 'User',
+        entityId: usuario.id,
       },
     };
   });

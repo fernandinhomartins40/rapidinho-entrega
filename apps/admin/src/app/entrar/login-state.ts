@@ -20,3 +20,6 @@ export interface LoginState {
 }
 
 export const LOGIN_INITIAL_STATE: LoginState = { step: 'phone' };
+
+/** Fora do app nativo o painel só tem e-mail e senha. */
+export const LOGIN_POR_SENHA: LoginState = { step: 'senha' };

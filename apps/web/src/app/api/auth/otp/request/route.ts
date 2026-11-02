@@ -1,13 +1,15 @@
 import { NextResponse } from 'next/server';
 import { apiHandler, requestOtp } from '@rapidinho/auth';
 import { clientIpFromHeaders, consumeRateLimit, getOtpSender } from '@rapidinho/services';
-import { parseServerEnv, RATE_LIMITS, requestOtpSchema } from '@rapidinho/shared';
+import { estaNoAppNativo, parseServerEnv, RATE_LIMITS, requestOtpSchema } from '@rapidinho/shared';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * Envia o código de acesso por WhatsApp.
+ * Envia o código de acesso (SMS ou WhatsApp, conforme OTP_PROVIDER).
+ *
+ * Só para o app nativo, como a tela de login: cada código custa um envio.
  *
  * Dois limites independentes: por telefone (protege o dono do número de ser
  * bombardeado) e por IP (protege o crédito de envio da operação). A resposta é
@@ -15,6 +17,13 @@ export const dynamic = 'force-dynamic';
  * base de clientes a quem enumerar telefones.
  */
 export const POST = apiHandler(async (request: Request) => {
+  if (!estaNoAppNativo(request.headers.get('user-agent'))) {
+    return NextResponse.json(
+      { error: 'Para entrar, use o app Rapidinho no celular.' },
+      { status: 403 },
+    );
+  }
+
   const body = await request.json();
   const { phone } = requestOtpSchema.parse(body);
 

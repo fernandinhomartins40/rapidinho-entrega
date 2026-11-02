@@ -10,9 +10,17 @@ import { LOGIN_INITIAL_STATE } from './login-state';
 /**
  * Login em duas etapas: telefone e código.
  *
- * Sem senha de propósito — o cliente esquece senha, não esquece o WhatsApp.
+ * Sem senha de propósito — o cliente esquece senha, não esquece o celular.
  */
-export function LoginForm({ destino, porSms = false }: { destino: string; porSms?: boolean }) {
+export function LoginForm({
+  destino,
+  porSms = false,
+  canal,
+}: {
+  destino: string;
+  porSms?: boolean;
+  canal: 'SMS' | 'WhatsApp';
+}) {
   const [state, enviar, enviando] = useActionState(autenticar, LOGIN_INITIAL_STATE);
   const [phone, setPhone] = useState('');
   const conferir = useCallback(() => conferirSms(destino), [destino]);
@@ -58,7 +66,7 @@ export function LoginForm({ destino, porSms = false }: { destino: string; porSms
               <p className="text-muted-foreground mt-1.5 text-sm">
                 {porSms
                   ? 'Você confirma com um SMS enviado do seu celular.'
-                  : 'Enviamos um código pelo WhatsApp.'}
+                  : `Enviamos um código por ${canal}.`}
               </p>
             </div>
 

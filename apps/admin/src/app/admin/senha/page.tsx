@@ -1,7 +1,8 @@
 import { requireAdmin } from '@rapidinho/auth';
 import { prisma } from '@rapidinho/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@rapidinho/ui';
-import { FormularioDeSenha } from './formulario';
+import { FormularioDeSenha } from '@/components/formulario-de-senha';
+import { trocarSenha } from './actions';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Minha senha' };
@@ -34,7 +35,7 @@ export default async function MinhaSenhaPage() {
           <CardTitle>{temSenha ? 'Trocar senha' : 'Criar senha'}</CardTitle>
         </CardHeader>
         <CardContent>
-          <FormularioDeSenha email={usuario.email ?? ''} temSenha={temSenha} />
+          <FormularioDeSenha email={usuario.email ?? ''} temSenha={temSenha} acao={trocarSenha} />
         </CardContent>
       </Card>
     </div>
