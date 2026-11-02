@@ -150,6 +150,13 @@ if [ -n "${SMS_GATEWAY_NUMBER:-}" ]; then
   gravar_env "OTP_PROVIDER" "sms-reverso"
 fi
 
+# SMS enviado pela plataforma (SMSDev). Com a chave informada, ganha da
+# confirmação reversa: o cliente só digita o código que recebeu.
+if [ -n "${SMSDEV_API_KEY:-}" ]; then
+  gravar_env "SMSDEV_API_KEY" "$SMSDEV_API_KEY"
+  gravar_env "OTP_PROVIDER" "sms"
+fi
+
 
 # Telefone do super admin. Sem ele o seed essencial não cria administrador
 # nenhum, e é assim de propósito: cair para um número fixo daria acesso ao

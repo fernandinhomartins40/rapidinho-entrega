@@ -10,7 +10,11 @@ import {
 } from '@rapidinho/shared';
 import { createS3Storage } from './storage/s3';
 import { createEvolutionWhatsApp, createFakeWhatsApp } from './messaging/whatsapp';
-import { createConsoleOtpSender, createWhatsAppOtpSender } from './messaging/otp';
+import {
+  createConsoleOtpSender,
+  createSmsDevOtpSender,
+  createWhatsAppOtpSender,
+} from './messaging/otp';
 import { createFakePaymentGateway } from './payments/fake';
 import { createFakeEmailProvider, createResendEmailProvider } from './messaging/email';
 import { createNoopPushProvider, createWebPushProvider } from './messaging/push';
@@ -75,6 +79,11 @@ export function getOtpSender(): OtpSender {
       throw new Error('OTP_PROVIDER=console não pode ser usado em produção');
     }
     otpSenderInstance = createConsoleOtpSender();
+  } else if (env.OTP_PROVIDER === 'sms') {
+    otpSenderInstance = createSmsDevOtpSender({
+      apiKey: env.SMSDEV_API_KEY!,
+      domain: new URL(getPublicEnv().NEXT_PUBLIC_WEB_URL).hostname,
+    });
   } else {
     otpSenderInstance = createWhatsAppOtpSender(getWhatsApp());
   }

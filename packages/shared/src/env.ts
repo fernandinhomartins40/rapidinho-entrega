@@ -43,6 +43,7 @@ const serverEnvSchema = z.object({
   EVOLUTION_API_KEY: z.string().optional(),
   EVOLUTION_INSTANCE: z.string().optional(),
 
+  /// `sms`: a plataforma envia o código por SMS pela SMSDev (pago por envio).
   /// `sms-reverso`: o cliente envia o código por SMS para SMS_GATEWAY_NUMBER
   /// e o app Android da operação repassa ao servidor. Sem custo de envio.
   OTP_PROVIDER: z.enum(['whatsapp', 'sms', 'sms-reverso', 'console']).default('console'),
@@ -50,6 +51,8 @@ const serverEnvSchema = z.object({
   SMS_GATEWAY_NUMBER: z.preprocess(vazioComoAusente, z.string().optional()),
   /// Segredo compartilhado com o app gateway. Mínimo de 32 caracteres.
   SMS_GATEWAY_TOKEN: z.preprocess(vazioComoAusente, z.string().min(32).optional()),
+  /// Chave da API da SMSDev (painel → API). Exigida com OTP_PROVIDER=sms.
+  SMSDEV_API_KEY: z.preprocess(vazioComoAusente, z.string().optional()),
   OTP_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(300),
   OTP_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
 
@@ -104,6 +107,9 @@ export function parseServerEnv(source: NodeJS.ProcessEnv = process.env): ServerE
   }
   if (env.OTP_PROVIDER === 'sms-reverso' && (!env.SMS_GATEWAY_NUMBER || !env.SMS_GATEWAY_TOKEN)) {
     throw new Error('OTP_PROVIDER=sms-reverso exige SMS_GATEWAY_NUMBER e SMS_GATEWAY_TOKEN');
+  }
+  if (env.OTP_PROVIDER === 'sms' && !env.SMSDEV_API_KEY) {
+    throw new Error('OTP_PROVIDER=sms exige SMSDEV_API_KEY');
   }
   if (env.WHATSAPP_PROVIDER === 'evolution' && !env.EVOLUTION_API_URL) {
     throw new Error('WHATSAPP_PROVIDER=evolution exige EVOLUTION_API_URL e EVOLUTION_API_KEY');
