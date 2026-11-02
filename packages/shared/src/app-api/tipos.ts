@@ -25,6 +25,9 @@ export type CodigoDeErro =
   | 'REGRA_DE_NEGOCIO'
   | 'CODIGO_INCORRETO'
   | 'PEDIDO_DE_ACESSO_ENCERRADO'
+  | 'FIREBASE_DESLIGADO'
+  | 'FIREBASE_INDISPONIVEL'
+  | 'TOKEN_FIREBASE_INVALIDO'
   | 'CARRINHO_VAZIO'
   | 'LOJA_INDISPONIVEL'
   | 'LOJA_FECHADA'
@@ -161,6 +164,15 @@ export interface SessaoCriada {
 }
 
 export type RespostaEntrar = SessaoCriada;
+
+/**
+ * `POST auth/firebase`: o app confirma o telefone no Firebase Phone Auth e troca
+ * o idToken pela sessão nossa. Responde como `auth/entrar`, e o idToken não é
+ * guardado nem vale como sessão. Só com `loginPorFirebase` em `configuracao`.
+ */
+export interface EntradaEntrarComFirebase {
+  idToken: string;
+}
 
 export interface EntradaConferirSms {
   identificador: string;
@@ -1047,6 +1059,8 @@ export interface RespostaTokenDeTempoReal {
 }
 
 export interface ConfiguracaoDoApp {
+  /** Verdadeiro: login por Firebase. Falso: `auth/codigo`. */
+  loginPorFirebase: boolean;
   /** Abaixo disto o app pede atualização antes de continuar. */
   versaoMinima: { android: string; ios: string };
   recursos: {
