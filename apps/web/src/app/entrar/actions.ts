@@ -18,14 +18,15 @@ import {
   resetRateLimit,
 } from '@rapidinho/services';
 import {
-  estaNoAppNativo,
+  parseServerEnv,
+  destinoInterno,
   formatPhoneBR,
   linkDoSmsDeConfirmacao,
-  parseServerEnv,
   RATE_LIMITS,
   requestOtpSchema,
-  textoDoSmsDeConfirmacao,
+  estaNoAppNativo,
   verifyOtpSchema,
+  textoDoSmsDeConfirmacao,
 } from '@rapidinho/shared';
 import { LOGIN_INITIAL_STATE, type LoginState } from './login-state';
 
@@ -170,7 +171,7 @@ async function verificarCodigo(previous: LoginState, formData: FormData): Promis
   // Só caminho interno: um destino absoluto viraria redirecionamento aberto,
   // de graça, para quem montar o link.
   const destino = String(formData.get('destino') ?? '/');
-  redirect(destino.startsWith('/') && !destino.startsWith('//') ? destino : '/');
+  redirect(destinoInterno(destino));
 }
 
 /**
@@ -190,6 +191,6 @@ export async function conferirSms(
   // Só caminho interno: destino absoluto viraria redirecionamento aberto.
   return {
     status: 'ok',
-    destino: destino.startsWith('/') && !destino.startsWith('//') ? destino : '/',
+    destino: destinoInterno(destino),
   };
 }

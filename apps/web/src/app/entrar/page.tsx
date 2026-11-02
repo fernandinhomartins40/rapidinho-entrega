@@ -5,7 +5,7 @@ import { Download } from 'lucide-react';
 import { getCurrentUser } from '@rapidinho/auth';
 import { buttonVariants, Card, CardContent } from '@rapidinho/ui';
 import { Logotipo } from '@/components/marca/logo';
-import { estaNoAppNativo, LINK_DO_APK, parseServerEnv } from '@rapidinho/shared';
+import { parseServerEnv, destinoInterno, LINK_DO_APK, estaNoAppNativo } from '@rapidinho/shared';
 import { LoginForm } from './login-form';
 
 export const dynamic = 'force-dynamic';
@@ -26,7 +26,7 @@ export default async function EntrarPage({
 
   // Só caminho interno: um destino absoluto viraria redirecionamento aberto
   // para quem já está logado, com o domínio legítimo no link do golpe.
-  if (user) redirect(destino?.startsWith('/') && !destino.startsWith('//') ? destino : '/');
+  if (user) redirect(destinoInterno(destino));
 
   if (!noApp) return <BaixeOApp iphone={/iPhone|iPad|iPod/i.test(userAgent ?? '')} />;
 

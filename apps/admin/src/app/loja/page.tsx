@@ -83,8 +83,11 @@ async function carregarResumo(storeId: string) {
 }
 
 export default async function LojaDashboardPage() {
-  const { store, abertura } = await getStoreContext();
+  const { store, abertura, access } = await getStoreContext();
   const dados = await carregarResumo(store.id);
+  // Faturamento, ticket e comissão são do dono, como no Financeiro. O
+  // funcionário vê o que opera: pedidos do dia e os que estão em aberto.
+  const veValores = access.isPlatformAdmin || access.staffRole === 'OWNER';
 
   return (
     <div className="space-y-6">
@@ -142,30 +145,36 @@ export default async function LojaDashboardPage() {
       ) : null}
 
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Indicador
-          titulo="Vendas de hoje"
-          valor={formatCents(dados.totalCents)}
-          detalhe={`${dados.entregues} ${dados.entregues === 1 ? 'pedido entregue' : 'pedidos entregues'}`}
-          icone={TrendingUp}
-        />
-        <Indicador
-          titulo="Ticket médio"
-          valor={formatCents(dados.ticketMedioCents)}
-          detalhe="Por pedido entregue hoje"
-          icone={ShoppingBag}
-        />
+        {veValores ? (
+          <>
+            <Indicador
+              titulo="Vendas de hoje"
+              valor={formatCents(dados.totalCents)}
+              detalhe={`${dados.entregues} ${dados.entregues === 1 ? 'pedido entregue' : 'pedidos entregues'}`}
+              icone={TrendingUp}
+            />
+            <Indicador
+              titulo="Ticket médio"
+              valor={formatCents(dados.ticketMedioCents)}
+              detalhe="Por pedido entregue hoje"
+              icone={ShoppingBag}
+            />
+          </>
+        ) : null}
         <Indicador
           titulo="Pedidos hoje"
           valor={String(dados.doDia)}
           detalhe={`${dados.emAberto} em aberto`}
           icone={Clock}
         />
-        <Indicador
-          titulo="Comissão da plataforma"
-          valor={formatCents(dados.comissaoCents)}
-          detalhe="Sobre as vendas de hoje"
-          icone={TrendingUp}
-        />
+        {veValores ? (
+          <Indicador
+            titulo="Comissão da plataforma"
+            valor={formatCents(dados.comissaoCents)}
+            detalhe="Sobre as vendas de hoje"
+            icone={TrendingUp}
+          />
+        ) : null}
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -185,7 +194,8 @@ export default async function LojaDashboardPage() {
                   <li key={item.productName} className="flex items-center justify-between gap-3">
                     <span className="min-w-0 truncate">{item.productName}</span>
                     <span className="text-muted-foreground shrink-0 text-sm">
-                      {item._sum.quantity ?? 0}× · {formatCents(item._sum.totalCents ?? 0)}
+                      {item._sum.quantity ?? 0}×
+                      {veValores ? ` · ${formatCents(item._sum.totalCents ?? 0)}` : null}
                     </span>
                   </li>
                 ))}

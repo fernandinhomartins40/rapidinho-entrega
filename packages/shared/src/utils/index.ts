@@ -6,3 +6,4 @@ export * from './slug';
 export * from './calendario';
 export * from './sms-reverso';
 export * from './app-nativo';
+export * from './destino';
