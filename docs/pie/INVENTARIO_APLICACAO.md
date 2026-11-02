@@ -1,0 +1,42 @@
+# Inventário da aplicação
+
+Auditor-Chefe, 2026-11-02, commit base `d65c0e5`.
+
+A rastreabilidade rota a rota está em `MATRIZ_VERIFICACAO.md`, escrita pelo R4 com o método de prova de cada linha:
+
+| Estado | Linhas |
+|---|---|
+| VERIFICADA | 27 |
+| PARCIAL | 47 |
+| IMPLEMENTADA NÃO VERIFICADA | 11 |
+| FALHA REPRODUZIDA | 7 |
+| BLOQUEADA | 4 |
+| NÃO LOCALIZADA | 1 |
+
+As 7 falhas reproduzidas foram corrigidas nesta rodada; ver `ACHADOS_CONSOLIDADOS.md`. Este documento dá a visão por domínio: tela → ação → serviço → dado → permissão → teste.
+
+| ID | Domínio | Jornada | UI / entrada | Ação / API | Persistência / integração | Permissão | Teste existente | Estado (após as correções) |
+|---|---|---|---|---|---|---|---|---|
+| I01 | Acesso | Login do cliente por SMS (só no app) | `web /entrar` | `entrar/actions.ts` (`autenticar`) → `packages/auth/src/otp.ts` | `otp_codes`, `sessions`, `consent_records`; SMSDev | Anônimo + marca do app | e2e global-setup; prova de força bruta (scratchpad) | VERIFICADA (runtime) |
+| I02 | Acesso | Login do painel por e-mail e senha | `admin /entrar` | `entrar/actions.ts` → `senha.ts` | `users.passwordHash`, `sessions` | Papéis em `PAPEIS_COM_SENHA` | e2e global-setup; R4 RT | VERIFICADA |
+| I03 | Acesso | Login do entregador por SMS | `admin /entrar` (no app) | `ehEntregadorAtivo` → OTP | `couriers.status` | COURIER + cadastro ativo | R4 RT (antes da correção) | PARCIAL (correção de R4-002 sem nova execução) |
+| I04 | Acesso | Senha provisória, troca de senha | `/admin/usuarios`, `/admin/lojas/[id]`, `/loja/senha`, `/admin/senha` | `gerarSenhaProvisoria`, `trocarSenhaDoUsuario` | `users`, `sessions` | SUPER_ADMIN; o próprio usuário | R4 RT; Pix e financeiro via Playwright | VERIFICADA |
+| I05 | Vitrine | Cidade, lojas, categorias, "Tô com fome", busca | `/app`, `/[cidade]`, `/[cidade]/fome`, `/[cidade]/busca` | RSC + Prisma | `cities`, `stores`, `products` | Público | e2e busca | VERIFICADA; R5 mediu TTFB de até 0,76 s em produção |
+| I06 | Pedido | Produto, complementos, pizza | `/[cidade]/produto/[id]`, `/[cidade]/pizza/[loja]` | `lib/regras-do-item.ts` | `carts`, `cart_items` | Cliente | e2e produto; Playwright (opção pelo nome) | VERIFICADA |
+| I07 | Pedido | Checkout e pagamento | `/checkout/[storeId]` | `checkout/actions.ts` (`finalizarPedido`) | `orders`, `payments`, BullMQ (expiração, lembrete) | Cliente | e2e pedido (dinheiro) | VERIFICADA (dinheiro); Pix na chave da loja VERIFICADO no painel; gateway BLOQUEADO (sem credencial) |
+| I08 | Pedido | Acompanhar, cancelar, avaliar, pedir de novo | `/pedidos`, `/pedidos/[id]`, `/pedidos/[id]/avaliar` | `pedidos/actions.ts` | `orders`, `order_status_history`, `reviews`; realtime | Dono do pedido | Playwright (cancelar) | VERIFICADA (cancelar); avaliar e pedir de novo IMPLEMENTADA NÃO VERIFICADA nesta rodada |
+| I09 | Pagamento | Webhook | `POST /api/webhooks/pagamento` | `route.ts` | `payment_events`, `payments`, `orders` | HMAC do gateway | R1 (assinatura, replay) | PARCIAL (falha parcial corrigida só por código) |
+| I10 | Conta | Endereços, favoritos, dados, exclusão | `/enderecos`, `/favoritos`, `/conta`, `/conta/dados`, `GET /api/conta/exportar` | `conta/dados/actions.ts`, `lib/dados-do-titular.ts` | `addresses`, `data_requests` | Cliente | Playwright (exportar) | VERIFICADA (exportar); exclusão PARCIAL |
+| I11 | Loja | Cadastro e aprovação | `/cadastro-loja` → `/admin/lojas/[id]` | `cadastro-loja/actions.ts`, `admin/lojas/actions.ts` | `stores`, `store_staff`, `subscriptions` | Anônimo → SUPER_ADMIN | e2e aprovação | VERIFICADA (e2e) |
+| I12 | Loja | Operar pedidos (aceitar, preparar, pronto, cancelar, Pix) | `/loja/pedidos` | `loja/pedidos/actions.ts` | `orders`, `deliveries`; realtime; push e WhatsApp | Equipe da loja | e2e loja; Playwright (Pix) | VERIFICADA |
+| I13 | Loja | Cardápio, categorias, complementos, pizzas, importar | `/loja/produtos…` | actions por tela | `products`, `media_assets`, S3 | Equipe da loja | e2e produto | PARCIAL |
+| I14 | Loja | Horários, entrega, configurações, cupons, avaliações | `/loja/*` | actions por tela | `stores`, `coupons` | Dono (edição) | Fumaça R4 | PARCIAL |
+| I15 | Loja | Financeiro, plano, impulsionar | `/loja/financeiro`, `/loja/impulsionar` | `plan-billing` (worker) | `invoices`, `boosts` | Só o dono | Playwright (dono vê) | PARCIAL; regra comercial pendente (A19, A20) |
+| I16 | Entregador | Cadastro, fila, aceite, avançar corrida, ganhos | `web /entregador` → `admin /entregador` | `entregador/actions.ts` | `couriers`, `deliveries` | COURIER ativo | R1 (aceite atômico) | PARCIAL; localização não integrada |
+| I17 | Plataforma | Cidades, lojas, entregadores, pedidos, planos, cupons, banners, notificações, SMS, auditoria, usuários, financeiro | `/admin/*` | `runAdminAction` (82 actions com guarda, segundo o R3) | várias; `audit_logs` | ADMIN / SUPER_ADMIN | Fumaça R4 | PARCIAL |
+| I18 | Integração | SMS reverso (gateway Android) | `/api/sms/{app/entrar,recebido,sinal}` | rotas | `otp_codes` | Token do gateway (só SUPER_ADMIN obtém) | R1 (401 sem token) | PARCIAL |
+| I19 | Integração | Uploads e imagens | `/api/uploads`, nginx `/uploads/` | `services/images`, worker `image-processing` | S3/MinIO | Sessão | R1 (401 sem sessão) | PARCIAL; correção do nginx precisa ser confirmada em produção |
+| I20 | Jobs | Expiração de pedido, lembrete à loja, cobrança de plano, fim de impulsionamento, processamento de imagem | `apps/worker/src/jobs/*` | BullMQ | Redis (`noeviction`) | — | Nenhum teste de job | IMPLEMENTADA NÃO VERIFICADA |
+| I21 | Tempo real | Canais da loja, do pedido e do entregador | `apps/realtime` | socket.io com token assinado | Redis | Token por canal | R5 (`/health` 200) | PARCIAL |
+| I22 | App nativo | APK do cliente | `/baixar/rapidinho.apk` | `apps/cliente-android` | Cookie da WebView | — | Build ok (1.1) | IMPLEMENTADA NÃO VERIFICADA em aparelho |
+| I23 | Infra | Deploy, backup, nginx, compose | `.github/workflows/deploy.yml`, `docker/*` | — | VPS compartilhada | — | CI | PARCIAL; ver `RELATORIO_PERFORMANCE_VPS.md` |
