@@ -34,6 +34,7 @@ export type CodigoDeErro =
   | 'MAIORIDADE_OBRIGATORIA'
   | 'TROCO_INVALIDO'
   | 'CHAVE_REUTILIZADA'
+  | 'CONTA_COM_ATIVIDADE'
   | 'ARMAZENAMENTO_INDISPONIVEL'
   | 'ERRO_INTERNO';
 
@@ -82,6 +83,8 @@ export type StatusDaEntrega =
   | 'CANCELLED'
   | 'REFUSED';
 
+export type StatusDoEntregador = 'PENDING_APPROVAL' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED';
+
 export type TipoDePedido = 'DELIVERY' | 'PICKUP';
 
 /** Sem pagamento online: dinheiro ou cartão na entrega, ou Pix na chave da loja. */
@@ -113,7 +116,9 @@ export interface Usuario {
   email: string | null;
   papel: Papel;
   /** Preenchido para quem tem cadastro de entregador, aprovado ou não. */
-  entregador: { id: string; status: 'PENDING_APPROVAL' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED' } | null;
+  entregador: { id: string; status: StatusDoEntregador } | null;
+  /** Há versão nova dos termos: pedir a ciência e chamar `eu/aceite-de-termos`. */
+  termosPendentes: boolean;
 }
 
 export interface EntradaPedirCodigo {
@@ -172,6 +177,17 @@ export type RespostaEu = Usuario;
 export interface EntradaAtualizarEu {
   nome: string;
 }
+
+/** `POST eu/aceite-de-termos` não tem corpo: registra a versão vigente. */
+export interface RespostaAceiteDeTermos {
+  ok: true;
+  termosPendentes: false;
+}
+
+/**
+ * `DELETE eu` responde 409 com `CONTA_COM_ATIVIDADE` enquanto houver pedido ou
+ * corrida em andamento, como cliente, entregador ou dono de loja.
+ */
 
 /** Exportação LGPD: o JSON completo do titular, sem forma fixa para o app. */
 export type RespostaExportarDados = Record<string, unknown>;
@@ -669,11 +685,22 @@ export interface PagamentoDoPedido {
   pix: PixDoPedido | null;
 }
 
+export interface PosicaoDoEntregador {
+  latitude: number;
+  longitude: number;
+  atualizadaEm: string;
+}
+
 export interface EntregadorDoPedido {
   nome: string;
   telefone: string | null;
   veiculo: Veiculo;
   statusDaEntrega: StatusDaEntrega;
+  /**
+   * Última posição, só com a corrida em andamento: depois da entrega volta null.
+   * Ao vivo, chega pelo evento `courier:location` do canal do pedido.
+   */
+  posicao: PosicaoDoEntregador | null;
 }
 
 export interface PedidoDetalhado {
@@ -855,9 +882,10 @@ export interface PlacarDaFome {
 
 /**
  * `POST uploads` é multipart: campo `arquivo` (imagem) e campo `contexto`.
- * As duas imagens são privadas: o `url` devolvido é assinado e vence.
+ * Todas são privadas: o `url` devolvido é assinado e vence. `documento` é do
+ * entregador, e só quem tem cadastro de entregador pode enviar.
  */
-export type ContextoDeUpload = 'receita' | 'comprovante';
+export type ContextoDeUpload = 'receita' | 'comprovante' | 'documento';
 
 export interface RespostaUpload {
   id: string;
@@ -956,6 +984,36 @@ export interface EntradaAvancarCorrida {
   status: 'PICKED_UP' | 'DELIVERED';
 }
 
+export type TipoDeDocumento = 'CNH' | 'CRLV' | 'OUTRO';
+
+export interface DocumentoDoEntregador {
+  id: string;
+  tipo: TipoDeDocumento;
+  /** Null enquanto a plataforma não conferiu. */
+  aprovado: boolean | null;
+  motivoDaRecusa: string | null;
+  enviadoEm: string;
+}
+
+/** Vale também para quem ainda aguarda aprovação: é assim que o cadastro anda. */
+export interface RespostaDocumentos {
+  status: StatusDoEntregador;
+  veiculo: Veiculo;
+  placa: string | null;
+  documentos: DocumentoDoEntregador[];
+}
+
+/**
+ * Envie `imagemId` (de `uploads` com contexto `documento`) junto de `tipo`, os
+ * dados do veículo, ou os dois. Reenviar um tipo substitui o anterior.
+ */
+export interface EntradaDocumento {
+  tipo?: TipoDeDocumento;
+  imagemId?: string;
+  veiculo?: Veiculo;
+  placa?: string | null;
+}
+
 export interface EntradaDisponibilidade {
   online: boolean;
 }
@@ -963,6 +1021,11 @@ export interface EntradaDisponibilidade {
 export interface EntradaLocalizacao {
   latitude: number;
   longitude: number;
+}
+
+/** Fora de corrida a posição não é guardada: `gravada` volta falso. */
+export interface RespostaLocalizacao {
+  gravada: boolean;
 }
 
 // ---------------------------------------------------------------------------
