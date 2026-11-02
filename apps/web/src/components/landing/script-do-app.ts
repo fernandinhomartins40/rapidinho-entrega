@@ -13,4 +13,5 @@
 export const SCRIPT_GUARDA_DO_APP =
   "try{if(window.matchMedia('(display-mode: standalone)').matches" +
   "||window.matchMedia('(display-mode: fullscreen)').matches" +
-  "||window.navigator.standalone===true){location.replace('/app')}}catch(e){}";
+  '||window.navigator.standalone===true' +
+  "||window.navigator.userAgent.indexOf('RapidinhoApp/')>=0){location.replace('/app')}}catch(e){}";

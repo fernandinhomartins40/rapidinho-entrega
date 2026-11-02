@@ -61,9 +61,17 @@ async function noAppNativo(): Promise<boolean> {
 async function ehEntregadorAtivo(phone: string): Promise<boolean> {
   const usuario = await prisma.user.findUnique({
     where: { phone },
-    select: { role: true, status: true, deletedAt: true },
+    select: { role: true, status: true, deletedAt: true, courier: { select: { status: true } } },
   });
-  return usuario?.role === 'COURIER' && usuario.status === 'ACTIVE' && !usuario.deletedAt;
+  // O cadastro público em /entregador já cria o usuário como COURIER, com o
+  // entregador aguardando aprovação: sem olhar o status do entregador, o
+  // candidato recebia SMS pago para uma sessão que o painel recusaria.
+  return (
+    usuario?.role === 'COURIER' &&
+    usuario.status === 'ACTIVE' &&
+    !usuario.deletedAt &&
+    usuario.courier?.status === 'ACTIVE'
+  );
 }
 
 export async function autenticar(previous: LoginState, formData: FormData): Promise<LoginState> {
@@ -88,7 +96,7 @@ async function solicitarCodigo(formData: FormData): Promise<LoginState> {
   const parsed = requestOtpSchema.safeParse({ phone: formData.get('phone') });
 
   if (!parsed.success) {
-    return { step: 'phone', error: 'Informe um telefone válido com DDD.' };
+    return { step: 'phone', error: 'Informe o celular com DDD, por exemplo (44) 99999-8888.' };
   }
 
   const { phone } = parsed.data;

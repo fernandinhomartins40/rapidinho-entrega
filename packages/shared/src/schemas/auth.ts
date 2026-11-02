@@ -2,7 +2,9 @@ import { z } from 'zod';
 import { phoneSchema } from './common';
 
 export const requestOtpSchema = z.object({
-  phone: phoneSchema,
+  // O código vai por SMS: fixo (10 dígitos) passa no telefone genérico, mas
+  // nunca recebe a mensagem — e cada envio é cobrado.
+  phone: phoneSchema.refine((e164) => /^\+55\d{2}9\d{8}$/.test(e164), 'Use o número do celular'),
 });
 
 export const verifyOtpSchema = z.object({

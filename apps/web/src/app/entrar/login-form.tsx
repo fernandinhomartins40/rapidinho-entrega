@@ -1,6 +1,6 @@
 'use client';
 
-import { startTransition, useActionState, useCallback, useState } from 'react';
+import { startTransition, useActionState, useCallback, useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Alert, Button, Card, CardContent, ConfirmacaoPorSms, Input, Label } from '@rapidinho/ui';
 import { formatPhoneBR, maskPhoneBR } from '@rapidinho/shared';
@@ -102,7 +102,9 @@ export function LoginForm({
               autoFocus
               required
             />
-            <p className="text-muted-foreground mt-1.5 text-sm">Enviado para {state.phone}</p>
+            <p className="text-muted-foreground mt-1.5 text-sm">
+              Enviado para {state.phone ? formatPhoneBR(state.phone) : 'o seu celular'}
+            </p>
           </div>
 
           {state.devCode ? (
@@ -119,6 +121,8 @@ export function LoginForm({
             Entrar
           </Button>
 
+          <BotaoReenviar telefone={state.phone ?? ''} reiniciar={state} />
+
           <Button type="submit" name="intencao" value="trocar-telefone" variant="ghost" block>
             <ArrowLeft className="h-4 w-4" aria-hidden />
             Usar outro telefone
@@ -126,5 +130,40 @@ export function LoginForm({
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+const ESPERA_PARA_REENVIAR = 60;
+
+/**
+ * "Não chegou?": pede outro código para o mesmo número. A espera evita o
+ * toque repetido (cada código é um SMS pago); o limite por telefone do
+ * servidor continua valendo. `reiniciar` muda a cada resposta da ação, e a
+ * contagem recomeça depois de cada envio.
+ */
+function BotaoReenviar({ telefone, reiniciar }: { telefone: string; reiniciar: unknown }) {
+  const [restante, setRestante] = useState(ESPERA_PARA_REENVIAR);
+
+  useEffect(() => {
+    setRestante(ESPERA_PARA_REENVIAR);
+    const relogio = setInterval(() => setRestante((s) => (s > 0 ? s - 1 : 0)), 1000);
+    return () => clearInterval(relogio);
+  }, [reiniciar]);
+
+  return (
+    <>
+      <input type="hidden" name="phone" value={telefone} />
+      <Button
+        type="submit"
+        name="intencao"
+        value="reenviar"
+        variant="outline"
+        block
+        formNoValidate
+        disabled={restante > 0}
+      >
+        {restante > 0 ? `Reenviar código em ${restante}s` : 'Reenviar código'}
+      </Button>
+    </>
   );
 }

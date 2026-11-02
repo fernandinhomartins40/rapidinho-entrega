@@ -65,6 +65,15 @@ async function gerarNumeroDoPedido(): Promise<string> {
   return `${prefixo}${Date.now().toString().slice(-6)}`;
 }
 
+/** "R$ 50", "50,00", "1.234,50" ou "50.5" → centavos; null quando não há número. */
+function trocoEmCentavos(texto: string): number | null {
+  const limpo = texto.replace(/[^\d,.]/g, '');
+  if (limpo === '') return null;
+  const normalizado = limpo.includes(',') ? limpo.replace(/\./g, '').replace(',', '.') : limpo;
+  const numero = Number(normalizado);
+  return Number.isFinite(numero) && numero > 0 ? Math.round(numero * 100) : null;
+}
+
 export async function finalizarPedido(
   _anterior: ActionResult,
   formData: FormData,
@@ -72,14 +81,24 @@ export async function finalizarPedido(
   let destino: string | null = null;
 
   const resultado = await runAuthedAction(async (user): Promise<ActionResult> => {
+    // Troco escrito como a pessoa fala: "R$ 50", "50,00", "50". Texto sem
+    // número ("cinquenta") vira aviso no campo, e não o erro do zod em inglês.
+    const trocoDigitado = String(formData.get('changeForCents') ?? '').trim();
+    const troco = trocoEmCentavos(trocoDigitado);
+    if (trocoDigitado !== '' && troco == null) {
+      return {
+        ok: false,
+        message: 'Confira o valor do troco.',
+        fieldErrors: { changeForCents: 'Use só números, por exemplo 50' },
+      };
+    }
+
     const dados = checkoutSchema.parse({
       storeId: formData.get('storeId'),
       type: formData.get('type') ?? 'DELIVERY',
       addressId: formData.get('addressId') || undefined,
       paymentMethod: formData.get('paymentMethod'),
-      changeForCents: formData.get('changeForCents')
-        ? Math.round(Number(String(formData.get('changeForCents')).replace(',', '.')) * 100)
-        : null,
+      changeForCents: troco ?? null,
       couponCode: formData.get('couponCode') || undefined,
       notes: formData.get('notes') || undefined,
       customerName: formData.get('customerName') || undefined,

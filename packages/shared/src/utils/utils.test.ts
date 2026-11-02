@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatCents, parseCurrencyToCents, percentOfCents, weightPriceCents } from './money';
-import { formatPhoneBR, isValidPhoneBR, normalizePhoneBR } from './phone';
+import { formatPhoneBR, isValidPhoneBR, maskPhoneBR, normalizePhoneBR } from './phone';
+import { requestOtpSchema } from '../schemas/auth';
 import { isValidCNPJ, isValidCPF, isValidDocument } from './document';
 import { distanceInMeters } from './geo';
 import { slugify } from './slug';
@@ -51,6 +52,20 @@ describe('telefone', () => {
   it('formata para exibição', () => {
     expect(formatPhoneBR('+5544999998888')).toBe('(44) 99999-8888');
     expect(formatPhoneBR('+554433334444')).toBe('(44) 3333-4444');
+  });
+
+  it('mascara número colado com +55 ou vindo do banco em E.164', () => {
+    expect(maskPhoneBR('+55 44 99777-0203')).toBe('(44) 99777-0203');
+    expect(maskPhoneBR('+5544997770203')).toBe('(44) 99777-0203');
+    expect(maskPhoneBR('044997770203')).toBe('(44) 99777-0203');
+    // DDD 55 (RS) digitado normalmente não perde dígito.
+    expect(maskPhoneBR('55999998888')).toBe('(55) 99999-8888');
+    expect(maskPhoneBR('449')).toBe('(44) 9');
+  });
+
+  it('login por SMS aceita só celular', () => {
+    expect(requestOtpSchema.safeParse({ phone: '(44) 99999-8888' }).success).toBe(true);
+    expect(requestOtpSchema.safeParse({ phone: '(44) 3333-4444' }).success).toBe(false);
   });
 });
 

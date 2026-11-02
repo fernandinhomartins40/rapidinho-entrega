@@ -47,7 +47,11 @@ export default async function UsuariosPage({
       ? {
           OR: [
             { name: { contains: busca, mode: 'insensitive' } },
-            { phone: { contains: busca.replace(/\D/g, '') } },
+            // Só busca por telefone com dígitos suficientes: "lojista@r4" tem
+            // um "4" e casaria com quase todo telefone.
+            ...(busca.replace(/\D/g, '').length >= 4
+              ? [{ phone: { contains: busca.replace(/\D/g, '') } }]
+              : []),
             { email: { contains: busca, mode: 'insensitive' } },
           ],
         }

@@ -1,3 +1,4 @@
+import { revokeOtherSessions } from '@rapidinho/auth';
 import { prisma } from '@rapidinho/database';
 import { consumeRateLimit, resetRateLimit } from '@rapidinho/services';
 import { RATE_LIMITS } from '@rapidinho/shared';
@@ -64,6 +65,9 @@ export async function trocarSenhaDoUsuario(
     where: { id: userId },
     data: { passwordHash: gerarHashDeSenha(nova) },
   });
+  // Quem troca a senha por desconfiar de vazamento não pode continuar com o
+  // invasor logado em outro aparelho.
+  await revokeOtherSessions(userId);
 
   return { ok: true, message: usuario.passwordHash ? 'Senha trocada.' : 'Senha criada.' };
 }

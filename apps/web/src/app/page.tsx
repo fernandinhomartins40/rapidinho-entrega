@@ -1,5 +1,7 @@
 import { unstable_cache } from 'next/cache';
 import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { estaNoAppNativo } from '@rapidinho/shared';
 import { prisma } from '@rapidinho/database';
 import Image from 'next/image';
 import { Hero } from '@/components/landing/hero';
@@ -51,9 +53,14 @@ const carregarVitrine = unstable_cache(
 );
 
 export default async function HomePage() {
+  const cabecalhos = await headers();
+  // O APK abre o site na raiz: dentro dele a landing ("Baixar agora", "App
+  // Store") não faz sentido, e o cliente vai direto para o app.
+  if (estaNoAppNativo(cabecalhos.get('user-agent'))) redirect('/app');
+
   const { cidades, categorias } = await carregarVitrine();
   // O nonce da CSP, gerado no middleware: sem ele o script inline é bloqueado.
-  const nonce = (await headers()).get('x-nonce') ?? undefined;
+  const nonce = cabecalhos.get('x-nonce') ?? undefined;
 
   const cidadesDisponiveis = cidades.map((cidade) => ({
     id: cidade.id,

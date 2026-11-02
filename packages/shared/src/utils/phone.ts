@@ -51,9 +51,20 @@ export function formatPhoneBR(e164: string): string {
   return e164;
 }
 
-/** Máscara progressiva para input controlado. */
+/**
+ * Máscara progressiva para input controlado.
+ *
+ * Tira o código do país (e o 0 de operadora) antes de cortar em 11 dígitos:
+ * o autopreenchimento do celular cola "+55 44 99999-8888", e um valor em
+ * E.164 vindo do banco passa por aqui também. Só com mais de 11 dígitos —
+ * quem é do DDD 55 (RS) digita no máximo 11 e não perde nada.
+ */
 export function maskPhoneBR(input: string): string {
-  const digits = onlyDigits(input).slice(0, 11);
+  let digits = onlyDigits(input);
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  if (digits.length > 11 && digits.startsWith(BR_COUNTRY_CODE)) digits = digits.slice(2);
+  if (digits.length > 11 && digits.startsWith('0')) digits = digits.slice(1);
+  digits = digits.slice(0, 11);
 
   if (digits.length <= 2) return digits;
   if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;

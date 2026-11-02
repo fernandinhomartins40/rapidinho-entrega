@@ -427,7 +427,11 @@ export function FormularioDeCheckout({
                 <p className="flex justify-between">
                   <span className="text-muted-foreground">Entrega</span>
                   <span>
-                    {resumo.deliveryFeeCents === 0 ? (
+                    {/* Sem endereço o frete ainda não foi calculado: "Grátis"
+                        aqui virava R$ 5 depois, e o cliente se sentia enganado. */}
+                    {!enderecoEscolhido ? (
+                      <span className="text-muted-foreground">Calculada após o endereço</span>
+                    ) : resumo.deliveryFeeCents === 0 ? (
                       <span className="text-success font-semibold">Grátis</span>
                     ) : (
                       formatCents(resumo.deliveryFeeCents)

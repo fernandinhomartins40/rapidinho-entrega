@@ -20,12 +20,15 @@ export default async function EntrarPage({
   const provedor = parseServerEnv().OTP_PROVIDER;
   const porSms = provedor === 'sms-reverso';
   const canal = provedor === 'whatsapp' ? 'WhatsApp' : 'SMS';
-  const noApp = estaNoAppNativo((await headers()).get('user-agent'));
+  const userAgent = (await headers()).get('user-agent');
+  const noApp = estaNoAppNativo(userAgent);
   const { destino } = await searchParams;
 
-  if (user) redirect(destino ?? '/');
+  // Só caminho interno: um destino absoluto viraria redirecionamento aberto
+  // para quem já está logado, com o domínio legítimo no link do golpe.
+  if (user) redirect(destino?.startsWith('/') && !destino.startsWith('//') ? destino : '/');
 
-  if (!noApp) return <BaixeOApp />;
+  if (!noApp) return <BaixeOApp iphone={/iPhone|iPad|iPod/i.test(userAgent ?? '')} />;
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center px-5 py-10">
@@ -65,7 +68,29 @@ export default async function EntrarPage({
  * Fora do app nativo não há login: o código por SMS é pago, e só o app guarda
  * a sessão para sempre. O cardápio e as lojas continuam abertos no site.
  */
-function BaixeOApp() {
+function BaixeOApp({ iphone }: { iphone: boolean }) {
+  // Ainda não há app para iPhone: dizer isso com clareza e dar uma saída,
+  // em vez de oferecer um APK que o aparelho não instala.
+  if (iphone) {
+    return (
+      <main className="flex min-h-dvh flex-col items-center justify-center px-5 py-10">
+        <div className="w-full max-w-sm text-center">
+          <Link href="/">
+            <Logotipo className="mx-auto h-11 w-auto" priority />
+          </Link>
+          <h1 className="mt-4 text-xl font-bold">O app para iPhone ainda não saiu</h1>
+          <p className="text-muted-foreground mt-2">
+            Por enquanto o Rapidinho funciona só no Android. Você pode ver as lojas e o cardápio por
+            aqui e pedir direto pelo WhatsApp da loja, no botão da página dela.
+          </p>
+          <Link href="/app" className={buttonVariants({ block: true, className: 'mt-6' })}>
+            Ver as lojas
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center px-5 py-10">
       <div className="w-full max-w-sm text-center">

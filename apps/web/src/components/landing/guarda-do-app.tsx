@@ -8,7 +8,9 @@ function estaNoApp(): boolean {
   return (
     window.matchMedia('(display-mode: standalone)').matches ||
     window.matchMedia('(display-mode: fullscreen)').matches ||
-    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+    (window.navigator as Navigator & { standalone?: boolean }).standalone === true ||
+    // APK nativo (WebView): marca no user-agent, a mesma de `estaNoAppNativo`.
+    window.navigator.userAgent.includes('RapidinhoApp/')
   );
 }
 

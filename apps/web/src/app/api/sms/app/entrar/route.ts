@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { apiHandler, autenticarPorSenha } from '@rapidinho/auth';
+import { prisma } from '@rapidinho/database';
 import { clientIpFromHeaders, consumeRateLimit, logger } from '@rapidinho/services';
 import { parseServerEnv, RATE_LIMITS } from '@rapidinho/shared';
 
@@ -37,8 +38,17 @@ export const POST = apiHandler(async (request: Request) => {
   const userId = dados.success
     ? await autenticarPorSenha(dados.data.email, dados.data.senha)
     : null;
+  // O token do gateway é da plataforma: com ele se forja "SMS recebido" e se
+  // confirma login de qualquer telefone. Desde que lojista e funcionário
+  // entram com senha, conferir a senha não basta — só super admin recebe.
+  const superAdmin = userId
+    ? await prisma.user.findFirst({
+        where: { id: userId, role: 'SUPER_ADMIN' },
+        select: { id: true },
+      })
+    : null;
   // O token só existe com o login por SMS configurado no servidor.
-  const token = userId ? parseServerEnv().SMS_GATEWAY_TOKEN : null;
+  const token = superAdmin ? parseServerEnv().SMS_GATEWAY_TOKEN : null;
 
   if (!token) {
     logger.warn({ ip }, '[sms-gateway] login do app recusado');

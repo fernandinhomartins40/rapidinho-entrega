@@ -67,6 +67,18 @@ export async function destroyCurrentSession(): Promise<void> {
   cookieStore.delete(name);
 }
 
+/**
+ * Encerra as sessões do usuário em outros aparelhos e mantém a deste. É o que
+ * se espera ao trocar a senha por desconfiar de vazamento.
+ */
+export async function revokeOtherSessions(userId: string): Promise<number> {
+  const atual = (await cookies()).get(sessionCookieName())?.value;
+  const result = await prisma.session.deleteMany({
+    where: { userId, ...(atual ? { sessionToken: { not: atual } } : {}) },
+  });
+  return result.count;
+}
+
 /** Revoga todas as sessões de um usuário (suspensão, exclusão LGPD, logout global). */
 export async function revokeAllSessions(userId: string): Promise<number> {
   const result = await prisma.session.deleteMany({ where: { userId } });

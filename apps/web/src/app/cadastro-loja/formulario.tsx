@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState } from 'react';
+import { startTransition, useActionState } from 'react';
 import Link from 'next/link';
 import { Button, Card, CardContent, Input, Label } from '@rapidinho/ui';
 import { cadastrarLoja } from './actions';
@@ -27,7 +27,17 @@ export function FormularioDeCadastro({
   }
 
   return (
-    <form action={acao} className="mt-6 space-y-4">
+    <form
+      // onSubmit, e não `action`: com `action` o React limpa o formulário
+      // quando a ação termina, e um erro do servidor (CPF repetido, e-mail em
+      // uso) apagava os 13 campos que o lojista acabou de digitar.
+      onSubmit={(evento) => {
+        evento.preventDefault();
+        const dados = new FormData(evento.currentTarget);
+        startTransition(() => acao(dados));
+      }}
+      className="mt-6 space-y-4"
+    >
       <div>
         <Label htmlFor="nome" required>
           Nome da loja

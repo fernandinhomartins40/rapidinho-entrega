@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { prisma } from '@rapidinho/database';
+import { getPublicEnv } from '@rapidinho/shared';
 import { Logotipo } from '@/components/marca/logo';
 import { FormularioDeEntregador } from './formulario';
 
@@ -55,9 +56,14 @@ export default async function EntregadorPage() {
 
       <p className="text-muted-foreground mt-8 text-sm">
         Já é entregador?{' '}
-        <Link href="/entrar" className="underline">
-          Entre com seu telefone
-        </Link>
+        {/* O painel do entregador fica no domínio do painel, não no site do
+            cliente: o /entrar daqui logava o entregador como cliente. */}
+        <a
+          href={`${getPublicEnv().NEXT_PUBLIC_ADMIN_URL.replace(/\/$/, '')}/entrar`}
+          className="underline"
+        >
+          Entrar no painel do entregador
+        </a>
         .
       </p>
     </main>

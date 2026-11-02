@@ -265,30 +265,46 @@ export function FormularioDoProduto({ produto, loja, grupos, cidadeSlug }: Props
               <ul className="mt-3 space-y-1">
                 {grupo.opcoes.map((opcao) => {
                   const escolhido = escolhas[grupo.id]?.[opcao.id] ?? 0;
+                  const idDaOpcao = `opcao-${grupo.id}-${opcao.id}`;
+                  const textoDaOpcao = (
+                    <>
+                      <p className="font-medium">{opcao.nome}</p>
+                      {opcao.descricao ? (
+                        <p className="text-muted-foreground text-sm">{opcao.descricao}</p>
+                      ) : null}
+                      {opcao.precoCents > 0 ? (
+                        <p className="text-muted-foreground text-sm">
+                          + {formatCents(opcao.precoCents)}
+                        </p>
+                      ) : null}
+                    </>
+                  );
 
                   return (
                     <li
                       key={opcao.id}
                       className="flex items-center gap-3 border-b py-2 last:border-0"
                     >
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium">{opcao.nome}</p>
-                        {opcao.descricao ? (
-                          <p className="text-muted-foreground text-sm">{opcao.descricao}</p>
-                        ) : null}
-                        {opcao.precoCents > 0 ? (
-                          <p className="text-muted-foreground text-sm">
-                            + {formatCents(opcao.precoCents)}
-                          </p>
-                        ) : null}
-                      </div>
+                      {grupo.permiteRepetir ? (
+                        <div className="min-w-0 flex-1">{textoDaOpcao}</div>
+                      ) : (
+                        // Rótulo ligado ao input: tocar no nome ou no preço marca a
+                        // opção. Só o círculo de 24 px respondia, e o cliente tocava
+                        // em "Ao ponto" sem nada acontecer.
+                        <label
+                          htmlFor={idDaOpcao}
+                          className="min-h-11 min-w-0 flex-1 cursor-pointer py-1"
+                        >
+                          {textoDaOpcao}
+                        </label>
+                      )}
 
                       {grupo.permiteRepetir ? (
                         <div className="flex shrink-0 items-center gap-2">
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-9 w-9"
+                            className="h-11 w-11"
                             aria-label={`Menos ${opcao.nome}`}
                             disabled={escolhido === 0}
                             onClick={() => alterarEscolha(grupo, opcao.id, -1)}
@@ -299,7 +315,7 @@ export function FormularioDoProduto({ produto, loja, grupos, cidadeSlug }: Props
                           <Button
                             variant="outline"
                             size="icon"
-                            className="h-9 w-9"
+                            className="h-11 w-11"
                             aria-label={`Mais ${opcao.nome}`}
                             onClick={() => alterarEscolha(grupo, opcao.id, 1)}
                           >
@@ -308,6 +324,7 @@ export function FormularioDoProduto({ produto, loja, grupos, cidadeSlug }: Props
                         </div>
                       ) : (
                         <input
+                          id={idDaOpcao}
                           type={grupo.maximo === 1 ? 'radio' : 'checkbox'}
                           name={`grupo-${grupo.id}`}
                           checked={escolhido > 0}

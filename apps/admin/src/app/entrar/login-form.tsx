@@ -97,6 +97,13 @@ export function LoginForm({
               Entrar
             </Button>
 
+            {/* Lojista antigo só tinha telefone, e quem esquece a senha não tinha
+                para onde ir: a tela só dizia "E-mail ou senha incorretos". */}
+            <p className="text-muted-foreground text-center text-sm leading-relaxed">
+              O painel agora usa e-mail e senha. Esqueceu a senha ou ainda não tem? Peça à equipe
+              Rapidinho uma senha provisória.
+            </p>
+
             {noApp ? (
               <Button
                 type="submit"

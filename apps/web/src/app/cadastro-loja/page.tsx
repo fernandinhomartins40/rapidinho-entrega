@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Check } from 'lucide-react';
 import { prisma } from '@rapidinho/database';
-import { formatCents } from '@rapidinho/shared';
+import { formatCents, getPublicEnv } from '@rapidinho/shared';
 import { Logotipo } from '@/components/marca/logo';
 import { FormularioDeCadastro } from './formulario';
 
@@ -73,9 +73,12 @@ export default async function CadastroLojaPage() {
 
       <p className="text-muted-foreground mt-8 text-sm">
         Já tem loja cadastrada?{' '}
-        <Link href="/entrar" className="underline">
-          Entre com seu telefone
-        </Link>
+        <a
+          href={`${getPublicEnv().NEXT_PUBLIC_ADMIN_URL.replace(/\/$/, '')}/entrar`}
+          className="underline"
+        >
+          Entre no painel com e-mail e senha
+        </a>
         .
       </p>
     </main>

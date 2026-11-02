@@ -72,7 +72,7 @@ async function solicitarCodigo(formData: FormData): Promise<LoginState> {
   const parsed = requestOtpSchema.safeParse({ phone: formData.get('phone') });
 
   if (!parsed.success) {
-    return { step: 'phone', error: 'Informe um telefone válido com DDD.' };
+    return { step: 'phone', error: 'Informe o celular com DDD, por exemplo (44) 99999-8888.' };
   }
 
   const { phone } = parsed.data;
