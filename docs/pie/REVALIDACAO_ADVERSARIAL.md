@@ -41,6 +41,7 @@ Comando:
 `DATABASE_URL=... OTP_PROVIDER=console SMSDEV_API_KEY= tsx verif/bf-otp.mts`
 
 Saída:
+
 ```
 R1-meio {"logins":0,"attempts":5,"consumido":true}
 reuso-consumido {"ok":false,"reason":"Código expirado. Peça um novo."}
@@ -62,6 +63,7 @@ Tentativa: 8 POST em `/api/sms/app/entrar`, cada um com `X-Forwarded-For`
 forjado diferente (10.0.0.1..8), sem `x-real-ip` (chave = `desconhecido`).
 
 Saída:
+
 ```
 XFF=10.0.0.1 -> 401  XFF=10.0.0.2 -> 401  XFF=10.0.0.3 -> 429 ... XFF=10.0.0.8 -> 429
 ```
@@ -83,6 +85,7 @@ exato da action com `access.storeId` = loja A, além da confirmação dupla em
 paralelo.
 
 Saída:
+
 ```
 offlineA(legit)    achavel = true   (esperado true)
 gatewayA           achavel = false  (esperado false)  <- provider MERCADOPAGO
@@ -104,6 +107,7 @@ Tentativa: `verif/webhook-a4.mts` reproduz fielmente o bloco `try` +
 liberado só se `PENDING_PAYMENT`).
 
 Saída:
+
 ```
 caso1 primeiro = liberado | orderStatus = RECEIVED | reenvio = duplicate
 caso2 resultado = nao-liberado | orderStatus = CANCELLED | paymentStatus = PAID
@@ -129,6 +133,7 @@ Arquivos: `apps/admin/src/app/loja/pedidos/actions.ts`,
 Tentativa: `verif/cancel-status.mts` e leitura da tabela de transições.
 
 Saída:
+
 ```
 canTransition CANCELLED->DELIVERED = false (esperado false)
 canTransition REJECTED->DELIVERED  = false (esperado false)
@@ -154,6 +159,7 @@ tem gate de cargo e exibe os indicadores "Vendas de hoje" (`totalCents`) e
 
 Reprodução (sessão sintética de `gerente.r2@e2e.rapidinho.test`, STORE_STAFF /
 MANAGER, vinculado à loja `cmvvwqbqm001acbpwu3i29w5l`):
+
 ```
 GET /loja           -> 200; HTML contém: "Vendas de hoje", "Comissão da plataforma", "Ticket médio"
 GET /loja/financeiro -> HTML contém: "Só o dono da loja vê o financeiro"
@@ -176,6 +182,7 @@ Arquivo: `apps/web/src/app/api/sms/app/entrar/route.ts:44`.
 Tentativa: POST com credenciais de lojista, de super admin e senha errada.
 
 Saída:
+
 ```
 lojista    => 401
 superadmin => 401 {"error":"E-mail ou senha incorretos."}
@@ -192,6 +199,7 @@ RESISTIU.
 ## 8. Redirecionamento aberto em `/entrar` (M9) — FALHOU
 
 Arquivos:
+
 - `apps/web/src/app/entrar/page.tsx:29`
 - `apps/web/src/app/entrar/actions.ts:173` e `:193`
 - `apps/admin/src/app/entrar/actions.ts:203`, `:245`, `:263` (mesmo padrão)
@@ -201,6 +209,7 @@ A guarda aplicada é
 
 Tentativa: com sessão sintética, variar `destino`. Resposta do servidor
 (`http://localhost:3200/entrar?destino=...`, sem seguir redirect):
+
 ```
 /painel              -> 307 location: /painel
 /pedidos             -> 307 location: /pedidos
@@ -214,6 +223,7 @@ guarda deixa passar. O navegador normaliza `\` para `/` e trata `/\example.com`
 como URL protocol-relative. Prova em runtime no Edge (`verif/redirect-edge.cjs`,
 Playwright channel msedge, com a sessão no cookie e navegações externas
 bloqueadas para registro):
+
 ```
 {"urlFinal":"https://example.com/","navegacoesExternas":["https://example.com/s.js"]}
 ```
@@ -238,6 +248,7 @@ Tentativa: `verif/cancel-status.mts` reproduz o predicado (findFirst por
 `['PENDING_PAYMENT','RECEIVED']`).
 
 Saída:
+
 ```
 outro cliente cancela RECEIVED = nao-encontrado   (esperado)
 dono cancela ACCEPTED          = bloqueado-status  (esperado)
@@ -253,6 +264,7 @@ Veredito: RESISTIU.
 Arquivo: `apps/web/src/app/api/conta/exportar/route.ts`.
 
 Tentativa: sem sessão e com sessão sintética.
+
 ```
 sem sessao => 401
 com sessao => 200  (devolve só os dados do titular da sessão)
@@ -269,12 +281,12 @@ titular. Veredito: RESISTIU.
 Comando: `pnpm typecheck && pnpm lint && pnpm test`
 (log em `verif/suites.log`).
 
-| Suíte | Baseline fase0 | Agora | Resultado |
-|---|---|---|---|
-| typecheck | 9/9 tasks OK | 9/9 tasks OK, exit 0 | igual (passa) |
-| lint | 9/9 tasks OK | 9/9 tasks OK, exit 0 | igual (passa) |
-| test | tasks OK (sem contagem no baseline) | 5/5 tasks, 192 testes (shared 168 + services 24), exit 0 | igual/melhor (verde) |
-| test:e2e | 14 passed, depois exit 1 (frágil) | NÃO reexecutado | — |
+| Suíte     | Baseline fase0                      | Agora                                                    | Resultado            |
+| --------- | ----------------------------------- | -------------------------------------------------------- | -------------------- |
+| typecheck | 9/9 tasks OK                        | 9/9 tasks OK, exit 0                                     | igual (passa)        |
+| lint      | 9/9 tasks OK                        | 9/9 tasks OK, exit 0                                     | igual (passa)        |
+| test      | tasks OK (sem contagem no baseline) | 5/5 tasks, 192 testes (shared 168 + services 24), exit 0 | igual/melhor (verde) |
+| test:e2e  | 14 passed, depois exit 1 (frágil)   | NÃO reexecutado                                          | —                    |
 
 Nada regrediu nas suítes. `pnpm test:e2e` não foi reexecutado: o baseline já
 termina em exit 1 (fragilidade conhecida M30, PENDENTE) e o item 11 do escopo
@@ -344,7 +356,7 @@ Limpeza final confirmada:
 
 ## Adendo do Auditor-Chefe: correção dos dois reabertos (commit `aef53aa`)
 
-| Reaberto | Correção | Revalidação em runtime (2026-11-02) |
-|---|---|---|
-| M9: redirecionamento aberto com `\` | `destinoInterno()` em `packages/shared/src/utils/destino.ts`, usada nos 6 pontos (site: página e actions; painel: actions). Recusa `\`, caracteres de controle e qualquer destino que resolva para outra origem | Com sessão: `%2F%5Cexample.com`, `%2F%5C%2Fexample.com`, `%5C%5Cexample.com`, `%2F%5C%5Cexample.com` e `%2F%09%2Fexample.com` → `307 /`. `%2Fpedidos` → `307 /pedidos`. Teste unitário com 13 formas de ataque (`destino.test.ts`) |
-| A8: valores no painel inicial para o funcionário | `apps/admin/src/app/loja/page.tsx`: "Vendas de hoje", "Ticket médio", "Comissão da plataforma" e o valor por produto só para o dono ou o admin da plataforma | Sessão sintética de funcionário: `/loja` → "Vendas de hoje" 0 ocorrências, "Comissão" 0, "Pedidos hoje" 1; `/loja/financeiro` → "Só o dono da loja vê o financeiro" |
+| Reaberto                                         | Correção                                                                                                                                                                                                        | Revalidação em runtime (2026-11-02)                                                                                                                                                                                                |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| M9: redirecionamento aberto com `\`              | `destinoInterno()` em `packages/shared/src/utils/destino.ts`, usada nos 6 pontos (site: página e actions; painel: actions). Recusa `\`, caracteres de controle e qualquer destino que resolva para outra origem | Com sessão: `%2F%5Cexample.com`, `%2F%5C%2Fexample.com`, `%5C%5Cexample.com`, `%2F%5C%5Cexample.com` e `%2F%09%2Fexample.com` → `307 /`. `%2Fpedidos` → `307 /pedidos`. Teste unitário com 13 formas de ataque (`destino.test.ts`) |
+| A8: valores no painel inicial para o funcionário | `apps/admin/src/app/loja/page.tsx`: "Vendas de hoje", "Ticket médio", "Comissão da plataforma" e o valor por produto só para o dono ou o admin da plataforma                                                    | Sessão sintética de funcionário: `/loja` → "Vendas de hoje" 0 ocorrências, "Comissão" 0, "Pedidos hoje" 1; `/loja/financeiro` → "Só o dono da loja vê o financeiro"                                                                |

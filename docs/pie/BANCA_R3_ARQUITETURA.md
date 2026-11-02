@@ -7,6 +7,7 @@ Revisão independente: não li nenhum outro `BANCA_*`.
 > anterior (`docs/revisao/REGISTRO.md`), escrevo **"antigo R3-00X"** para não confundir.
 
 Estados usados:
+
 - **CONFIRMADO**: o caminho do código está provado pela leitura, por uma consulta ao banco ou por uma chamada HTTP local.
 - **FORTE INDÍCIO**: o defeito é estrutural (corrida, por exemplo), mas não executei a reprodução.
 - **HIPÓTESE**: depende do ambiente de produção, que não pude ver.
@@ -20,37 +21,37 @@ Scripts e saídas brutas ficam em
 
 ## Sumário dos achados
 
-| ID | Sev. | Estado | Onde | Resumo |
-|---|---|---|---|---|
-| R3-001 | Crítica | CONFIRMADO | `apps/web/src/app/checkout/actions.ts:450-452`, `apps/admin/src/lib/store-context.ts:33` | O pedido pago por Pix na chave da loja fica invisível para a loja, sem confirmação manual e sem expiração |
-| R3-002 | Alta | CONFIRMADO | `apps/admin/src/app/loja/pedidos/actions.ts:311-332`, `packages/database/src/cancelamento.ts:19-62` | O cancelamento de pedido pago online não estorna nem registra o valor devido |
-| R3-003 | Alta | CONFIRMADO | `apps/web/src/app/api/webhooks/pagamento/route.ts:63-103` | O webhook grava a deduplicação antes de processar: uma falha depois disso perde a confirmação de pagamento para sempre |
-| R3-004 | Alta | FORTE INDÍCIO | `apps/worker/src/jobs/order-timeout.ts:30-42`, `route.ts:93` | Corrida entre a expiração do Pix e o webhook, sem nenhuma reconciliação com o gateway |
-| R3-005 | Alta | FORTE INDÍCIO | `loja/pedidos/actions.ts:145-168`, `entregador/actions.ts:94-146` | Mudanças de status sem concorrência otimista: um pedido cancelado pode virar entregue |
-| R3-006 | Alta | CONFIRMADO | `apps/worker/src/jobs/plan-billing.ts:22,57-67`, `loja/impulsionar/actions.ts:44-60` | A comissão do plano grátis (12%) nunca é faturada; a janela de faturamento e a troca de plano também perdem receita |
-| R3-007 | Alta | CONFIRMADO | `loja/impulsionar/actions.ts:108-118`, `admin/financeiro/page.tsx:63-66` | O impulsionamento é ativado sem cobrança, o financeiro mostra receita fictícia e as faturas nunca são quitadas |
-| R3-008 | Alta | CONFIRMADO | `checkout/actions.ts:73-85,183-192`, `packages/shared/src/schemas/order.ts:88` | O cartão online pode ser ligado pela loja e escolhido pelo cliente, mas sempre falha |
-| R3-009 | Alta | CONFIRMADO | `apps/web/src/app/cadastro-loja/actions.ts:107-139,201-207` | Um cliente que cadastra loja vira lojista sem e-mail nem senha e não consegue entrar no painel (regressão de 6cb5ecb) |
-| R3-010 | Alta | CONFIRMADO | `admin/financeiro/page.tsx:57`, `loja/financeiro/page.tsx:66` | Repasses (`Payout`) nunca são gerados, embora a plataforma receba pelo gateway (antigo R3-004) |
-| R3-011 | Média | FORTE INDÍCIO | `checkout/actions.ts:388-400`, `apps/web/src/lib/checkout.ts:148-153`, `schema.prisma:1671` | Os limites de cupom são checados fora da transação; a unicidade do código não vale para cupom global |
-| R3-012 | Média | CONFIRMADO | `apps/admin/src/app/entregador/actions.ts:51-63` | A ação de aceitar corrida não filtra cidade nem loja (a lista filtra) |
-| R3-013 | Média | CONFIRMADO / HIPÓTESE | `checkout/actions.ts:556-558`, `pedidos/[id]/acompanhamento.tsx:228` | Uma falha ao gerar o Pix é engolida e não existe o "tentar de novo" prometido; em produção com `PAYMENT_PROVIDER=fake`, nenhuma loja sem chave Pix gera QR |
-| R3-014 | Média | CONFIRMADO / HIPÓTESE | `packages/shared/src/env.ts:35,41`, `packages/services/src/providers.ts:55-70,99-117` | O contrato de env aceita provedores sem implementação e permite WhatsApp falso em produção |
-| R3-015 | Média | CONFIRMADO | `packages/services/src/notifications/index.ts:37-52,123-134` | Notificações síncronas dentro das actions, retentativas inúteis e falhas de rede sem registro |
-| R3-016 | Média | CONFIRMADO | `docker-compose.yml:238`, `checkout/actions.ts:484-493` | Redis com `allkeys-lru` e nenhuma varredura de jobs órfãos (reconfirma o antigo R3-013) |
-| R3-017 | Média | CONFIRMADO | `apps/web/src/app/conta/dados/actions.ts:128` | A exclusão de conta não apaga o `addressSnapshot` dos pedidos (`undefined` não faz nada no Prisma) |
-| R3-018 | Média | CONFIRMADO | `apps/web/src/app/entrar/actions.ts:68-118`, `api/auth/otp/*` | Os fluxos de login estão duplicados e já divergem: falta limite por IP e há API morta com superfície ativa |
-| R3-019 | Média | CONFIRMADO | (ausência) `storeStaff.create`; dados locais | Não existe fluxo para criar funcionário da loja; contas antigas sem senha ficam trancadas fora do painel |
-| R3-020 | Média | FORTE INDÍCIO | `apps/admin/src/app/loja/pedidos/separacao.ts:212-214,268-325`, `mercadopago.ts:163-167` | A separação permite estorno parcial duplicado, e o estorno vai sem chave de idempotência |
-| R3-021 | Média | CONFIRMADO | `packages/services/src/payments/mercadopago.ts:57-65`, `messaging/push.ts:25` | Chamadas ao Mercado Pago e ao web-push sem timeout: o checkout pode travar |
-| R3-022 | Média | CONFIRMADO | `admin/entregadores/actions.ts:50`, `admin/entregadores/page.tsx:60` | Documentos de entregador e de loja são aprovados, mas ninguém consegue enviá-los (antigo R3-006) |
-| R3-023 | Baixa | CONFIRMADO | `entregador/actions.ts:205-224` | A localização do entregador está pela metade: ninguém chama a ação nem escuta o evento (antigo R3-003) |
-| R3-024 | Baixa | CONFIRMADO | `apps/admin/src/app/entregador/painel.tsx:133`, `loja/pedidos/actions.ts:474-494` | "Novas corridas aparecem sozinhas" não é verdade: nenhum evento é publicado, e o que salva é um polling acidental |
-| R3-025 | Baixa | CONFIRMADO | `packages/shared/src/constants/index.ts:102,117-119`, `queues.ts:82`, `otp.ts:313` | Código morto: fila `reports`, worker de imagem sem produtor, limpeza de OTP nunca agendada, limites de taxa declarados e não usados |
-| R3-026 | Baixa | CONFIRMADO | `schema.prisma` (enums) | Enums e colunas nunca usados (reconfirma o antigo R3-010, com acréscimos) |
-| R3-027 | Baixa | FORTE INDÍCIO | `packages/auth/src/otp.ts:86-124` | `verifyOtp` checa e depois age: tentativas em paralelo passam de `OTP_MAX_ATTEMPTS` |
-| R3-028 | Baixa | CONFIRMADO | `apps/web/next.config.mjs:22`, `apps/web/src/middleware.ts:26-40`, `packages/auth/src/session.ts:21-22` | Fragilidades da sessão: env embutido no build e lido em runtime, renovação de qualquer cookie, painel sem renovação |
-| R3-029 | Baixa | CONFIRMADO | `checkout/actions.ts:45-64` | O número do pedido (DDMM + 4 dígitos) é único para sempre e o espaço é dividido entre os anos |
+| ID     | Sev.    | Estado                | Onde                                                                                                    | Resumo                                                                                                                                                     |
+| ------ | ------- | --------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| R3-001 | Crítica | CONFIRMADO            | `apps/web/src/app/checkout/actions.ts:450-452`, `apps/admin/src/lib/store-context.ts:33`                | O pedido pago por Pix na chave da loja fica invisível para a loja, sem confirmação manual e sem expiração                                                  |
+| R3-002 | Alta    | CONFIRMADO            | `apps/admin/src/app/loja/pedidos/actions.ts:311-332`, `packages/database/src/cancelamento.ts:19-62`     | O cancelamento de pedido pago online não estorna nem registra o valor devido                                                                               |
+| R3-003 | Alta    | CONFIRMADO            | `apps/web/src/app/api/webhooks/pagamento/route.ts:63-103`                                               | O webhook grava a deduplicação antes de processar: uma falha depois disso perde a confirmação de pagamento para sempre                                     |
+| R3-004 | Alta    | FORTE INDÍCIO         | `apps/worker/src/jobs/order-timeout.ts:30-42`, `route.ts:93`                                            | Corrida entre a expiração do Pix e o webhook, sem nenhuma reconciliação com o gateway                                                                      |
+| R3-005 | Alta    | FORTE INDÍCIO         | `loja/pedidos/actions.ts:145-168`, `entregador/actions.ts:94-146`                                       | Mudanças de status sem concorrência otimista: um pedido cancelado pode virar entregue                                                                      |
+| R3-006 | Alta    | CONFIRMADO            | `apps/worker/src/jobs/plan-billing.ts:22,57-67`, `loja/impulsionar/actions.ts:44-60`                    | A comissão do plano grátis (12%) nunca é faturada; a janela de faturamento e a troca de plano também perdem receita                                        |
+| R3-007 | Alta    | CONFIRMADO            | `loja/impulsionar/actions.ts:108-118`, `admin/financeiro/page.tsx:63-66`                                | O impulsionamento é ativado sem cobrança, o financeiro mostra receita fictícia e as faturas nunca são quitadas                                             |
+| R3-008 | Alta    | CONFIRMADO            | `checkout/actions.ts:73-85,183-192`, `packages/shared/src/schemas/order.ts:88`                          | O cartão online pode ser ligado pela loja e escolhido pelo cliente, mas sempre falha                                                                       |
+| R3-009 | Alta    | CONFIRMADO            | `apps/web/src/app/cadastro-loja/actions.ts:107-139,201-207`                                             | Um cliente que cadastra loja vira lojista sem e-mail nem senha e não consegue entrar no painel (regressão de 6cb5ecb)                                      |
+| R3-010 | Alta    | CONFIRMADO            | `admin/financeiro/page.tsx:57`, `loja/financeiro/page.tsx:66`                                           | Repasses (`Payout`) nunca são gerados, embora a plataforma receba pelo gateway (antigo R3-004)                                                             |
+| R3-011 | Média   | FORTE INDÍCIO         | `checkout/actions.ts:388-400`, `apps/web/src/lib/checkout.ts:148-153`, `schema.prisma:1671`             | Os limites de cupom são checados fora da transação; a unicidade do código não vale para cupom global                                                       |
+| R3-012 | Média   | CONFIRMADO            | `apps/admin/src/app/entregador/actions.ts:51-63`                                                        | A ação de aceitar corrida não filtra cidade nem loja (a lista filtra)                                                                                      |
+| R3-013 | Média   | CONFIRMADO / HIPÓTESE | `checkout/actions.ts:556-558`, `pedidos/[id]/acompanhamento.tsx:228`                                    | Uma falha ao gerar o Pix é engolida e não existe o "tentar de novo" prometido; em produção com `PAYMENT_PROVIDER=fake`, nenhuma loja sem chave Pix gera QR |
+| R3-014 | Média   | CONFIRMADO / HIPÓTESE | `packages/shared/src/env.ts:35,41`, `packages/services/src/providers.ts:55-70,99-117`                   | O contrato de env aceita provedores sem implementação e permite WhatsApp falso em produção                                                                 |
+| R3-015 | Média   | CONFIRMADO            | `packages/services/src/notifications/index.ts:37-52,123-134`                                            | Notificações síncronas dentro das actions, retentativas inúteis e falhas de rede sem registro                                                              |
+| R3-016 | Média   | CONFIRMADO            | `docker-compose.yml:238`, `checkout/actions.ts:484-493`                                                 | Redis com `allkeys-lru` e nenhuma varredura de jobs órfãos (reconfirma o antigo R3-013)                                                                    |
+| R3-017 | Média   | CONFIRMADO            | `apps/web/src/app/conta/dados/actions.ts:128`                                                           | A exclusão de conta não apaga o `addressSnapshot` dos pedidos (`undefined` não faz nada no Prisma)                                                         |
+| R3-018 | Média   | CONFIRMADO            | `apps/web/src/app/entrar/actions.ts:68-118`, `api/auth/otp/*`                                           | Os fluxos de login estão duplicados e já divergem: falta limite por IP e há API morta com superfície ativa                                                 |
+| R3-019 | Média   | CONFIRMADO            | (ausência) `storeStaff.create`; dados locais                                                            | Não existe fluxo para criar funcionário da loja; contas antigas sem senha ficam trancadas fora do painel                                                   |
+| R3-020 | Média   | FORTE INDÍCIO         | `apps/admin/src/app/loja/pedidos/separacao.ts:212-214,268-325`, `mercadopago.ts:163-167`                | A separação permite estorno parcial duplicado, e o estorno vai sem chave de idempotência                                                                   |
+| R3-021 | Média   | CONFIRMADO            | `packages/services/src/payments/mercadopago.ts:57-65`, `messaging/push.ts:25`                           | Chamadas ao Mercado Pago e ao web-push sem timeout: o checkout pode travar                                                                                 |
+| R3-022 | Média   | CONFIRMADO            | `admin/entregadores/actions.ts:50`, `admin/entregadores/page.tsx:60`                                    | Documentos de entregador e de loja são aprovados, mas ninguém consegue enviá-los (antigo R3-006)                                                           |
+| R3-023 | Baixa   | CONFIRMADO            | `entregador/actions.ts:205-224`                                                                         | A localização do entregador está pela metade: ninguém chama a ação nem escuta o evento (antigo R3-003)                                                     |
+| R3-024 | Baixa   | CONFIRMADO            | `apps/admin/src/app/entregador/painel.tsx:133`, `loja/pedidos/actions.ts:474-494`                       | "Novas corridas aparecem sozinhas" não é verdade: nenhum evento é publicado, e o que salva é um polling acidental                                          |
+| R3-025 | Baixa   | CONFIRMADO            | `packages/shared/src/constants/index.ts:102,117-119`, `queues.ts:82`, `otp.ts:313`                      | Código morto: fila `reports`, worker de imagem sem produtor, limpeza de OTP nunca agendada, limites de taxa declarados e não usados                        |
+| R3-026 | Baixa   | CONFIRMADO            | `schema.prisma` (enums)                                                                                 | Enums e colunas nunca usados (reconfirma o antigo R3-010, com acréscimos)                                                                                  |
+| R3-027 | Baixa   | FORTE INDÍCIO         | `packages/auth/src/otp.ts:86-124`                                                                       | `verifyOtp` checa e depois age: tentativas em paralelo passam de `OTP_MAX_ATTEMPTS`                                                                        |
+| R3-028 | Baixa   | CONFIRMADO            | `apps/web/next.config.mjs:22`, `apps/web/src/middleware.ts:26-40`, `packages/auth/src/session.ts:21-22` | Fragilidades da sessão: env embutido no build e lido em runtime, renovação de qualquer cookie, painel sem renovação                                        |
+| R3-029 | Baixa   | CONFIRMADO            | `checkout/actions.ts:45-64`                                                                             | O número do pedido (DDMM + 4 dígitos) é único para sempre e o espaço é dividido entre os anos                                                              |
 
 Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 
@@ -59,6 +60,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 ## Achados
 
 ### R3-001 — O pedido pago por Pix na chave da loja fica invisível e preso para sempre
+
 - **Categoria:** funcionalidade fantasma / fluxo de pagamento.
 - **Severidade:** Crítica. O cliente paga e a loja nunca recebe o pedido. Basta o lojista preencher a chave Pix em Configurações para isso acontecer.
 - **Estado:** CONFIRMADO (leitura de código, sem execução em runtime).
@@ -86,6 +88,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** um pedido Pix com `pixKey` aparece na loja; "Recebi o Pix" muda pagamento e status em uma única transação; sem confirmação, o pedido expira e devolve estoque e cupom.
 
 ### R3-002 — O cancelamento de pedido pago online não estorna
+
 - **Categoria:** pagamentos / consistência financeira.
 - **Severidade:** Alta. O dinheiro do cliente fica com a plataforma e nada registra o valor a devolver.
 - **Estado:** CONFIRMADO.
@@ -101,6 +104,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** cancelar um pedido `PAID` com o gateway fake → `refund` chamado uma vez, `Payment.status=REFUNDED`. Com o gateway falhando → estado "estorno pendente", visível no admin.
 
 ### R3-003 — O webhook deduplica antes de processar e engole qualquer erro como "duplicado"
+
 - **Categoria:** idempotência / integração de pagamentos.
 - **Severidade:** Alta. Uma confirmação de pagamento pode se perder de forma definitiva.
 - **Estado:** CONFIRMADO.
@@ -113,6 +117,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** com falha injetada no update, o reenvio do mesmo evento processa normalmente; um evento duplicado de verdade devolve `duplicate: true` sem efeito.
 
 ### R3-004 — Corrida entre a expiração do Pix e o webhook, sem reconciliação
+
 - **Categoria:** concorrência / reconciliação.
 - **Severidade:** Alta. Um pedido pago pode ser cancelado, e nada percebe.
 - **Estado:**
@@ -137,6 +142,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** um teste de integração com as duas ordens de chegada termina em "pedido RECEIVED" ou em "CANCELLED + estorno", nunca em "CANCELLED + PAID".
 
 ### R3-005 — Trocas de status sem concorrência otimista em cinco caminhos
+
 - **Categoria:** transações / arquitetura.
 - **Severidade:** Alta. Pode ressuscitar um pedido cancelado (já com estoque e cupom devolvidos) e duplicar a contagem do entregador.
 - **Estado:** FORTE INDÍCIO (o código prova a janela; não rodei carga concorrente).
@@ -156,6 +162,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** um teste concorrente com `Promise.all` de cancelar e entregar termina num único estado final válido, com `deliveryCount` igual a 1.
 
 ### R3-006 — A comissão do plano grátis nunca é faturada e a janela perde pedidos
+
 - **Categoria:** consistência financeira / job.
 - **Severidade:** Alta. A principal receita do plano de entrada (12% de comissão) é zero.
 - **Estado:** CONFIRMADO (código e dados do seed local).
@@ -178,6 +185,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** uma loja no plano grátis com R$ 100 entregues no período recebe fatura de R$ 12; um pedido entregue após o fechamento entra no período seguinte; trocar de plano não reabre o trial.
 
 ### R3-007 — Impulsionamento sem cobrança, receita fictícia e faturas sem quitação
+
 - **Categoria:** funcionalidade fantasma / financeiro.
 - **Severidade:** Alta. Um produto pago é entregue de graça e o painel financeiro mostra receita que não existe.
 - **Estado:** CONFIRMADO.
@@ -192,6 +200,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** contratar um boost gera uma cobrança pendente; o financeiro só soma o que foi quitado; uma fatura vencida passa a `OVERDUE`.
 
 ### R3-008 — O cartão online é oferecido, mas sempre falha
+
 - **Categoria:** funcionalidade fantasma.
 - **Severidade:** Alta. Uma forma de pagamento visível ao cliente não funciona em nenhum caso.
 - **Estado:** CONFIRMADO.
@@ -209,6 +218,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** com a opção desativada no produto, o checkout não a mostra; implementada, o e2e com o gateway fake fecha o pedido como `PAID`.
 
 ### R3-009 — Um cliente que cadastra loja não consegue entrar no painel (regressão do login por senha)
+
 - **Categoria:** regressão / login.
 - **Severidade:** Alta. Bloqueia a entrada de novos lojistas que já usavam o app, um caso comum em cidade pequena.
 - **Estado:** CONFIRMADO.
@@ -225,6 +235,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** e2e "cliente existente cadastra loja e entra no painel com a senha escolhida".
 
 ### R3-010 — Repasses nunca gerados, embora a plataforma receba pelo gateway (antigo R3-004)
+
 - **Categoria:** funcionalidade fantasma / financeiro.
 - **Severidade:** Alta (era S2). Todas as 12 lojas locais aceitam Pix **sem** chave Pix, então todo Pix passa pelo gateway da plataforma (`checkout/actions.ts:519,538`) e nenhum registro diz quanto é devido à loja.
 - **Estado:** CONFIRMADO.
@@ -241,6 +252,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** um pedido Pix pelo gateway entregue gera um `Payout` de `total − comissão`; a fatura mensal não cobra a comissão de novo.
 
 ### R3-011 — Cupom: limites checados fora da transação e unicidade furada no cupom global
+
 - **Categoria:** concorrência / restrição de dados.
 - **Severidade:** Média. Uma campanha limitada pode estourar o orçamento; o mesmo cliente pode usar mais de uma vez.
 - **Estado:**
@@ -260,6 +272,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** 10 checkouts concorrentes com `usageLimit = 3` → exatamente 3 resgates.
 
 ### R3-012 — Aceitar corrida não confere cidade nem loja do entregador
+
 - **Categoria:** autorização inconsistente.
 - **Severidade:** Média. Um entregador de outra cidade, ou de uma loja, pega a corrida da frota da plataforma conhecendo o id.
 - **Estado:** CONFIRMADO.
@@ -271,6 +284,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** um entregador de outra cidade recebe "corrida não encontrada".
 
 ### R3-013 — Falha do Pix engolida, sem "tentar de novo"; risco de gateway falso em produção
+
 - **Categoria:** tratamento de erro / integração.
 - **Severidade:** Média. O cliente fica com um pedido sem QR, que expira em 35 minutos.
 - **Estado:**
@@ -288,6 +302,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** com o gateway falhando, a tela mostra "Tentar de novo"; com ele de volta, o QR aparece.
 
 ### R3-014 — Contrato de env aceita provedores inexistentes e WhatsApp falso em produção
+
 - **Categoria:** contrato de configuração.
 - **Severidade:** Média.
 - **Estado:**
@@ -309,6 +324,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** um teste unitário de `parseServerEnv` recusa as combinações.
 
 ### R3-015 — Notificações síncronas, retentativas inúteis e falhas sem registro
+
 - **Categoria:** integração / desempenho / observabilidade.
 - **Severidade:** Média.
 - **Estado:** CONFIRMADO.
@@ -326,6 +342,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** com o provedor fora, a action responde em menos de 500 ms, o log mostra `FAILED` e o job tenta 3 vezes.
 
 ### R3-016 — Redis com `allkeys-lru` e nenhuma varredura de jobs órfãos (reconfirma o antigo R3-013)
+
 - **Categoria:** jobs / infraestrutura de dados.
 - **Severidade:** Média.
 - **Estado:** CONFIRMADO (configuração local e compose).
@@ -340,6 +357,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** `config get` → `noeviction`; um pedido `PENDING_PAYMENT` sem job é cancelado pela varredura.
 
 ### R3-017 — A exclusão de conta não apaga o snapshot do endereço
+
 - **Categoria:** dados / LGPD.
 - **Severidade:** Média. Dado pessoal (endereço completo) continua nos pedidos depois da "exclusão".
 - **Estado:** CONFIRMADO (semântica documentada do Prisma: `undefined` significa "não alterar").
@@ -351,6 +369,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** um teste de integração exclui a conta e confere `addressSnapshot IS NULL`.
 
 ### R3-018 — Fluxos de login duplicados e já divergentes
+
 - **Categoria:** duplicação / regressão arquitetural (commits 7cada39 e 6cb5ecb).
 - **Severidade:** Média. A divergência abre bombeamento de SMS pago (a marca de user-agent é trivial de forjar).
 - **Estado:** CONFIRMADO.
@@ -367,6 +386,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** um teste unitário do caso de uso aplica os dois limites; `grep` não encontra lógica de OTP fora de `packages/auth`.
 
 ### R3-019 — Funcionário da loja sem fluxo de criação; contas antigas trancadas
+
 - **Categoria:** funcionalidade fantasma / regressão de login.
 - **Severidade:** Média.
 - **Estado:** CONFIRMADO.
@@ -382,6 +402,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** o dono convida um funcionário, que entra com a senha provisória e é obrigado a trocá-la.
 
 ### R3-020 — Separação: estorno parcial duplicável e refund sem idempotência
+
 - **Categoria:** concorrência / pagamentos.
 - **Severidade:** Média.
 - **Estado:** FORTE INDÍCIO.
@@ -396,6 +417,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** um teste concorrente faz um único refund.
 
 ### R3-021 — Integrações sem timeout
+
 - **Categoria:** integração / resiliência.
 - **Severidade:** Média. O checkout espera o gateway sem limite.
 - **Estado:** CONFIRMADO.
@@ -410,6 +432,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** um teste unitário com `fetch` pendurado rejeita em até 10 s.
 
 ### R3-022 — Documentos aprovados que ninguém envia (antigo R3-006)
+
 - **Categoria:** funcionalidade fantasma.
 - **Severidade:** Média.
 - **Estado:** CONFIRMADO.
@@ -425,6 +448,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** um cadastro de entregador com foto da CNH aparece na aprovação.
 
 ### R3-023 — Localização do entregador pela metade (antigo R3-003)
+
 - **Categoria:** funcionalidade fantasma / código morto.
 - **Severidade:** Baixa. Nada promete o recurso na tela.
 - **Estado:** CONFIRMADO.
@@ -438,6 +462,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** `grep` sem ocorrências, ou e2e com mapa.
 
 ### R3-024 — "Novas corridas aparecem sozinhas" sem evento publicado
+
 - **Categoria:** consistência entre realtime e banco.
 - **Severidade:** Baixa.
 - **Estado:** CONFIRMADO.
@@ -453,6 +478,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** um entregador conectado recebe o evento em menos de 2 s ao pedido ficar pronto.
 
 ### R3-025 — Código morto e contratos declarados sem uso
+
 - **Categoria:** código morto.
 - **Severidade:** Baixa.
 - **Estado:** CONFIRMADO.
@@ -469,6 +495,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** `upsertJobScheduler('limpeza-auth')` registrado; `grep` sem símbolos órfãos.
 
 ### R3-026 — Enums e colunas nunca usados (reconfirma o antigo R3-010)
+
 - **Categoria:** modelo de dados.
 - **Severidade:** Baixa.
 - **Estado:** CONFIRMADO (script `enums.mjs` e `grep` direcionado).
@@ -490,6 +517,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** o script não lista valores sem decisão registrada.
 
 ### R3-027 — `verifyOtp` checa e depois age
+
 - **Categoria:** concorrência / autenticação.
 - **Severidade:** Baixa. O código de 6 dígitos e o limite por IP reduzem muito o risco.
 - **Estado:** FORTE INDÍCIO.
@@ -500,6 +528,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** 20 tentativas paralelas → no máximo 5 comparações.
 
 ### R3-028 — Fragilidades da sessão introduzidas no login novo
+
 - **Categoria:** configuração / login (6cb5ecb).
 - **Severidade:** Baixa.
 - **Estado:** CONFIRMADO.
@@ -523,6 +552,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 - **Teste de aceite:** um teste de `env.ts` recusa `RAPIDINHO_SESSAO_DIAS=abc`; o painel continua com 30 dias mesmo com a variável no `.env`.
 
 ### R3-029 — Espaço do número de pedido dividido entre os anos
+
 - **Categoria:** modelo de dados.
 - **Severidade:** Baixa.
 - **Estado:** CONFIRMADO.
@@ -562,26 +592,26 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 
 ## O que foi testado (comandos)
 
-| Teste | Comando | Resultado |
-|---|---|---|
-| Drift | `npx prisma migrate status` e `npx prisma migrate diff --from-url … --to-schema-datamodel …` (em `packages/database`) | sem drift |
-| Migrations aplicadas | `docker exec rapidinho-postgres psql -U rapidinho -d rapidinho -At -c "select migration_name, finished_at is not null … from _prisma_migrations"` | 11 OK |
-| Índices de busca e de tabelas | consultas a `pg_indexes` | presentes |
-| Unicidade de cupom | `select indexdef from pg_indexes where tablename='coupons'` | `UNIQUE (code,"storeId")` sem `NULLS NOT DISTINCT` |
-| Tipos de coluna | `information_schema.columns` | só lat/lon em ponto flutuante |
-| FKs | `pg_constraint` | RESTRICT para loja e cidade |
-| Planos | `select slug,"monthlyPriceCents","commissionRate" from plans` | `gratis|0|12.00` (R3-006) |
-| Lojas com Pix sem chave | `select count(*) filter (…) from stores` | `12|12` (R3-010) |
-| Tabelas de funcionalidades fantasma | contagem de `payouts`, `courier_documents`, `store_documents`, `couriers.latitude` | 0 / 0 / 0 / `2|0` |
-| Usuários sem senha | `select role,count(*),count(email),count("passwordHash") from users group by role` | ver R3-019 |
-| OTP vencidos | contagem de `otp_codes` | 44 / 21 |
-| Política do Redis | `docker exec rapidinho-redis redis-cli config get maxmemory-policy` | `allkeys-lru` |
-| Filas BullMQ | `redis-cli --scan --pattern 'bull:*'` | sem `reports` |
-| Cookie de sessão no site | `curl … -H "Cookie: authjs.session-token=teste123" http://localhost:3200/privacidade` | renovado por 400 dias |
-| Cookie de sessão no painel | mesma chamada em `http://localhost:3201/entrar` | não renovado |
-| Guards | `node scratchpad/r3/guards.mjs apps/admin/src` e `apps/web/src` | ver acima |
-| Enums | `node scratchpad/r3/enums.mjs <repo>` | ver R3-026 |
-| Testes unitários | `pnpm exec vitest run` em `packages/services` e `packages/shared` | 24 + 166 passaram |
+| Teste                               | Comando                                                                                                                                           | Resultado                                          |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| Drift                               | `npx prisma migrate status` e `npx prisma migrate diff --from-url … --to-schema-datamodel …` (em `packages/database`)                             | sem drift                                          |
+| Migrations aplicadas                | `docker exec rapidinho-postgres psql -U rapidinho -d rapidinho -At -c "select migration_name, finished_at is not null … from _prisma_migrations"` | 11 OK                                              |
+| Índices de busca e de tabelas       | consultas a `pg_indexes`                                                                                                                          | presentes                                          |
+| Unicidade de cupom                  | `select indexdef from pg_indexes where tablename='coupons'`                                                                                       | `UNIQUE (code,"storeId")` sem `NULLS NOT DISTINCT` |
+| Tipos de coluna                     | `information_schema.columns`                                                                                                                      | só lat/lon em ponto flutuante                      |
+| FKs                                 | `pg_constraint`                                                                                                                                   | RESTRICT para loja e cidade                        |
+| Planos                              | `select slug,"monthlyPriceCents","commissionRate" from plans`                                                                                     | `gratis                                            | 0            | 12.00` (R3-006) |
+| Lojas com Pix sem chave             | `select count(*) filter (…) from stores`                                                                                                          | `12                                                | 12` (R3-010) |
+| Tabelas de funcionalidades fantasma | contagem de `payouts`, `courier_documents`, `store_documents`, `couriers.latitude`                                                                | 0 / 0 / 0 / `2                                     | 0`           |
+| Usuários sem senha                  | `select role,count(*),count(email),count("passwordHash") from users group by role`                                                                | ver R3-019                                         |
+| OTP vencidos                        | contagem de `otp_codes`                                                                                                                           | 44 / 21                                            |
+| Política do Redis                   | `docker exec rapidinho-redis redis-cli config get maxmemory-policy`                                                                               | `allkeys-lru`                                      |
+| Filas BullMQ                        | `redis-cli --scan --pattern 'bull:*'`                                                                                                             | sem `reports`                                      |
+| Cookie de sessão no site            | `curl … -H "Cookie: authjs.session-token=teste123" http://localhost:3200/privacidade`                                                             | renovado por 400 dias                              |
+| Cookie de sessão no painel          | mesma chamada em `http://localhost:3201/entrar`                                                                                                   | não renovado                                       |
+| Guards                              | `node scratchpad/r3/guards.mjs apps/admin/src` e `apps/web/src`                                                                                   | ver acima                                          |
+| Enums                               | `node scratchpad/r3/enums.mjs <repo>`                                                                                                             | ver R3-026                                         |
+| Testes unitários                    | `pnpm exec vitest run` em `packages/services` e `packages/shared`                                                                                 | 24 + 166 passaram                                  |
 
 ## O que não foi testado e limitações
 
@@ -596,6 +626,7 @@ Contagem: 1 Crítica, 9 Altas, 12 Médias, 7 Baixas.
 **Reprovado para operação com pagamento online e para faturamento, até correção das Críticas e Altas.**
 
 A base é boa:
+
 - schema e migrations sem drift;
 - dinheiro em centavos e integridade referencial correta;
 - guards coerentes em todas as actions;
@@ -605,17 +636,20 @@ A base é boa:
 O problema está no **dinheiro em trânsito e no ciclo de vida do pedido**. Não há uma máquina de estados única com transição condicional (R3-005); o webhook não é transacional (R3-003); não há reconciliação nem estorno (R3-002, R3-004). Por isso pedidos pagos podem sumir, ser cancelados sem devolução ou ressuscitar.
 
 Três fluxos financeiros prometidos não funcionam:
+
 - Pix na chave da loja (R3-001);
 - cartão online (R3-008);
 - repasse (R3-010).
 
 E a receita da plataforma escapa:
+
 - a comissão do plano grátis nunca é faturada (R3-006);
 - o impulsionamento é ativado sem cobrança (R3-007).
 
 O login novo cumpre a regra do dono, mas deixou duas regressões operacionais: um cliente que vira lojista não consegue entrar (R3-009), e não há como criar funcionário (R3-019). Os fluxos de OTP também ficaram triplicados, e as cópias já divergem (R3-018).
 
 Ordem sugerida de correção:
+
 1. R3-001, R3-003, R3-005 (serviço único de transição) e R3-002/R3-004.
 2. R3-006, R3-007, R3-008 (esconder a opção) e R3-009.
 3. R3-010 (decisão de modelo), R3-016 e R3-015.

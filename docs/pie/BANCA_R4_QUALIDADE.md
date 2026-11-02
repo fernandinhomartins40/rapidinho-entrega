@@ -46,15 +46,15 @@ O que foi **verificado em runtime** e funciona:
 
 ## 2. Verificações existentes (executadas)
 
-| Comando | Duração | Resultado |
-|---|---|---|
-| `pnpm typecheck` | 177 s | **OK.** 9/9 tarefas turbo (1 em cache) |
-| `pnpm lint` | 42 s | **OK.** 9/9 tarefas, nenhum aviso no log |
-| `pnpm test` | 25 s | **OK.** `@rapidinho/shared`: 13 arquivos, **166 passaram**, 0 falharam. `@rapidinho/services`: 4 arquivos, **24 passaram**, 0 falharam. `@rapidinho/auth`, `@rapidinho/admin` e `@rapidinho/web`: **nenhum arquivo de teste** (o vitest passa vazio). Total: **190/190** |
-| `pnpm format:check` | 160 s | **FALHOU.** "Code style issues found in 388 files". Causa: fim de linha. `git config core.autocrlf` = `true`, e o Prettier usa `lf` por padrão. `npx prettier --check --end-of-line auto "apps/**/*.{ts,tsx}" "packages/**/*.{ts,tsx}"` → "All matched files use Prettier code style!". É artefato do checkout no Windows, não problema do código (ver R4-012) |
-| `pnpm --filter @rapidinho/worker build` | 5 s | **OK.** `dist/main.js` 2186 kB e `dist/saude.js` |
-| `pnpm --filter @rapidinho/realtime build` | 4 s | **OK.** `dist/server.js` 900 kB |
-| `next build` (web e admin) | — | **NÃO EXECUTADO** de propósito: escreve em `.next`, o mesmo diretório dos servidores dev das portas 3200/3201 |
+| Comando                                   | Duração | Resultado                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm typecheck`                          | 177 s   | **OK.** 9/9 tarefas turbo (1 em cache)                                                                                                                                                                                                                                                                                                                         |
+| `pnpm lint`                               | 42 s    | **OK.** 9/9 tarefas, nenhum aviso no log                                                                                                                                                                                                                                                                                                                       |
+| `pnpm test`                               | 25 s    | **OK.** `@rapidinho/shared`: 13 arquivos, **166 passaram**, 0 falharam. `@rapidinho/services`: 4 arquivos, **24 passaram**, 0 falharam. `@rapidinho/auth`, `@rapidinho/admin` e `@rapidinho/web`: **nenhum arquivo de teste** (o vitest passa vazio). Total: **190/190**                                                                                       |
+| `pnpm format:check`                       | 160 s   | **FALHOU.** "Code style issues found in 388 files". Causa: fim de linha. `git config core.autocrlf` = `true`, e o Prettier usa `lf` por padrão. `npx prettier --check --end-of-line auto "apps/**/*.{ts,tsx}" "packages/**/*.{ts,tsx}"` → "All matched files use Prettier code style!". É artefato do checkout no Windows, não problema do código (ver R4-012) |
+| `pnpm --filter @rapidinho/worker build`   | 5 s     | **OK.** `dist/main.js` 2186 kB e `dist/saude.js`                                                                                                                                                                                                                                                                                                               |
+| `pnpm --filter @rapidinho/realtime build` | 4 s     | **OK.** `dist/server.js` 900 kB                                                                                                                                                                                                                                                                                                                                |
+| `next build` (web e admin)                | —       | **NÃO EXECUTADO** de propósito: escreve em `.next`, o mesmo diretório dos servidores dev das portas 3200/3201                                                                                                                                                                                                                                                  |
 
 Logs: `scratchpad/r4/{typecheck,lint,test,format:check,build-worker,build-realtime}.log`.
 
@@ -64,13 +64,13 @@ Logs: `scratchpad/r4/{typecheck,lint,test,format:check,build-worker,build-realti
 
 **Edge:** `chromium.launch` aceita `E2E_CHROMIUM_PATH`, tanto no global setup quanto no projeto `celular`. Usei `E2E_CHROMIUM_PATH="C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe"`.
 
-| # | Comando | Duração | Resultado |
-|---|---|---|---|
-| 1 | `E2E_BASE_URL=http://localhost:3200 E2E_ADMIN_URL=http://localhost:3201 E2E_CHROMIUM_PATH=…msedge.exe pnpm exec playwright test --output scratchpad/r4/e2e-results` | 61 s | **0 testes.** Global setup: `page.goto: Timeout 30000ms exceeded … /entrar` (primeira compilação dev) |
-| 2 | o mesmo, depois de aquecer as rotas com curl | 79 s | **0 testes.** Global setup: `page.waitForURL: Timeout 20000ms exceeded` em `apoio.ts:76` (login do cliente por OTP) |
-| 3 | o mesmo | 119 s | **0 testes.** Global setup: `waitForURL` 20 s em `apoio.ts:49` (login do painel com senha; o log do painel mostra `POST /entrar 303 in 31561ms`) |
-| 4 | `pnpm exec playwright test --config scratchpad/r4/playwright.r4.config.ts` (proposta: estende a do repo, global setup com esperas de 120 s e timeout de 180 s por teste) | 24,6 min | **12 passaram, 4 falharam.** Falharam `pedido.spec.ts:43`, `pedido.spec.ts:137`, `produto.spec.ts:16` e `produto.spec.ts:31`, todos com `page.goto: Timeout 120000ms exceeded` (`/palmital-pr`, `/carrinho`, `/loja/produtos`) |
-| 5 | config proposta, só `pedido produto` | 329 s | **0 testes.** Global setup: `waitForURL` 120 s no login do cliente |
+| #   | Comando                                                                                                                                                                  | Duração  | Resultado                                                                                                                                                                                                                      |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `E2E_BASE_URL=http://localhost:3200 E2E_ADMIN_URL=http://localhost:3201 E2E_CHROMIUM_PATH=…msedge.exe pnpm exec playwright test --output scratchpad/r4/e2e-results`      | 61 s     | **0 testes.** Global setup: `page.goto: Timeout 30000ms exceeded … /entrar` (primeira compilação dev)                                                                                                                          |
+| 2   | o mesmo, depois de aquecer as rotas com curl                                                                                                                             | 79 s     | **0 testes.** Global setup: `page.waitForURL: Timeout 20000ms exceeded` em `apoio.ts:76` (login do cliente por OTP)                                                                                                            |
+| 3   | o mesmo                                                                                                                                                                  | 119 s    | **0 testes.** Global setup: `waitForURL` 20 s em `apoio.ts:49` (login do painel com senha; o log do painel mostra `POST /entrar 303 in 31561ms`)                                                                               |
+| 4   | `pnpm exec playwright test --config scratchpad/r4/playwright.r4.config.ts` (proposta: estende a do repo, global setup com esperas de 120 s e timeout de 180 s por teste) | 24,6 min | **12 passaram, 4 falharam.** Falharam `pedido.spec.ts:43`, `pedido.spec.ts:137`, `produto.spec.ts:16` e `produto.spec.ts:31`, todos com `page.goto: Timeout 120000ms exceeded` (`/palmital-pr`, `/carrinho`, `/loja/produtos`) |
+| 5   | config proposta, só `pedido produto`                                                                                                                                     | 329 s    | **0 testes.** Global setup: `waitForURL` 120 s no login do cliente                                                                                                                                                             |
 
 Passaram na execução 4:
 
@@ -87,33 +87,33 @@ As quatro falhas são de **tempo de resposta do servidor dev**, não de asserç�
 
 Roteiro: `node scratchpad/r4/regressao.mjs <passo>` (Edge, `channel: 'msedge'`, contextos separados por papel).
 
-| ID | O que prova | Resultado | Evidência (sanitizada) |
-|---|---|---|---|
-| RT01 | Fora do app, `/entrar` mostra o convite | **PASSOU** | `h1="Entre pelo app Rapidinho"`, 1 link para `/baixar/rapidinho.apk`, campo telefone = 0 |
-| RT02 | `POST /api/auth/otp/request` sem a marca do app | **PASSOU** | `403 {"error":"Para entrar, use o app Rapidinho no celular."}` |
-| RT03 | APK servido | **PASSOU** | `200 application/vnd.android.package-archive`, 101135 bytes |
-| RT04 | No app, login do cliente por código (console) | **PASSOU** | Telefone de teste `(44) 97000-0002`, código lido de `data-testid=codigo-dev`, redirecionou para `/`, 1 sessão no banco |
-| RT05 | Painel: lojista entra com senha | **PASSOU** | Destino final `/loja`. Na primeira tentativa a navegação do cliente parou em `/` por 90 s; recarregar levou a `/loja` |
-| RT06 | Painel: super admin entra com senha | **PASSOU** | Destino `/admin` |
-| RT07 | Senha errada | **PASSOU** | "E-mail ou senha incorretos." |
-| RT08 | Papel sem senha (CUSTOMER com hash scrypt válido e e-mail) | **PASSOU** | Recusado com a mesma mensagem genérica |
-| RT09 | Painel fora do app não oferece telefone | **PASSOU** | campo telefone = 0, campo e-mail = 1 |
-| RT10 | Entregador inexistente, no app | **PASSOU** | "Este número não é de entregador cadastrado…" |
-| RT11 | Entregador com usuário `BLOCKED`, no app | **PASSOU** | Mesma mensagem |
-| RT12 | Entregador `PENDING_APPROVAL` (usuário ACTIVE), no app | **FALHOU** (R4-002) | `otp_codes` criados = **1**: o SMS seria pago. A tela não avançou porque o `logger.warn` do provedor console estourou (R4-005) |
-| RT24 | Funcionário com senha e sem loja | **FALHOU** (R4-007) | `{"ok":true,"url":"/cadastro"}`, página "404 This page could not be found." `GET /cadastro` → 404 |
-| RT13 | Super admin gera senha provisória para `r4test_lojista` | **PASSOU** | "Senha provisória de Lojista R4: ********** — anote e envie agora…" Audit `user.password_changed` gravado. Captura: `scratchpad/r4/provisoria.png` (só um usuário fictício local) |
-| RT14 | Login com a provisória | **PASSOU** | Destino `/loja`, 1 sessão |
-| RT15 | Nova provisória revoga sessões | **PASSOU** | Sessões depois de gerar = 0. O contexto antigo foi mandado para `/entrar` |
-| RT16 | Provisória antiga deixa de valer | **PASSOU** | "E-mail ou senha incorretos." |
-| RT17 | `/loja/senha` troca a senha | **PASSOU** | Alerta "Senha trocada" |
-| RT18 | A troca de senha encerra as outras sessões | **FALHOU** (R4-009) | Sessões antes = 2, depois = 2. O outro aparelho continuou em `/loja` |
-| RT19 | A nova senha vale e a antiga não | **PASSOU** | nova → `/loja`; antiga → recusada |
-| RT20 | `/loja/senha` com a senha atual errada | **PASSOU** | "Senha atual incorreta" exibida |
-| RT21 | Provisória para cliente | **PASSOU** | O botão "Gerar senha provisória" não aparece para CUSTOMER. A action chamada direto não foi testada (a guarda `PAPEIS_COM_SENHA` existe no servidor) |
-| RT22 | Busca de usuários sem filtro efetivo | **FALHOU** (R4-006) | `/admin/usuarios?busca=lojista%40r4.teste` mostrou **32 linhas**, para 1 usuário com esse e-mail (`provisoria-diag.mjs`) |
-| RT23 | `/entrar?destino=https://example.com/golpe` com sessão de cliente | **FALHOU** (R4-008) | `status=307 location=https://example.com/golpe` |
-| RT25 | Action do site: 10 números distintos no mesmo contexto/IP | **FALHOU** (R4-003) | 10/10 aceitos, nenhum "Muitas tentativas", **10 `otp_codes` gravados** (com o provedor sms seriam 10 SMS pagos) |
+| ID   | O que prova                                                       | Resultado           | Evidência (sanitizada)                                                                                                                                                            |
+| ---- | ----------------------------------------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| RT01 | Fora do app, `/entrar` mostra o convite                           | **PASSOU**          | `h1="Entre pelo app Rapidinho"`, 1 link para `/baixar/rapidinho.apk`, campo telefone = 0                                                                                          |
+| RT02 | `POST /api/auth/otp/request` sem a marca do app                   | **PASSOU**          | `403 {"error":"Para entrar, use o app Rapidinho no celular."}`                                                                                                                    |
+| RT03 | APK servido                                                       | **PASSOU**          | `200 application/vnd.android.package-archive`, 101135 bytes                                                                                                                       |
+| RT04 | No app, login do cliente por código (console)                     | **PASSOU**          | Telefone de teste `(44) 97000-0002`, código lido de `data-testid=codigo-dev`, redirecionou para `/`, 1 sessão no banco                                                            |
+| RT05 | Painel: lojista entra com senha                                   | **PASSOU**          | Destino final `/loja`. Na primeira tentativa a navegação do cliente parou em `/` por 90 s; recarregar levou a `/loja`                                                             |
+| RT06 | Painel: super admin entra com senha                               | **PASSOU**          | Destino `/admin`                                                                                                                                                                  |
+| RT07 | Senha errada                                                      | **PASSOU**          | "E-mail ou senha incorretos."                                                                                                                                                     |
+| RT08 | Papel sem senha (CUSTOMER com hash scrypt válido e e-mail)        | **PASSOU**          | Recusado com a mesma mensagem genérica                                                                                                                                            |
+| RT09 | Painel fora do app não oferece telefone                           | **PASSOU**          | campo telefone = 0, campo e-mail = 1                                                                                                                                              |
+| RT10 | Entregador inexistente, no app                                    | **PASSOU**          | "Este número não é de entregador cadastrado…"                                                                                                                                     |
+| RT11 | Entregador com usuário `BLOCKED`, no app                          | **PASSOU**          | Mesma mensagem                                                                                                                                                                    |
+| RT12 | Entregador `PENDING_APPROVAL` (usuário ACTIVE), no app            | **FALHOU** (R4-002) | `otp_codes` criados = **1**: o SMS seria pago. A tela não avançou porque o `logger.warn` do provedor console estourou (R4-005)                                                    |
+| RT24 | Funcionário com senha e sem loja                                  | **FALHOU** (R4-007) | `{"ok":true,"url":"/cadastro"}`, página "404 This page could not be found." `GET /cadastro` → 404                                                                                 |
+| RT13 | Super admin gera senha provisória para `r4test_lojista`           | **PASSOU**          | "Senha provisória de Lojista R4: ********** — anote e envie agora…" Audit `user.password_changed` gravado. Captura: `scratchpad/r4/provisoria.png` (só um usuário fictício local) |
+| RT14 | Login com a provisória                                            | **PASSOU**          | Destino `/loja`, 1 sessão                                                                                                                                                         |
+| RT15 | Nova provisória revoga sessões                                    | **PASSOU**          | Sessões depois de gerar = 0. O contexto antigo foi mandado para `/entrar`                                                                                                         |
+| RT16 | Provisória antiga deixa de valer                                  | **PASSOU**          | "E-mail ou senha incorretos."                                                                                                                                                     |
+| RT17 | `/loja/senha` troca a senha                                       | **PASSOU**          | Alerta "Senha trocada"                                                                                                                                                            |
+| RT18 | A troca de senha encerra as outras sessões                        | **FALHOU** (R4-009) | Sessões antes = 2, depois = 2. O outro aparelho continuou em `/loja`                                                                                                              |
+| RT19 | A nova senha vale e a antiga não                                  | **PASSOU**          | nova → `/loja`; antiga → recusada                                                                                                                                                 |
+| RT20 | `/loja/senha` com a senha atual errada                            | **PASSOU**          | "Senha atual incorreta" exibida                                                                                                                                                   |
+| RT21 | Provisória para cliente                                           | **PASSOU**          | O botão "Gerar senha provisória" não aparece para CUSTOMER. A action chamada direto não foi testada (a guarda `PAPEIS_COM_SENHA` existe no servidor)                              |
+| RT22 | Busca de usuários sem filtro efetivo                              | **FALHOU** (R4-006) | `/admin/usuarios?busca=lojista%40r4.teste` mostrou **32 linhas**, para 1 usuário com esse e-mail (`provisoria-diag.mjs`)                                                          |
+| RT23 | `/entrar?destino=https://example.com/golpe` com sessão de cliente | **FALHOU** (R4-008) | `status=307 location=https://example.com/golpe`                                                                                                                                   |
+| RT25 | Action do site: 10 números distintos no mesmo contexto/IP         | **FALHOU** (R4-003) | 10/10 aceitos, nenhum "Muitas tentativas", **10 `otp_codes` gravados** (com o provedor sms seriam 10 SMS pagos)                                                                   |
 
 Nota: as primeiras tentativas dos passos 5 a 9 estouraram o tempo, porque os dois servidores ficaram sem responder por alguns minutos (`curl /api/health` no 3201 → `000` em 100 s). Repeti depois que eles voltaram. Uma tentativa do RT13 falhou só porque o roteiro procurava `[role=alert]` dentro do diálogo; a captura mostrou a mensagem na tela, e o seletor foi corrigido para o texto.
 
@@ -121,13 +121,13 @@ Nota: as primeiras tentativas dos passos 5 a 9 estouraram o tempo, porque os doi
 
 Script: `scratchpad/r4/dados.sql`, mais dois `UPDATE` e um `INSERT` registrados no fim do arquivo. Prefixo `r4test_` nos ids, e-mails `@r4.teste.local`, telefones fictícios `+55449700000xx`.
 
-| id | papel / status | Uso |
-|---|---|---|
-| `r4test_lojista` (+ `store_staff` `r4test_staff`, OWNER na loja do lojista e2e) | STORE_OWNER / ACTIVE, `lojista@r4.teste.local`, sem senha | Senha provisória e `/loja/senha` (bloqueado) |
-| `r4test_cliente` | CUSTOMER / ACTIVE, `cliente@r4.teste.local`, hash de `R4@senhaCliente1` | RT04 e RT08. Ganhou 1 sessão no site |
-| `r4test_ent_pend` (+ `couriers` `r4test_cour_pend`, PENDING_APPROVAL) | COURIER / ACTIVE | RT12. Ganhou 1 `otp_codes` |
-| `r4test_ent_bloq` (+ `couriers` `r4test_cour_bloq`, ACTIVE) | COURIER / BLOCKED | RT11 |
-| `r4test_staff_sem_loja` | STORE_STAFF / ACTIVE, `semloja@r4.teste.local`, hash de `R4@semLoja2026` | RT24 |
+| id                                                                              | papel / status                                                           | Uso                                          |
+| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------- |
+| `r4test_lojista` (+ `store_staff` `r4test_staff`, OWNER na loja do lojista e2e) | STORE_OWNER / ACTIVE, `lojista@r4.teste.local`, sem senha                | Senha provisória e `/loja/senha` (bloqueado) |
+| `r4test_cliente`                                                                | CUSTOMER / ACTIVE, `cliente@r4.teste.local`, hash de `R4@senhaCliente1`  | RT04 e RT08. Ganhou 1 sessão no site         |
+| `r4test_ent_pend` (+ `couriers` `r4test_cour_pend`, PENDING_APPROVAL)           | COURIER / ACTIVE                                                         | RT12. Ganhou 1 `otp_codes`                   |
+| `r4test_ent_bloq` (+ `couriers` `r4test_cour_bloq`, ACTIVE)                     | COURIER / BLOCKED                                                        | RT11                                         |
+| `r4test_staff_sem_loja`                                                         | STORE_STAFF / ACTIVE, `semloja@r4.teste.local`, hash de `R4@semLoja2026` | RT24                                         |
 
 Também foram criados:
 
@@ -192,12 +192,12 @@ Limpeza sugerida: `DELETE FROM users WHERE id LIKE 'r4test_%';` (as tabelas filh
 - **Estado:** CONFIRMADO. O `pnpm test` mostra `@rapidinho/auth`, `@rapidinho/admin` e `@rapidinho/web` sem arquivos de teste; `e2e/tests` não tem nenhum spec de login (o login só aparece como preparação no global setup).
 - **Cobertura dos quatro casos pedidos:**
 
-| Caso | Teste existente | Situação |
-|---|---|---|
-| Recusa fora do app (página, action e API) | `packages/shared/src/utils/app-nativo.test.ts` só testa a função pura | **sem teste** da página, da action e da rota |
-| Entregador inativo | nenhum | **sem teste**, e com defeito (R4-002) |
-| Papel sem senha | nenhum (`senha.test.ts` só testa o hash) | **sem teste** |
-| Provisória que revoga sessões | nenhum | **sem teste**. Também falta o caso inverso: a troca de senha não revoga (R4-009) |
+| Caso                                      | Teste existente                                                       | Situação                                                                         |
+| ----------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Recusa fora do app (página, action e API) | `packages/shared/src/utils/app-nativo.test.ts` só testa a função pura | **sem teste** da página, da action e da rota                                     |
+| Entregador inativo                        | nenhum                                                                | **sem teste**, e com defeito (R4-002)                                            |
+| Papel sem senha                           | nenhum (`senha.test.ts` só testa o hash)                              | **sem teste**                                                                    |
+| Provisória que revoga sessões             | nenhum                                                                | **sem teste**. Também falta o caso inverso: a troca de senha não revoga (R4-009) |
 
 - **Correção proposta:**
   - testes de integração de `autenticarPorSenha` (matriz papel × status × deletedAt), `ehEntregadorAtivo` e `gerarSenhaProvisoria` (não super admin, papel sem senha, e-mail em uso, `revokeAllSessions` chamado);
@@ -216,6 +216,7 @@ Limpeza sugerida: `DELETE FROM users WHERE id LIKE 'r4test_%';` (as tabelas filh
   - `Cannot find module 'C:\FuseDev\rapidinho-entrega\apps\web\.next\server\vendor-chunks\lib\worker.js'`, e o mesmo no admin. É o `thread-stream` do pino empacotado pelo webpack do Next.
 
   No RT12 o OTP foi gravado e a tela não avançou. Nas execuções 2, 3 e 5 do E2E, o global setup estourou o tempo.
+
 - **Reprodução segura:** subir `next dev`, pedir código e observar o log.
 - **Esperado × observado:** esperado: código mostrado e login concluído. Observado: falha intermitente e `uncaughtException`.
 - **Correção proposta:** colocar `pino`/`pino-pretty`/`thread-stream` em `serverExternalPackages` no `next.config.mjs` dos dois apps, ou usar `pino-pretty` como stream síncrono, sem `transport`. No provedor console, não deixar exceção do log derrubar o envio.
@@ -322,6 +323,7 @@ Limpeza sugerida: `DELETE FROM users WHERE id LIKE 'r4test_%';` (as tabelas filh
   - grava só o hash, chama `revokeAllSessions(usuario.id)` e audita sem a senha.
 
   A interface só mostra o formulário para os papéis com senha (`acoes-do-usuario.tsx:24,88`). Parece correta. Faltam testes (R4-004). Um detalhe: a ação também troca o e-mail do usuário, e um erro de digitação tranca a conta até a próxima provisória.
+
 - **`/loja/senha`** (`apps/admin/src/lib/trocar-senha.ts`):
   - confere a senha atual com limite (`senha:troca:<id>`) e exige no mínimo 8 caracteres, diferente da atual e confirmada;
   - quem não tem senha pode criar uma sem a atual. Aceitável, porque é preciso estar logado, e só se entra no painel sem senha pelo SMS de entregador, que não tem `/loja`;

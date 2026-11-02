@@ -11,25 +11,25 @@ O `git status` final mostra só `docs/pie/` e `docs/revisao/evidencias/`, que j�
 
 ## Resumo dos achados
 
-| ID | Título | Sev. | Estado |
-| --- | --- | --- | --- |
-| R5-001 | `/uploads/` em produção não serve nenhum arquivo (MinIO: "invalid hostname"; a URL pública ainda omite o bucket) | Alta | CONFIRMADO |
-| R5-002 | Imagens do MinIO e do mc fixadas no compose não existem mais (R3-011); um host novo não sobe nem o site | Alta | CONFIRMADO |
-| R5-003 | Deploy entra como root por senha (sshpass), sem checar a chave do host, com IP e usuário num repositório público | Alta | CONFIRMADO |
-| R5-004 | Segredos interpolados na linha de comando SSH remota (visíveis no `ps` da VPS compartilhada; risco de injeção por aspas) | Média | CONFIRMADO |
-| R5-005 | Deploy promete "a versão anterior continua no ar", mas troca os containers antes do health; sem rollback automático; health só do web | Alta | CONFIRMADO |
-| R5-006 | Migrations aplicadas sem backup prévio; rollback documentado nunca testado; documentação de retenção divergente | Alta | CONFIRMADO / FORTE INDÍCIO |
-| R5-007 | Backups só no mesmo disco da VPS, sem cópia externa, sem criptografia, sem teste; MinIO e `.env` sem backup nenhum | Alta | CONFIRMADO (código) |
-| R5-008 | Redis `allkeys-lru` pode descartar jobs do BullMQ (R3-013) | Média | CONFIRMADO |
-| R5-009 | `limit_req` do nginx interno conta todos os clientes como um IP só (gateway do Docker): 6 OTP/min para a plataforma inteira | Alta | FORTE INDÍCIO |
-| R5-010 | Observabilidade: sem alerta externo, container `unhealthy` não reinicia, Sentry sem instrumentação do Next, sem log de consulta lenta | Média | CONFIRMADO |
-| R5-011 | Vitrine da cidade sem cache: TTFB de 0,44 a 0,76 s, HTML de 615 KB, carga de dados sem limite | Média | CONFIRMADO (medido) |
-| R5-012 | Índices: consultas quentes que crescem com o histórico; 39 chaves estrangeiras sem índice | Baixa | HIPÓTESE |
-| R5-013 | Encerramento e limites: worker sem `stop_grace_period`; migrate e minio-init sem teto; loopback depende do `.env` | Baixa | CONFIRMADO |
-| R5-014 | `liberar-espaco.sh` trunca logs de containers de **todos** os projetos da VPS (e é código morto) | Baixa | CONFIRMADO |
-| R5-015 | nginx do host expõe a versão; `proxy_cache_valid` sem `proxy_cache` (sem efeito) | Baixa | CONFIRMADO |
-| R5-016 | Imagem `migrate` com 398 MB e worker com 170 MB comprimidos: cerca de 882 MB por deploy | Baixa | CONFIRMADO (medido) |
-| R5-017 | Reconfirmação do R3-012 (worker e realtime em `pnpm dev`) | — | NÃO REPRODUZIDO (corrigido) |
+| ID     | Título                                                                                                                                | Sev.  | Estado                      |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------- | ----- | --------------------------- |
+| R5-001 | `/uploads/` em produção não serve nenhum arquivo (MinIO: "invalid hostname"; a URL pública ainda omite o bucket)                      | Alta  | CONFIRMADO                  |
+| R5-002 | Imagens do MinIO e do mc fixadas no compose não existem mais (R3-011); um host novo não sobe nem o site                               | Alta  | CONFIRMADO                  |
+| R5-003 | Deploy entra como root por senha (sshpass), sem checar a chave do host, com IP e usuário num repositório público                      | Alta  | CONFIRMADO                  |
+| R5-004 | Segredos interpolados na linha de comando SSH remota (visíveis no `ps` da VPS compartilhada; risco de injeção por aspas)              | Média | CONFIRMADO                  |
+| R5-005 | Deploy promete "a versão anterior continua no ar", mas troca os containers antes do health; sem rollback automático; health só do web | Alta  | CONFIRMADO                  |
+| R5-006 | Migrations aplicadas sem backup prévio; rollback documentado nunca testado; documentação de retenção divergente                       | Alta  | CONFIRMADO / FORTE INDÍCIO  |
+| R5-007 | Backups só no mesmo disco da VPS, sem cópia externa, sem criptografia, sem teste; MinIO e `.env` sem backup nenhum                    | Alta  | CONFIRMADO (código)         |
+| R5-008 | Redis `allkeys-lru` pode descartar jobs do BullMQ (R3-013)                                                                            | Média | CONFIRMADO                  |
+| R5-009 | `limit_req` do nginx interno conta todos os clientes como um IP só (gateway do Docker): 6 OTP/min para a plataforma inteira           | Alta  | FORTE INDÍCIO               |
+| R5-010 | Observabilidade: sem alerta externo, container `unhealthy` não reinicia, Sentry sem instrumentação do Next, sem log de consulta lenta | Média | CONFIRMADO                  |
+| R5-011 | Vitrine da cidade sem cache: TTFB de 0,44 a 0,76 s, HTML de 615 KB, carga de dados sem limite                                         | Média | CONFIRMADO (medido)         |
+| R5-012 | Índices: consultas quentes que crescem com o histórico; 39 chaves estrangeiras sem índice                                             | Baixa | HIPÓTESE                    |
+| R5-013 | Encerramento e limites: worker sem `stop_grace_period`; migrate e minio-init sem teto; loopback depende do `.env`                     | Baixa | CONFIRMADO                  |
+| R5-014 | `liberar-espaco.sh` trunca logs de containers de **todos** os projetos da VPS (e é código morto)                                      | Baixa | CONFIRMADO                  |
+| R5-015 | nginx do host expõe a versão; `proxy_cache_valid` sem `proxy_cache` (sem efeito)                                                      | Baixa | CONFIRMADO                  |
+| R5-016 | Imagem `migrate` com 398 MB e worker com 170 MB comprimidos: cerca de 882 MB por deploy                                               | Baixa | CONFIRMADO (medido)         |
+| R5-017 | Reconfirmação do R3-012 (worker e realtime em `pnpm dev`)                                                                             | —     | NÃO REPRODUZIDO (corrigido) |
 
 ---
 
@@ -109,7 +109,7 @@ O `git status` final mostra só `docs/pie/` e `docs/revisao/evidencias/`, que j�
   (`StrictHostKeyChecking=no`, `PreferredAuthentications=password`, `PubkeyAuthentication=no`),
   `:323-327` (sshpass) e todos os passos seguintes.
 - **Reprodução segura:** leitura do arquivo e `curl -s -o /dev/null -w "%{http_code}"
-  https://api.github.com/repos/fernandinhomartins40/rapidinho-entrega` responde 200, logo é público.
+https://api.github.com/repos/fernandinhomartins40/rapidinho-entrega` responde 200, logo é público.
 - **Esperado × observado:** esperado chave SSH dedicada, usuário sem privilégio com `sudo` restrito e
   `known_hosts` fixado. Observado root, senha e host não verificado.
 - **Impacto:** escalada lateral para todos os projetos da VPS. O vazamento da senha é irrevogável sem
@@ -129,7 +129,7 @@ O `git status` final mostra só `docs/pie/` e `docs/revisao/evidencias/`, que j�
   como root.
 - **Estado:** CONFIRMADO (arquivo).
 - **Onde:** `.github/workflows/deploy.yml:367-370`: `SUPER_ADMIN_PHONE='…' SENTRY_DSN='…'
-  SMS_GATEWAY_NUMBER='…' SMSDEV_API_KEY='…'` na string do comando remoto.
+SMS_GATEWAY_NUMBER='…' SMSDEV_API_KEY='…'` na string do comando remoto.
 - **Reprodução segura:** leitura do arquivo.
 - **Esperado × observado:** esperado que o segredo chegue por stdin ou arquivo temporário com
   `umask 077`, como já é feito com o token do GHCR (`:380`). Observado o segredo em argv.
@@ -257,7 +257,7 @@ O `git status` final mostra só `docs/pie/` e `docs/revisao/evidencias/`, que j�
 - **Esperado × observado:** esperado limite por cliente. Observado (inferido) limite por gateway.
 - **Impacto:** 503 no login em horário de pico; lojistas e clientes travados.
 - **Correção proposta:** no nginx interno, `set_real_ip_from 127.0.0.1; set_real_ip_from 172.16.0.0/12;
-  real_ip_header X-Real-IP;` (o host já envia `X-Real-IP $remote_addr`). No app, usar `x-real-ip`, ou o
+real_ip_header X-Real-IP;` (o host já envia `X-Real-IP $remote_addr`). No app, usar `x-real-ip`, ou o
   último salto confiável do XFF.
 - **Teste de aceite:** o access log do container mostra IPs públicos distintos; 7 pedidos de OTP de
   um IP dão 503 e o oitavo, de outro IP, passa.
@@ -464,8 +464,7 @@ Em produção, os health respondem 200 com 23 a 41 ms de servidor.
 Mesmo assim, **o parecer é DESFAVORÁVEL à operação no estado atual**, por quatro motivos de
 severidade Alta que não dependem de carga para acontecer:
 
-1. **R5-001:** as imagens enviadas não são servidas em produção. Foi medido: todo `/uploads/` devolve
-   400.
+1. **R5-001:** as imagens enviadas não são servidas em produção. Foi medido: todo `/uploads/` devolve 400.
 2. **R5-002 e R5-007:** não há recuperação de desastre possível. A imagem do storage não existe mais,
    o backup fica no mesmo disco e nunca foi restaurado, e as imagens e o `.env` não têm backup.
 3. **R5-005 e R5-006:** o deploy não cumpre a promessa de manter a versão anterior no ar, migra sem

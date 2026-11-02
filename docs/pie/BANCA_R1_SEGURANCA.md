@@ -13,16 +13,16 @@ foi executada contra produção. Scripts e saídas em
 
 ## Resumo dos achados
 
-| ID | Sev. | Estado | Área | Título |
-| --- | --- | --- | --- | --- |
-| R1-001 | Crítica (S1) | CONFIRMADO | Auth | OTP de login é força-bruta-vel: cap de tentativas por código não é atômico e o limite por IP é burlável |
-| R1-002 | Alta (S1) | CONFIRMADO | Auth/Infra | `X-Forwarded-For` é confiável no servidor: todo limite por IP (OTP e senha) é burlável, com abuso de custo de SMS |
-| R1-003 | Alta (S2) | CONFIRMADO | Permissão | Funcionário da loja (STORE_STAFF/OPERATOR) acessa `/loja/financeiro` (reconfirma R3-005) |
-| R1-004 | Média (S2) | FORTE INDÍCIO | LGPD | Exclusão de conta não apaga `order.addressSnapshot`: endereço do titular persiste |
-| R1-005 | Média (S2) | CONFIRMADO | LGPD | Aceite de termos do cliente nunca é gravado; `ConsentRecord` vazio (reconfirma R3-001) |
-| R1-006 | Baixa (S3) | CONFIRMADO | LGPD | Exportação de dados não registra `DataRequest`; nenhuma tela lê `DataRequest` (reconfirma R3-001b) |
-| R1-007 | Média (S2) | FORTE INDÍCIO | LGPD | Loja grava aceite de termos em nome do entregador convidado (reconfirma R3-007) |
-| R1-008 | Baixa (S3) | CONFIRMADO | Admin/UX | Super admin entra no "modo lojista" sem caminho de saída na UI (reconfirma R3-002) |
+| ID     | Sev.         | Estado        | Área       | Título                                                                                                            |
+| ------ | ------------ | ------------- | ---------- | ----------------------------------------------------------------------------------------------------------------- |
+| R1-001 | Crítica (S1) | CONFIRMADO    | Auth       | OTP de login é força-bruta-vel: cap de tentativas por código não é atômico e o limite por IP é burlável           |
+| R1-002 | Alta (S1)    | CONFIRMADO    | Auth/Infra | `X-Forwarded-For` é confiável no servidor: todo limite por IP (OTP e senha) é burlável, com abuso de custo de SMS |
+| R1-003 | Alta (S2)    | CONFIRMADO    | Permissão  | Funcionário da loja (STORE_STAFF/OPERATOR) acessa `/loja/financeiro` (reconfirma R3-005)                          |
+| R1-004 | Média (S2)   | FORTE INDÍCIO | LGPD       | Exclusão de conta não apaga `order.addressSnapshot`: endereço do titular persiste                                 |
+| R1-005 | Média (S2)   | CONFIRMADO    | LGPD       | Aceite de termos do cliente nunca é gravado; `ConsentRecord` vazio (reconfirma R3-001)                            |
+| R1-006 | Baixa (S3)   | CONFIRMADO    | LGPD       | Exportação de dados não registra `DataRequest`; nenhuma tela lê `DataRequest` (reconfirma R3-001b)                |
+| R1-007 | Média (S2)   | FORTE INDÍCIO | LGPD       | Loja grava aceite de termos em nome do entregador convidado (reconfirma R3-007)                                   |
+| R1-008 | Baixa (S3)   | CONFIRMADO    | Admin/UX   | Super admin entra no "modo lojista" sem caminho de saída na UI (reconfirma R3-002)                                |
 
 Controles que passaram nos testes (detalhe na seção "Verificado e sem achado").
 
@@ -361,7 +361,7 @@ Testado em runtime, resultado correto:
 - **SVG/HTML disfarçado no upload**: não executado em runtime (sem sessão de
   upload montada no tempo). Pendência: o `location /uploads/` do Nginx serve o
   objeto do MinIO com `Cache-Control` mas **sem** `Content-Disposition:
-  attachment` nem `X-Content-Type-Options` nesse bloco; se um asset com
+attachment` nem `X-Content-Type-Options` nesse bloco; se um asset com
   `Content-Type` perigoso chegar ao bucket, seria servido inline. Recomendo o
   corretor confirmar o pipeline `sharp` + headers do bloco `/uploads/`.
 - **SSRF na importação de produtos**: `importarPlanilha` lê planilha enviada,

@@ -25,35 +25,36 @@ As três primeiras dependem de decisão e custo do dono, e estão detalhadas aba
 
 ## O que existe e foi comprovado
 
-| Função | Situação | Prova |
-|---|---|---|
-| Escolher a cidade e lembrar dela | Funciona | R2 J2; `/app` com cookie |
-| Vitrine por categoria, "Tô com fome" com pratos de vários restaurantes, busca | Funciona; a busca não entende termos regionais ("xis") | R2 J3, R2-017 |
-| Produto com complementos obrigatórios e opcionais, pizza por sabores e tamanhos | Funciona; tocar no nome da opção foi corrigido nesta rodada | R2-002 → 6f3ebdf |
-| Carrinho, cupom, retirada ou entrega, endereço, troco | Funciona; "Grátis" antes do endereço e troco em texto corrigidos | R2-009, R2-011 → 6f3ebdf |
-| Pagamento: dinheiro, cartão na entrega, Pix na chave da loja | Funciona; o Pix da loja agora tem confirmação no painel | R3-001 → 4395f01 |
-| Acompanhar o pedido em tempo real | Funciona com o app aberto | R2 J5 |
-| Cancelar enquanto a loja não aceitou | **Criado nesta rodada** | c5a6c06, testado |
-| Avaliar e pedir de novo | Existe | R4 matriz |
-| Favoritos, endereços, conta, exportar e excluir dados (LGPD) | Funciona; a exportação dentro do app foi corrigida | c5a6c06 |
-| Mercado: separação, pesagem justa, substituição combinada com o cliente | Existe | R3, R4 matriz |
-| Farmácia: foto da receita; item +18 conferido na entrega | Existe; o upload dentro do app foi corrigido (APK 1.1) | R2-016 → c5a6c06 |
-| Painel da loja: pedidos com alerta sonoro, cardápio, horários, área de entrega, cupons, avaliações, financeiro, impulsionar | Funciona (fumaça do R4: todas as rotas 200 com o papel certo) | R4 |
-| Entregador: fila de corridas da cidade ou da loja, aceite sem disputa, ganhos do dia | Funciona | R1 (corrida atômica), R4 |
-| Plataforma: aprovar loja, planos, cupons, banners, campanhas, auditoria, usuários, senha provisória | Funciona | R4 |
-| Login "como o WhatsApp" (SMS uma vez, conectado por 400 dias) | Funciona no app Android | R4 RT, entregas anteriores |
+| Função                                                                                                                      | Situação                                                         | Prova                      |
+| --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------- |
+| Escolher a cidade e lembrar dela                                                                                            | Funciona                                                         | R2 J2; `/app` com cookie   |
+| Vitrine por categoria, "Tô com fome" com pratos de vários restaurantes, busca                                               | Funciona; a busca não entende termos regionais ("xis")           | R2 J3, R2-017              |
+| Produto com complementos obrigatórios e opcionais, pizza por sabores e tamanhos                                             | Funciona; tocar no nome da opção foi corrigido nesta rodada      | R2-002 → 6f3ebdf           |
+| Carrinho, cupom, retirada ou entrega, endereço, troco                                                                       | Funciona; "Grátis" antes do endereço e troco em texto corrigidos | R2-009, R2-011 → 6f3ebdf   |
+| Pagamento: dinheiro, cartão na entrega, Pix na chave da loja                                                                | Funciona; o Pix da loja agora tem confirmação no painel          | R3-001 → 4395f01           |
+| Acompanhar o pedido em tempo real                                                                                           | Funciona com o app aberto                                        | R2 J5                      |
+| Cancelar enquanto a loja não aceitou                                                                                        | **Criado nesta rodada**                                          | c5a6c06, testado           |
+| Avaliar e pedir de novo                                                                                                     | Existe                                                           | R4 matriz                  |
+| Favoritos, endereços, conta, exportar e excluir dados (LGPD)                                                                | Funciona; a exportação dentro do app foi corrigida               | c5a6c06                    |
+| Mercado: separação, pesagem justa, substituição combinada com o cliente                                                     | Existe                                                           | R3, R4 matriz              |
+| Farmácia: foto da receita; item +18 conferido na entrega                                                                    | Existe; o upload dentro do app foi corrigido (APK 1.1)           | R2-016 → c5a6c06           |
+| Painel da loja: pedidos com alerta sonoro, cardápio, horários, área de entrega, cupons, avaliações, financeiro, impulsionar | Funciona (fumaça do R4: todas as rotas 200 com o papel certo)    | R4                         |
+| Entregador: fila de corridas da cidade ou da loja, aceite sem disputa, ganhos do dia                                        | Funciona                                                         | R1 (corrida atômica), R4   |
+| Plataforma: aprovar loja, planos, cupons, banners, campanhas, auditoria, usuários, senha provisória                         | Funciona                                                         | R4                         |
+| Login "como o WhatsApp" (SMS uma vez, conectado por 400 dias)                                                               | Funciona no app Android                                          | R4 RT, entregas anteriores |
 
 ## O que falta, por prioridade
 
 Formato: problema → o que muda para o leigo → esforço → quem decide.
 
-### P1. Avisar o cliente com o app fechado *(decisão do dono, com custo)*
+### P1. Avisar o cliente com o app fechado _(decisão do dono, com custo)_
 
 - **Problema:** com o app fechado, o cliente não recebe nada. As duas vias de aviso existentes estão desligadas:
   - o WhatsApp está como `fake` por padrão no deploy (`.github/scripts/preparar-env.sh:135`);
   - o push web não funciona dentro da WebView do Android.
 
   O cliente só vê que o pedido saiu se abrir o app.
+
 - **Para o leigo:** é a diferença entre "o app me avisou que está chegando" e "fiquei abrindo o app".
 - **Caminhos:**
   - **(a) WhatsApp pela Evolution API:** já está implementada no código (`WHATSAPP_PROVIDER=evolution`). Exige um número dedicado e um servidor da Evolution. É o caminho mais rápido.
@@ -61,14 +62,14 @@ Formato: problema → o que muda para o leigo → esforço → quem decide.
   - **(c) SMS só para "saiu para entrega":** custa um crédito da SMSDev por pedido.
 - **Esforço:** (a) P se já houver servidor; (b) M.
 
-### P2. Pagamento online pela plataforma *(decisão do dono)*
+### P2. Pagamento online pela plataforma _(decisão do dono)_
 
 - **Problema:** sem gateway real (`PAYMENT_PROVIDER=fake`), só há Pix na chave da própria loja, confirmado à mão. O cartão pelo app foi escondido nesta rodada porque nunca funcionou: falta a tokenização (R3-008).
 - **Para o leigo:** pagar pelo app e o pedido entrar sozinho, sem a loja conferir o extrato.
 - **Caminho:** configurar o Mercado Pago (`MERCADOPAGO_ACCESS_TOKEN` e `MERCADOPAGO_WEBHOOK_SECRET`). O webhook ficou robusto nesta rodada (R3-003, R3-004). O cartão exige a tela de tokenização do Mercado Pago.
 - **Esforço:** Pix pelo gateway P (configuração); cartão M.
 
-### P3. Instalar sem atrito *(decisão do dono, custo de US$ 25)*
+### P3. Instalar sem atrito _(decisão do dono, custo de US$ 25)_
 
 - **Problema:** o APK é instalado "de fonte desconhecida". Para leigo, o aviso do Android assusta, e muitos desistem. Não há app para iPhone; a tela agora é honesta sobre isso (6f3ebdf).
 - **Caminho:** publicar na Google Play (conta de desenvolvedor de US$ 25, chave de assinatura própria). Para iPhone, ou um app iOS (conta Apple de US$ 99/ano), ou liberar o login por SMS no navegador do iPhone, com limite agressivo. Esta segunda opção é a hipótese H2 do R2: custo de SMS contra vendas perdidas.
@@ -80,7 +81,7 @@ Formato: problema → o que muda para o leigo → esforço → quem decide.
 - **Caminho:** o painel do entregador envia a posição a cada 15 s enquanto há corrida, e a tela do pedido mostra o mapa.
 - **Esforço:** M.
 
-### P5. Equipe da loja *(funcionalidade faltando)*
+### P5. Equipe da loja _(funcionalidade faltando)_
 
 - **Problema:** o papel "funcionário" existe e entra com senha, mas não há tela para o dono adicionar alguém (R3-019).
 - **Caminho:** uma seção "Equipe" em Configurações (nome, e-mail, senha provisória), reaproveitando a lógica de senha provisória criada nesta rodada.

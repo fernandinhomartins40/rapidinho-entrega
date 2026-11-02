@@ -17,13 +17,13 @@ Havia bloqueadores confirmados no escopo, conforme o critério do protocolo (§2
 
 Pareceres de origem:
 
-| Revisor | Recomendação |
-|---|---|
-| R1 | REPROVAR |
-| R2 | APROVADO COM RESSALVAS, condicionado às correções de prioridade alta |
-| R3 | REPROVAR para pagamento online e faturamento |
-| R4 | Não pronto para liberar |
-| R5 | DESFAVORÁVEL à operação |
+| Revisor | Recomendação                                                         |
+| ------- | -------------------------------------------------------------------- |
+| R1      | REPROVAR                                                             |
+| R2      | APROVADO COM RESSALVAS, condicionado às correções de prioridade alta |
+| R3      | REPROVAR para pagamento online e faturamento                         |
+| R4      | Não pronto para liberar                                              |
+| R5      | DESFAVORÁVEL à operação                                              |
 
 ## 2. Veredito pós-correção (commit `aef53aa`, main local)
 
@@ -42,15 +42,15 @@ A aprovação **não** significa segurança absoluta nem conformidade jurídica 
 
 ### Por área
 
-| Área | Veredito | Motivo |
-|---|---|---|
-| Segurança do código (autenticação, autorização, isolamento) | APROVADO | Crítico e altos corrigidos; revalidação adversarial independente |
-| Jornadas essenciais (pedir, pagar em dinheiro ou Pix da loja, acompanhar, cancelar, operar a loja, aprovar loja) | APROVADO | E2E 16/16 + Playwright dirigido |
-| Receita | APROVADO COM RESSALVA | Pagamentos protegidos. A cobrança da comissão do plano grátis, do impulsionamento e dos repasses **nunca acontece** (A19, A20): regra comercial pendente, sem regressão |
-| LGPD (controles técnicos) | APROVADO COM RESSALVA | Aceite com versão, exportação registrada, exclusão completa. Falta a tela de atendimento do titular e a revisão jurídica |
-| Produção: fotos (A6) e IP real (A2, parte do nginx) | NÃO COMPROVADO | Corrigido na configuração; só se prova depois do deploy |
-| Recuperação e continuidade (A7 MinIO, A22 backup externo e rollback, A23 acesso) | REPROVADO | Riscos altos sem correção possível nesta sessão (SSH negado, decisão de infraestrutura e custo) |
-| Completude como produto de delivery | NÃO COMPROVADO para larga escala | Núcleo completo e funcional. Faltam notificação com app fechado, pagamento online e Play Store (`OPORTUNIDADES_PRODUTO.md`) |
+| Área                                                                                                             | Veredito                         | Motivo                                                                                                                                                                  |
+| ---------------------------------------------------------------------------------------------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Segurança do código (autenticação, autorização, isolamento)                                                      | APROVADO                         | Crítico e altos corrigidos; revalidação adversarial independente                                                                                                        |
+| Jornadas essenciais (pedir, pagar em dinheiro ou Pix da loja, acompanhar, cancelar, operar a loja, aprovar loja) | APROVADO                         | E2E 16/16 + Playwright dirigido                                                                                                                                         |
+| Receita                                                                                                          | APROVADO COM RESSALVA            | Pagamentos protegidos. A cobrança da comissão do plano grátis, do impulsionamento e dos repasses **nunca acontece** (A19, A20): regra comercial pendente, sem regressão |
+| LGPD (controles técnicos)                                                                                        | APROVADO COM RESSALVA            | Aceite com versão, exportação registrada, exclusão completa. Falta a tela de atendimento do titular e a revisão jurídica                                                |
+| Produção: fotos (A6) e IP real (A2, parte do nginx)                                                              | NÃO COMPROVADO                   | Corrigido na configuração; só se prova depois do deploy                                                                                                                 |
+| Recuperação e continuidade (A7 MinIO, A22 backup externo e rollback, A23 acesso)                                 | REPROVADO                        | Riscos altos sem correção possível nesta sessão (SSH negado, decisão de infraestrutura e custo)                                                                         |
+| Completude como produto de delivery                                                                              | NÃO COMPROVADO para larga escala | Núcleo completo e funcional. Faltam notificação com app fechado, pagamento online e Play Store (`OPORTUNIDADES_PRODUTO.md`)                                             |
 
 ## 3. Verificação obrigatória depois do deploy (somente leitura)
 
