@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button, Card, CardContent, Input, Label } from '@rapidinho/ui';
 import { cadastrarLoja } from './actions';
 import { ACTION_IDLE } from '@/lib/action-state';
+import { CampoDeTelefoneConfirmado } from '@/components/campo-de-telefone-confirmado';
 
 export function FormularioDeCadastro({
   cidades,
@@ -73,16 +74,10 @@ export function FormularioDeCadastro({
       </div>
 
       <div>
-        <Label htmlFor="telefone" required>
-          WhatsApp
-        </Label>
-        <Input
-          id="telefone"
-          name="telefone"
-          inputMode="tel"
-          placeholder="(44) 99999-0000"
-          required
-          error={estado.fieldErrors?.telefone}
+        <CampoDeTelefoneConfirmado
+          rotulo="Celular (WhatsApp)"
+          erroDoTelefone={estado.fieldErrors?.telefone}
+          erroDoCodigo={estado.fieldErrors?.codigo}
         />
         <p className="text-muted-foreground mt-1 text-sm">
           É por aqui que você recebe os avisos dos pedidos.

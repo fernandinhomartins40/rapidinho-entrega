@@ -6,6 +6,7 @@ import { notificarUsuario } from '@rapidinho/services';
 import { COMISSAO_HABILITADA, isValidDocument, normalizePhoneBR, slugify } from '@rapidinho/shared';
 import { gerarHashDeSenha } from '@rapidinho/shared/senha';
 import { runAction, type ActionResult } from '@/lib/action';
+import { conferirTelefoneDoCadastro, TELEFONE_JA_TEM_CONTA } from '@/lib/telefone-confirmado';
 
 /**
  * Cadastro de loja.
@@ -14,9 +15,9 @@ import { runAction, type ActionResult } from '@/lib/action';
  * entenda a plataforma para poder se cadastrar nela. A conta é criada junto,
  * com e-mail e senha, que é como o lojista entra no painel.
  *
- * Senha só em conta nova. Se o telefone já tem conta, este formulário anônimo
- * não pode definir a senha dela — seria tomar a conta de quem tem o número.
- * Nesse caso a plataforma libera o acesso com uma senha provisória.
+ * O telefone é provado por código SMS antes de qualquer gravação, e o
+ * formulário só cria conta nova: se o número já tem conta, nada é alterado e a
+ * equipe liga a loja à conta existente (decisão 11 do dono).
  *
  * A loja nasce em PENDING_APPROVAL e não aparece para ninguém até a plataforma
  * aprovar — é o gargalo que impede cadastro falso de virar loja no ar.
@@ -36,6 +37,7 @@ const cadastroSchema = z.object({
   numero: z.string().max(20).optional(),
   bairro: z.string().min(2, 'Informe o bairro'),
   referencia: z.string().max(200).optional(),
+  codigo: z.string().trim().default(''),
 });
 
 /** Slug único: o nome da loja pode repetir entre cidades. */
@@ -87,6 +89,22 @@ export async function cadastrarLoja(
 
     if (!cidade) return { ok: false, message: 'Cidade indisponível.' };
 
+    // Nada é consultado nem gravado antes do código por SMS (decisão 11): sem
+    // isso, o formulário dizia a um anônimo quais e-mails e documentos existem.
+    const posse = await conferirTelefoneDoCadastro(telefone, dados.codigo);
+    if (!posse.ok) {
+      return { ok: false, message: posse.message, fieldErrors: { codigo: posse.message } };
+    }
+
+    const existente = await prisma.user.findUnique({
+      where: { phone: telefone },
+      select: { id: true },
+    });
+
+    // Conta existente não é alterada por formulário: antes, nome e papel eram
+    // trocados e a loja nascia em nome de quem sabia o telefone (R3-060, R3-061).
+    if (existente) return { ok: false, message: TELEFONE_JA_TEM_CONTA };
+
     const documento = dados.documento.replace(/\D/g, '');
 
     const duplicada = await prisma.store.findFirst({
@@ -104,40 +122,29 @@ export async function cadastrarLoja(
       };
     }
 
-    const existente = await prisma.user.findUnique({
-      where: { phone: telefone },
+    const emailEmUso = await prisma.user.findUnique({
+      where: { email: dados.email },
       select: { id: true },
     });
-
-    if (!existente) {
-      const emailEmUso = await prisma.user.findUnique({
-        where: { email: dados.email },
-        select: { id: true },
-      });
-      if (emailEmUso) {
-        return {
-          ok: false,
-          message: 'Confira os campos destacados.',
-          fieldErrors: { email: 'Este e-mail já tem conta. Use outro.' },
-        };
-      }
+    if (emailEmUso) {
+      return {
+        ok: false,
+        message: 'Confira os campos destacados.',
+        fieldErrors: { email: 'Este e-mail já tem conta. Use outro.' },
+      };
     }
 
-    // O usuário é criado (ou reaproveitado) junto, sem segundo cadastro.
-    const usuario = await prisma.user.upsert({
-      where: { phone: telefone },
-      update: { name: dados.responsavel },
-      create: {
-        phone: telefone,
-        name: dados.responsavel,
-        email: dados.email,
-        passwordHash: gerarHashDeSenha(dados.senha),
-        role: 'STORE_OWNER',
-        acceptedTermsAt: new Date(),
-        acceptedPrivacyAt: new Date(),
-      },
-      select: { id: true, role: true },
-    });
+    // O usuário é criado junto, sem segundo cadastro, com o telefone já provado.
+    const dadosDoUsuario = {
+      phone: telefone,
+      phoneVerified: new Date(),
+      name: dados.responsavel,
+      email: dados.email,
+      passwordHash: gerarHashDeSenha(dados.senha),
+      role: 'STORE_OWNER' as const,
+      acceptedTermsAt: new Date(),
+      acceptedPrivacyAt: new Date(),
+    };
 
     // O segmento vem da categoria escolhida. Sem isto toda loja nascia como
     // "outros": o restaurante ficava fora do "Tô com fome" e no plano errado.
@@ -162,7 +169,8 @@ export async function cadastrarLoja(
       select: { id: true, trialDays: true },
     });
 
-    const loja = await prisma.$transaction(async (tx) => {
+    const { loja, usuario } = await prisma.$transaction(async (tx) => {
+      const usuario = await tx.user.create({ data: dadosDoUsuario, select: { id: true } });
       const criada = await tx.store.create({
         data: {
           name: dados.nome,
@@ -202,13 +210,7 @@ export async function cadastrarLoja(
         select: { id: true, name: true },
       });
 
-      // Promove quem já era cliente; nunca rebaixa um admin que se cadastrou
-      // como lojista para testar.
-      if (usuario.role === 'CUSTOMER') {
-        await tx.user.update({ where: { id: usuario.id }, data: { role: 'STORE_OWNER' } });
-      }
-
-      return criada;
+      return { loja: criada, usuario };
     });
 
     await notificarUsuario({
@@ -221,9 +223,8 @@ export async function cadastrarLoja(
 
     return {
       ok: true,
-      message: existente
-        ? 'Cadastro enviado! Este telefone já tinha conta: quando a loja for aprovada, a equipe Rapidinho te passa a senha de acesso ao painel.'
-        : 'Cadastro enviado! Avisamos no seu WhatsApp assim que a loja for aprovada. Depois é só entrar no painel com seu e-mail e senha.',
+      message:
+        'Cadastro enviado! Avisamos no seu WhatsApp assim que a loja for aprovada. Depois é só entrar no painel com seu e-mail e senha.',
     };
   });
 }

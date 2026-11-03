@@ -1,10 +1,11 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { startTransition, useActionState, useState } from 'react';
 import { Button, Card, CardContent, Input, Label } from '@rapidinho/ui';
 import { VEHICLE_TYPE_LABEL } from '@rapidinho/shared';
 import { cadastrarEntregador } from './actions';
 import { ACTION_IDLE } from '@/lib/action-state';
+import { CampoDeTelefoneConfirmado } from '@/components/campo-de-telefone-confirmado';
 
 export function FormularioDeEntregador({
   cidades,
@@ -26,7 +27,16 @@ export function FormularioDeEntregador({
   }
 
   return (
-    <form action={acao} className="mt-6 space-y-4">
+    <form
+      // onSubmit, e não `action`: com `action` o React limpa o formulário quando
+      // a ação termina, e um código errado apagava tudo o que foi digitado.
+      onSubmit={(evento) => {
+        evento.preventDefault();
+        const dados = new FormData(evento.currentTarget);
+        startTransition(() => acao(dados));
+      }}
+      className="mt-6 space-y-4"
+    >
       <div>
         <Label htmlFor="nome" required>
           Nome completo
@@ -34,19 +44,11 @@ export function FormularioDeEntregador({
         <Input id="nome" name="nome" required error={estado.fieldErrors?.nome} />
       </div>
 
-      <div>
-        <Label htmlFor="telefone" required>
-          WhatsApp
-        </Label>
-        <Input
-          id="telefone"
-          name="telefone"
-          inputMode="tel"
-          placeholder="(44) 99999-0000"
-          required
-          error={estado.fieldErrors?.telefone}
-        />
-      </div>
+      <CampoDeTelefoneConfirmado
+        rotulo="Celular (WhatsApp)"
+        erroDoTelefone={estado.fieldErrors?.telefone}
+        erroDoCodigo={estado.fieldErrors?.codigo}
+      />
 
       <div>
         <Label htmlFor="documento" required>

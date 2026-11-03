@@ -84,6 +84,20 @@ export interface VerifyOtpOptions {
 }
 
 export async function verifyOtp(options: VerifyOtpOptions): Promise<VerifyOtpResult> {
+  const conferido = await conferirCodigoDoTelefone(options);
+  if (!conferido.ok) return conferido;
+
+  return entrarComTelefoneConfirmado(options.phone);
+}
+
+/**
+ * Só prova a posse do telefone: consome o código e não cria nem altera conta.
+ * É o que os cadastros públicos de loja e de entregador usam antes de gravar
+ * qualquer coisa (R3-060, R3-061).
+ */
+export async function conferirCodigoDoTelefone(
+  options: VerifyOtpOptions,
+): Promise<{ ok: true } | { ok: false; reason: string }> {
   const record = await prisma.otpCode.findFirst({
     where: {
       phone: options.phone,
@@ -129,7 +143,7 @@ export async function verifyOtp(options: VerifyOtpOptions): Promise<VerifyOtpRes
     return { ok: false, reason: 'Código expirado. Peça um novo.' };
   }
 
-  return entrarComTelefoneConfirmado(options.phone);
+  return { ok: true };
 }
 
 /** Telefone confirmado: devolve o usuário, criando o cliente no primeiro acesso. */
@@ -141,10 +155,21 @@ export async function entrarComTelefoneConfirmado(phone: string): Promise<Verify
       return { ok: false, reason: 'Esta conta está bloqueada.' };
     }
     if (!existing.phoneVerified) {
-      await prisma.user.update({
-        where: { id: existing.id },
-        data: { phoneVerified: new Date() },
-      });
+      // Conta criada antes de alguém provar a posse do número (cadastro antigo
+      // sem SMS). A senha e as sessões vieram de quem preencheu o formulário,
+      // que pode não ser o dono do telefone: ficam sem valor (R3-060).
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: existing.id },
+          data: {
+            phoneVerified: new Date(),
+            ...(existing.passwordHash ? { passwordHash: null } : {}),
+          },
+        }),
+        ...(existing.passwordHash
+          ? [prisma.session.deleteMany({ where: { userId: existing.id } })]
+          : []),
+      ]);
     }
     return { ok: true, userId: existing.id, isNewUser: false };
   }

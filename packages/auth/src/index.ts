@@ -10,6 +10,7 @@ export * from './session';
 export {
   requestOtp,
   verifyOtp,
+  conferirCodigoDoTelefone,
   purgeExpiredOtpCodes,
   confirmInboundSms,
   entrarComTelefoneConfirmado,

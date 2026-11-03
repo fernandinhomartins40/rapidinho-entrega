@@ -5,6 +5,7 @@ import { prisma } from '@rapidinho/database';
 import { notificarUsuario } from '@rapidinho/services';
 import { isValidCPF, normalizePhoneBR } from '@rapidinho/shared';
 import { runAction, type ActionResult } from '@/lib/action';
+import { conferirTelefoneDoCadastro, TELEFONE_JA_TEM_CONTA } from '@/lib/telefone-confirmado';
 
 /**
  * Cadastro de entregador na frota da plataforma.
@@ -21,13 +22,14 @@ const cadastroSchema = z.object({
   veiculo: z.enum(['MOTORCYCLE', 'BICYCLE', 'CAR', 'ON_FOOT']),
   placa: z.string().max(10).optional(),
   pixKey: z.string().max(140).optional(),
+  codigo: z.string().trim().default(''),
 });
 
 export async function cadastrarEntregador(
   _anterior: ActionResult,
   formData: FormData,
 ): Promise<ActionResult> {
-  return runAction(async () => {
+  return runAction(async (): Promise<ActionResult> => {
     const dados = cadastroSchema.parse(Object.fromEntries(formData.entries()));
 
     const telefone = normalizePhoneBR(dados.telefone);
@@ -47,33 +49,31 @@ export async function cadastrarEntregador(
 
     if (!cidade) return { ok: false, message: 'Cidade indisponível.' };
 
-    const usuario = await prisma.user.upsert({
+    // Só grava com o telefone confirmado por SMS (decisão 11).
+    const posse = await conferirTelefoneDoCadastro(telefone, dados.codigo);
+    if (!posse.ok) {
+      return { ok: false, message: posse.message, fieldErrors: { codigo: posse.message } };
+    }
+
+    // Formulário público nunca escreve em conta que já existe: nome, papel e
+    // Pix eram trocados por quem soubesse o telefone (R3-018, R3-061).
+    const existente = await prisma.user.findUnique({
       where: { phone: telefone },
-      update: { name: dados.nome },
-      create: {
+      select: { id: true },
+    });
+    if (existente) return { ok: false, message: TELEFONE_JA_TEM_CONTA };
+
+    const usuario = await prisma.user.create({
+      data: {
         phone: telefone,
+        phoneVerified: new Date(),
         name: dados.nome,
         role: 'COURIER',
         acceptedTermsAt: new Date(),
         acceptedPrivacyAt: new Date(),
       },
-      select: { id: true, role: true },
+      select: { id: true },
     });
-
-    const jaCadastrado = await prisma.courier.findUnique({
-      where: { userId: usuario.id },
-      select: { status: true },
-    });
-
-    if (jaCadastrado) {
-      return {
-        ok: false,
-        message:
-          jaCadastrado.status === 'PENDING_APPROVAL'
-            ? 'Você já tem um cadastro em análise. Avisamos assim que aprovarmos.'
-            : 'Você já é entregador aqui. Entre com seu telefone.',
-      };
-    }
 
     const entregador = await prisma.courier.create({
       data: {
@@ -91,10 +91,6 @@ export async function cadastrarEntregador(
       },
       select: { id: true },
     });
-
-    if (usuario.role === 'CUSTOMER') {
-      await prisma.user.update({ where: { id: usuario.id }, data: { role: 'COURIER' } });
-    }
 
     await notificarUsuario({
       userId: usuario.id,
