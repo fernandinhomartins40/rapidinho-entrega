@@ -30,13 +30,30 @@ export function sessionCookieName(): string {
   return isSecure ? '__Secure-authjs.session-token' : 'authjs.session-token';
 }
 
-export async function createDatabaseSession(userId: string): Promise<string> {
+/**
+ * Cria a sessão sem cookie: é o que o app nativo recebe como token. Mesma tabela
+ * e mesma revogação do site, sem um segundo sistema de sessão.
+ */
+export async function criarSessaoSemCookie(
+  userId: string,
+): Promise<{ sessionToken: string; expires: Date }> {
   const sessionToken = randomBytes(32).toString('hex');
   const expires = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000);
 
   await prisma.session.create({
     data: { sessionToken, userId, expires },
   });
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: { lastLoginAt: new Date() },
+  });
+
+  return { sessionToken, expires };
+}
+
+export async function createDatabaseSession(userId: string): Promise<string> {
+  const { sessionToken, expires } = await criarSessaoSemCookie(userId);
 
   const cookieStore = await cookies();
   cookieStore.set(sessionCookieName(), sessionToken, {
@@ -45,11 +62,6 @@ export async function createDatabaseSession(userId: string): Promise<string> {
     secure: sessionCookieName().startsWith('__Secure-'),
     path: '/',
     expires,
-  });
-
-  await prisma.user.update({
-    where: { id: userId },
-    data: { lastLoginAt: new Date() },
   });
 
   return sessionToken;

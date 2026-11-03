@@ -1,5 +1,6 @@
 import { prisma } from '@rapidinho/database';
-import { VERSAO_DOS_TERMOS } from '@rapidinho/shared';
+// Subcaminho: o barril de `services` carrega fila e S3, sem nada a ver com isto.
+import { versaoVigenteDosTermos } from '@rapidinho/services/regras/termos';
 
 /**
  * Grava a ciência dos termos de uso e da política de privacidade.
@@ -13,8 +14,9 @@ import { VERSAO_DOS_TERMOS } from '@rapidinho/shared';
  * nova dos termos gera um registro novo no próximo login.
  */
 export async function registrarAceiteDosTermos(userId: string, ipAddress?: string | null) {
+  const versao = await versaoVigenteDosTermos();
   const jaRegistrado = await prisma.consentRecord.findFirst({
-    where: { userId, kind: 'terms', version: VERSAO_DOS_TERMOS, granted: true },
+    where: { userId, kind: 'terms', version: versao, granted: true },
     select: { id: true },
   });
   if (jaRegistrado) return;
@@ -23,8 +25,8 @@ export async function registrarAceiteDosTermos(userId: string, ipAddress?: strin
   await prisma.$transaction([
     prisma.consentRecord.createMany({
       data: [
-        { userId, kind: 'terms', version: VERSAO_DOS_TERMOS, granted: true, ipAddress },
-        { userId, kind: 'privacy', version: VERSAO_DOS_TERMOS, granted: true, ipAddress },
+        { userId, kind: 'terms', version: versao, granted: true, ipAddress },
+        { userId, kind: 'privacy', version: versao, granted: true, ipAddress },
       ],
     }),
     prisma.user.updateMany({

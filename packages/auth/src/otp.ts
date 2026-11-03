@@ -133,7 +133,7 @@ export async function verifyOtp(options: VerifyOtpOptions): Promise<VerifyOtpRes
 }
 
 /** Telefone confirmado: devolve o usuário, criando o cliente no primeiro acesso. */
-async function entrarComTelefoneConfirmado(phone: string): Promise<VerifyOtpResult> {
+export async function entrarComTelefoneConfirmado(phone: string): Promise<VerifyOtpResult> {
   const existing = await prisma.user.findUnique({ where: { phone } });
 
   if (existing) {

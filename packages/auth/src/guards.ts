@@ -1,7 +1,11 @@
 import { cookies } from 'next/headers';
 import { prisma } from '@rapidinho/database';
 import { isPlatformAdmin, type UserRole } from '@rapidinho/shared';
+import { conferirEntregador } from './entregador';
+import { AuthorizationError, type CurrentUser } from './erros';
 import { auth } from './index';
+
+export { AuthorizationError, type CurrentUser } from './erros';
 
 /**
  * Guardas de autorização.
@@ -12,26 +16,6 @@ import { auth } from './index';
  */
 
 export const IMPERSONATION_COOKIE = 'rapidinho.impersonation';
-
-export class AuthorizationError extends Error {
-  constructor(
-    message: string,
-    readonly status: 401 | 403 = 403,
-  ) {
-    super(message);
-    this.name = 'AuthorizationError';
-  }
-}
-
-export interface CurrentUser {
-  id: string;
-  role: UserRole;
-  name: string | null;
-  phone: string | null;
-  email: string | null;
-  /// Preenchido quando um admin está operando como outro usuário.
-  impersonatedBy?: { id: string; name: string | null };
-}
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const session = await auth();
@@ -199,18 +183,7 @@ export async function requireStoreOwner(storeId?: string): Promise<StoreAccess> 
 
 export async function requireCourier(): Promise<{ user: CurrentUser; courierId: string }> {
   const user = await requireUser();
-
-  const courier = await prisma.courier.findUnique({
-    where: { userId: user.id },
-    select: { id: true, status: true },
-  });
-
-  if (!courier) throw new AuthorizationError('Cadastro de entregador não encontrado');
-  if (courier.status !== 'ACTIVE') {
-    throw new AuthorizationError('Seu cadastro de entregador ainda não foi aprovado');
-  }
-
-  return { user, courierId: courier.id };
+  return { user, courierId: await conferirEntregador(user.id) };
 }
 
 /** Lojas às quais o usuário tem acesso — usado no seletor de loja. */

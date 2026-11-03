@@ -8,7 +8,8 @@
     ".": "./src/index.ts",
     "./otp": "./src/otp.ts",
     "./guards": "./src/guards.ts",
-    "./config": "./src/config.ts"
+    "./config": "./src/config.ts",
+    "./token": "./src/token.ts"
   },
   "scripts": {
     "lint": "eslint .",
@@ -21,6 +22,7 @@
     "@rapidinho/database": "workspace:*",
     "@rapidinho/services": "workspace:*",
     "@rapidinho/shared": "workspace:*",
+    "jose": "^5.10.0",
     "next": "^15.1.3",
     "next-auth": "5.0.0-beta.25",
     "zod": "^3.24.1"

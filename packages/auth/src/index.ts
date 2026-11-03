@@ -12,6 +12,7 @@ export {
   verifyOtp,
   purgeExpiredOtpCodes,
   confirmInboundSms,
+  entrarComTelefoneConfirmado,
   type RequestOtpResult,
   type VerifyOtpResult,
   type InboundSmsResult,
@@ -19,3 +20,7 @@ export {
 export * from './sms-login';
 export * from './senha';
 export * from './consentimento';
+export * from './token';
+export * from './api-do-app';
+export * from './login-por-telefone';
+export * from './firebase';
