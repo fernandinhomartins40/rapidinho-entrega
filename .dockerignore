@@ -38,3 +38,6 @@ packages/database/generated
 # vazia. O CI nunca viu isso porque faz checkout limpo e o arquivo é
 # gitignorado; um build local produziria imagem sem o código.
 *.tsbuildinfo
+
+# App nativo: compilado no job do APK, não entra nas imagens.
+apps/mobile

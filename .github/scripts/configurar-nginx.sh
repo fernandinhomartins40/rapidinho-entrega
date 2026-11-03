@@ -45,7 +45,8 @@ restaurar_e_falhar() {
 }
 
 export SERVER_NAMES="$DOMAINS"
-export DEPLOY_PORT SITE_NAME
+export DEPLOY_PORT SITE_NAME APP_ROOT
+mkdir -p "$APP_ROOT/baixar"
 
 if [ "$MODO" = "https" ]; then
   CERT_DIR="${CERT_DIR:?CERT_DIR não informado no modo https}"
@@ -62,10 +63,10 @@ if [ "$MODO" = "https" ]; then
     export HTTP2_DIRECTIVE=''
   fi
 
-  envsubst '${SERVER_NAMES} ${DEPLOY_PORT} ${CERT_DIR} ${SITE_NAME} ${HTTP2_LISTEN} ${HTTP2_DIRECTIVE}' \
+  envsubst '${SERVER_NAMES} ${DEPLOY_PORT} ${CERT_DIR} ${SITE_NAME} ${HTTP2_LISTEN} ${HTTP2_DIRECTIVE} ${APP_ROOT}' \
     < "$TEMPLATES/rapidinho-https.conf.template" > "$DESTINO"
 else
-  envsubst '${SERVER_NAMES} ${DEPLOY_PORT}' \
+  envsubst '${SERVER_NAMES} ${DEPLOY_PORT} ${APP_ROOT}' \
     < "$TEMPLATES/rapidinho-http.conf.template" > "$DESTINO"
 fi
 

@@ -301,6 +301,125 @@ jobs:
           cache-from: type=gha,scope=nginx
           cache-to: type=gha,mode=max,scope=nginx
 
+  # APK do app nativo (apps/mobile), servido em /baixar/rapidinho.apk enquanto
+  # o app não está na Play Store. Só é gerado quando o app mudou: a versão é o
+  # hash da pasta do app e do contrato da API no commit, comparado com o que
+  # está publicado na VPS. Roda em paralelo e não segura o deploy do site; quem
+  # publica é o `publicar-apk`, depois que o site novo está no ar.
+  build-apk:
+    name: Build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    outputs:
+      versao: ${{ steps.versao.outputs.versao }}
+      gerar: ${{ steps.versao.outputs.gerar }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Instalar sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+      - name: Ver se o app mudou desde o APK publicado
+        id: versao
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+        run: |
+          versao="$(git rev-parse HEAD:apps/mobile)-$(git rev-parse HEAD:packages/shared/src/app-api)"
+          echo "versao=$versao" >> "$GITHUB_OUTPUT"
+          publicada="$(sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "cat '$APP_ROOT/baixar/versao.txt' 2>/dev/null || true" || true)"
+          if [ "$publicada" = "$versao" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            echo "O APK publicado já é desta versão do app; nada a gerar."
+            echo "gerar=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "APK publicado: '${publicada:-nenhum}'. Gerando $versao."
+            echo "gerar=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.versao.outputs.gerar == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - if: steps.versao.outputs.gerar == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: apps/mobile/pnpm-lock.yaml
+      - if: steps.versao.outputs.gerar == 'true'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      # O app tem instalação própria, fora do workspace: o React Native exige
+      # um React diferente do site, e no mesmo lockfile isso duplicava o Next.
+      - if: steps.versao.outputs.gerar == 'true'
+        working-directory: apps/mobile
+        run: pnpm install --frozen-lockfile --ignore-workspace
+      - if: steps.versao.outputs.gerar == 'true'
+        working-directory: apps/mobile
+        run: pnpm exec tsc --noEmit
+      - name: Arquivos das contas (fora do repositório)
+        if: steps.versao.outputs.gerar == 'true'
+        env:
+          GOOGLE_SERVICES_JSON_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+          APK_KEYSTORE_B64: ${{ secrets.APK_KEYSTORE_B64 }}
+        run: |
+          test -n "$GOOGLE_SERVICES_JSON_B64" || { echo "::error::Secret GOOGLE_SERVICES_JSON_B64 ausente." >&2; exit 1; }
+          test -n "$APK_KEYSTORE_B64" || { echo "::error::Secret APK_KEYSTORE_B64 ausente." >&2; exit 1; }
+          mkdir -p "$RUNNER_TEMP/contas"
+          printf '%s' "$GOOGLE_SERVICES_JSON_B64" | base64 -d > "$RUNNER_TEMP/contas/google-services.json"
+          printf '%s' "$APK_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/contas/apk.keystore"
+      - name: Gerar o projeto Android
+        if: steps.versao.outputs.gerar == 'true'
+        working-directory: apps/mobile
+        env:
+          GOOGLE_SERVICES_JSON: ${{ runner.temp }}/contas/google-services.json
+          EXPO_PUBLIC_API_URL: ${{ env.CANONICAL_URL }}
+        run: |
+          pnpm exec expo prebuild --platform android --no-install --clean
+          # A mesma chave do APK que o site já servia: o celular atualiza por
+          # cima, sem desinstalar. A chave da Play é outra e não passa por aqui.
+          cp "$RUNNER_TEMP/contas/apk.keystore" android/app/debug.keystore
+      - name: Compilar o APK
+        if: steps.versao.outputs.gerar == 'true'
+        working-directory: apps/mobile/android
+        env:
+          EXPO_PUBLIC_API_URL: ${{ env.CANONICAL_URL }}
+          NODE_ENV: production
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a --no-daemon
+      - if: steps.versao.outputs.gerar == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapidinho-apk
+          path: apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 7
+
+  publicar-apk:
+    name: Publicar APK
+    needs: [deploy, build-apk]
+    if: needs.build-apk.outputs.gerar == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: rapidinho-apk
+      - name: Instalar sshpass
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+      - name: Enviar para a VPS
+        env:
+          SSHPASS: ${{ secrets.VPS_PASSWORD }}
+          VERSAO: ${{ needs.build-apk.outputs.versao }}
+        run: |
+          # Grava num temporário e troca com `mv`: quem estiver baixando
+          # nunca recebe um arquivo pela metade.
+          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" "mkdir -p '$APP_ROOT/baixar' && cat > '$APP_ROOT/baixar/.rapidinho.apk.novo'" < app-release.apk
+          sshpass -e ssh $SSH_OPTS "$VPS_USER@$VPS_HOST" \
+            "cd '$APP_ROOT/baixar' && mv .rapidinho.apk.novo rapidinho.apk && printf '%s' '$VERSAO' > versao.txt && ls -la rapidinho.apk"
+      - name: Conferir o download no site
+        run: |
+          tamanho="$(curl -sfI "$CANONICAL_URL/baixar/rapidinho.apk" | tr -d '\r' | awk 'tolower($1)=="content-length:"{print $2}')"
+          echo "Tamanho servido: ${tamanho:-?} bytes"
+          test "${tamanho:-0}" -gt 5000000 || { echo "::error::O site não está servindo o APK novo." >&2; exit 1; }
+
   deploy:
     name: Publicar na VPS
     needs:

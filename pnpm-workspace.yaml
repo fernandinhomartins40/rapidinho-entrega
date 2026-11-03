@@ -1,3 +1,6 @@
 packages:
   - "apps/*"
   - "packages/*"
+  # O app nativo tem instalação própria (apps/mobile/pnpm-lock.yaml): o React
+  # Native exige outro React, e no mesmo lockfile isso duplicava o Next do site.
+  - "!apps/mobile"
