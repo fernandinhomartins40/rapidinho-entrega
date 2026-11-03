@@ -24,3 +24,4 @@ export * from './token';
 export * from './api-do-app';
 export * from './login-por-telefone';
 export * from './firebase';
+export * from './entregador';
