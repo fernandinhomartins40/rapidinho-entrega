@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { prisma } from '@rapidinho/database';
-import { isStoreOpen } from '@rapidinho/shared';
+import { isStoreOpen, situacaoDoProduto } from '@rapidinho/shared';
 import { imagemExibivel, SELECT_IMAGEM } from '@/lib/media';
 import { FormularioDoProduto } from './formulario';
 
@@ -97,7 +97,6 @@ export default async function ProdutoPage({
   });
 
   const imagem = imagemExibivel(produto.image, 'large');
-  const pausado = produto.pausedUntil != null && produto.pausedUntil > new Date();
 
   return (
     <main className="mx-auto max-w-lg pb-32">
@@ -139,13 +138,7 @@ export default async function ProdutoPage({
           porPeso: produto.sellingUnit === 'WEIGHT_KG',
           passoGramas: produto.weightStepGrams ?? 100,
           minimoGramas: produto.minWeightGrams ?? 100,
-          disponivel:
-            produto.isAvailable &&
-            !pausado &&
-            produto.prescription !== 'CONTROLLED' &&
-            (produto.sellingUnit === 'WEIGHT_KG' || produto.stockQuantity !== 0),
-          esgotado: produto.sellingUnit !== 'WEIGHT_KG' && produto.stockQuantity === 0,
-          estoque: produto.sellingUnit !== 'WEIGHT_KG' ? produto.stockQuantity : null,
+          ...situacaoDoProduto(produto),
           receita: produto.prescription,
           maiorDeIdade: produto.ageRestricted,
         }}

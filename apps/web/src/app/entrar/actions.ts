@@ -7,22 +7,18 @@ import {
   conferirLoginPorSms,
   createDatabaseSession,
   iniciarLoginPorSms,
+  limitarConferenciaDeCodigo,
+  limitarPedidoDeCodigo,
   registrarAceiteDosTermos,
   requestOtp,
   verifyOtp,
 } from '@rapidinho/auth';
-import {
-  clientIpFromHeaders,
-  consumeRateLimit,
-  getOtpSender,
-  resetRateLimit,
-} from '@rapidinho/services';
+import { clientIpFromHeaders, getOtpSender, resetRateLimit } from '@rapidinho/services';
 import {
   parseServerEnv,
   destinoInterno,
   formatPhoneBR,
   linkDoSmsDeConfirmacao,
-  RATE_LIMITS,
   requestOtpSchema,
   estaNoAppNativo,
   verifyOtpSchema,
@@ -79,23 +75,10 @@ async function solicitarCodigo(formData: FormData): Promise<LoginState> {
   const { phone } = parsed.data;
   const env = parseServerEnv();
 
-  const limit = await consumeRateLimit(
-    `otp:request:phone:${phone}`,
-    RATE_LIMITS.otpRequest.points,
-    RATE_LIMITS.otpRequest.durationSeconds,
-  );
+  const limite = await limitarPedidoDeCodigo(phone, await currentIp());
 
-  // Por IP também: o limite por telefone sozinho deixa quem varre vários
-  // números do mesmo lugar gastar SMS à vontade. Teto folgado porque, no
-  // interior, a operadora põe muitos celulares atrás do mesmo IP (CGNAT).
-  const limitePorIp = await consumeRateLimit(
-    `otp:request:ip:${await currentIp()}`,
-    RATE_LIMITS.otpRequest.points * 10,
-    RATE_LIMITS.otpRequest.durationSeconds,
-  );
-
-  if (!limit.allowed || !limitePorIp.allowed) {
-    const espera = Math.max(limit.retryAfterSeconds, limitePorIp.retryAfterSeconds);
+  if (!limite.permitido) {
+    const espera = limite.esperaSegundos;
     return {
       step: 'phone',
       error: `Muitas tentativas. Tente de novo em ${Math.ceil(espera / 60)} minutos.`,
@@ -146,15 +129,9 @@ async function verificarCodigo(previous: LoginState, formData: FormData): Promis
 
   const { phone, code } = parsed.data;
   const env = parseServerEnv();
-  const limitKey = `otp:verify:${phone}:${await currentIp()}`;
+  const { permitido, chave: limitKey } = await limitarConferenciaDeCodigo(phone, await currentIp());
 
-  const limit = await consumeRateLimit(
-    limitKey,
-    RATE_LIMITS.otpVerify.points,
-    RATE_LIMITS.otpVerify.durationSeconds,
-  );
-
-  if (!limit.allowed) {
+  if (!permitido) {
     return { ...previous, error: 'Muitas tentativas. Peça um novo código.' };
   }
 

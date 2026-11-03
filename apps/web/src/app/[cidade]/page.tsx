@@ -4,6 +4,11 @@ import { notFound } from 'next/navigation';
 import { Check, ChevronDown, ChevronRight, MapPin, Search } from 'lucide-react';
 import { prisma } from '@rapidinho/database';
 import { getCurrentUser } from '@rapidinho/auth';
+import {
+  compararLojasDaVitrine,
+  filtroDeBannerAtivo,
+  lojasPatrocinadas,
+} from '@rapidinho/services/regras';
 import { isStoreOpen } from '@rapidinho/shared';
 import { cn } from '@rapidinho/ui';
 import { Logotipo } from '@/components/marca/logo';
@@ -54,7 +59,7 @@ async function carregarVitrine(citySlug: string) {
 
   const agora = new Date();
 
-  const [lojas, banners, impulsionadas] = await Promise.all([
+  const [lojas, banners, idsImpulsionados] = await Promise.all([
     prisma.store.findMany({
       where: { cityId: cidade.id, status: 'ACTIVE', deletedAt: null },
       orderBy: [{ ratingAverage: 'desc' }, { orderCount: 'desc' }],
@@ -85,40 +90,13 @@ async function carregarVitrine(citySlug: string) {
       },
     }),
     prisma.banner.findMany({
-      where: {
-        isActive: true,
-        // Banner sem cidade é da plataforma inteira.
-        OR: [{ cityId: cidade.id }, { cityId: null }],
-        // Datas são opcionais: sem data significa "vale sempre", então o
-        // filtro precisa aceitar null em vez de excluir.
-        AND: [
-          { OR: [{ startsAt: null }, { startsAt: { lte: agora } }] },
-          { OR: [{ endsAt: null }, { endsAt: { gte: agora } }] },
-        ],
-      },
+      where: filtroDeBannerAtivo(cidade.id, agora),
       orderBy: { sortOrder: 'asc' },
       take: 5,
       select: { id: true, title: true, linkUrl: true, image: { select: SELECT_IMAGEM } },
     }),
-    // Lojas com impulsionamento ativo aparecem em destaque, identificadas
-    // como patrocinadas — esconder isso seria propaganda disfarçada.
-    prisma.storeBoost.findMany({
-      where: {
-        status: 'ACTIVE',
-        startsAt: { lte: agora },
-        endsAt: { gte: agora },
-        // O tipo de destaque e o peso vivem no pacote contratado, não no
-        // impulsionamento em si.
-        package: { placement: 'HOME_HIGHLIGHT' },
-        store: { cityId: cidade.id, status: 'ACTIVE', deletedAt: null },
-      },
-      orderBy: { package: { priority: 'desc' } },
-      take: 6,
-      select: { storeId: true },
-    }),
+    lojasPatrocinadas(cidade.id, agora),
   ]);
-
-  const idsImpulsionados = new Set(impulsionadas.map((boost) => boost.storeId));
 
   // O que cada loja vende, para a faixa do cartão.
   const produtos = await produtosDasLojas(
@@ -169,14 +147,7 @@ async function carregarVitrine(citySlug: string) {
       imagem: imagemExibivel(banner.image, 'large'),
     })),
     // Abertas primeiro; dentro delas, as patrocinadas no topo.
-    lojas: [...comStatus].sort((a, b) => {
-      if (a.aberta !== b.aberta) return a.aberta ? -1 : 1;
-      if (a.patrocinada !== b.patrocinada) return a.patrocinada ? -1 : 1;
-      // Depois do anúncio, quem vende pelo preço do balcão: é o compromisso
-      // que mais importa para quem compra mercado e farmácia.
-      if (a.precoDeBalcao !== b.precoDeBalcao) return a.precoDeBalcao ? -1 : 1;
-      return b.nota - a.nota;
-    }),
+    lojas: [...comStatus].sort(compararLojasDaVitrine),
   };
 }
 

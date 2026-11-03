@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Search } from 'lucide-react';
 import { prisma } from '@rapidinho/database';
+import { idsDaBusca } from '@rapidinho/services/regras';
 import { Card, CardContent } from '@rapidinho/ui';
 import { formatCents, isStoreOpen } from '@rapidinho/shared';
 import { CartaoDeLoja, type LojaNaVitrine } from '@/components/app/cartao-de-loja';
@@ -30,10 +31,6 @@ export const metadata = { title: 'Buscar' };
  * filtros de cidade e status na camada de query.
  */
 
-/** Termo pronto para `LIKE`, com os curingas do usuário neutralizados. */
-function paraLike(termo: string): string {
-  return `%${termo.replace(/[\\%_]/g, (caractere) => `\\${caractere}`)}%`;
-}
 async function buscar(citySlug: string, termo: string) {
   const cidade = await prisma.city.findFirst({
     where: { slug: citySlug, isActive: true },
@@ -47,44 +44,13 @@ async function buscar(citySlug: string, termo: string) {
   }
 
   const agora = new Date();
-  const alvo = paraLike(termo);
 
-  // Ids primeiro, pelo índice. `$queryRaw` com template interpola como
-  // parâmetro preparado — o termo do usuário nunca vira SQL.
-  const [idsDeLoja, idsDeProduto] = await Promise.all([
-    prisma.$queryRaw<{ id: string }[]>`
-      SELECT s."id"
-      FROM "stores" s
-      LEFT JOIN "store_categories" c ON c."id" = s."categoryId"
-      WHERE s."cityId" = ${cidade.id}
-        AND s."status" = 'ACTIVE'
-        AND s."deletedAt" IS NULL
-        AND (
-          immutable_unaccent(lower(s."name")) LIKE immutable_unaccent(lower(${alvo}))
-          OR immutable_unaccent(lower(coalesce(s."description", ''))) LIKE immutable_unaccent(lower(${alvo}))
-          OR immutable_unaccent(lower(coalesce(c."name", ''))) LIKE immutable_unaccent(lower(${alvo}))
-        )
-      LIMIT 20
-    `,
-    prisma.$queryRaw<{ id: string }[]>`
-      SELECT p."id"
-      FROM "products" p
-      JOIN "stores" s ON s."id" = p."storeId"
-      WHERE s."cityId" = ${cidade.id}
-        AND s."status" = 'ACTIVE'
-        AND s."deletedAt" IS NULL
-        AND p."deletedAt" IS NULL
-        AND p."isAvailable" = true
-        AND immutable_unaccent(lower(p."name")) LIKE immutable_unaccent(lower(${alvo}))
-      ORDER BY p."soldCount" DESC
-      LIMIT 30
-    `,
-  ]);
+  const { idsDeLoja, idsDeProduto } = await idsDaBusca(cidade.id, termo);
 
   const [lojas, produtos] = await Promise.all([
     prisma.store.findMany({
       where: {
-        id: { in: idsDeLoja.map((linha) => linha.id) },
+        id: { in: idsDeLoja },
         // Os mesmos filtros do SQL acima, de novo: a regra do projeto é que
         // toda query multi-tenant filtre na camada de query, e uma lista de
         // ids vinda de outra consulta não dispensa isso.
@@ -120,7 +86,7 @@ async function buscar(citySlug: string, termo: string) {
     }),
     prisma.product.findMany({
       where: {
-        id: { in: idsDeProduto.map((linha) => linha.id) },
+        id: { in: idsDeProduto },
         deletedAt: null,
         isAvailable: true,
         store: { cityId: cidade.id, status: 'ACTIVE', deletedAt: null },

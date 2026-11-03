@@ -1,12 +1,7 @@
 import { redirect } from 'next/navigation';
 import { AuthorizationError, requireCourier } from '@rapidinho/auth';
-import { prisma } from '@rapidinho/database';
-import {
-  getPublicEnv,
-  inicioDoDia as inicioDoDiaEmBrasilia,
-  parseServerEnv,
-  REALTIME_CHANNELS,
-} from '@rapidinho/shared';
+import { carregarPainelDoEntregador, corridasRecusadas } from '@rapidinho/services/regras';
+import { getPublicEnv, parseServerEnv, REALTIME_CHANNELS } from '@rapidinho/shared';
 import { createChannelToken } from '@rapidinho/shared/realtime/token';
 import { PainelDoEntregador } from './painel';
 import { CorridasAvulsas, type CorridaAvulsa } from './corridas-avulsas';
@@ -33,133 +28,20 @@ export default async function EntregadorPage() {
     throw error;
   }
 
-  const entregador = await prisma.courier.findUniqueOrThrow({
-    where: { id: contexto.courierId },
-    select: {
-      id: true,
-      cityId: true,
-      storeId: true,
-      isOnline: true,
-      deliveryCount: true,
-      ratingAverage: true,
-      vehicleType: true,
-      user: { select: { name: true } },
-    },
-  });
-
-  // Dia de Brasília: o servidor roda em UTC, e às 21h o "hoje" virava amanhã.
-  const inicioDoDia = inicioDoDiaEmBrasilia();
-
-  const [disponiveis, minhas, ganhos] = await Promise.all([
-    prisma.delivery.findMany({
-      where: {
-        status: 'PENDING',
-        courierId: null,
-        order: {
-          cityId: entregador.cityId,
-          status: { in: ['READY', 'PREPARING'] },
-          // Entregador de loja só enxerga a fila da própria loja; o da
-          // plataforma vê a cidade inteira.
-          ...(entregador.storeId ? { storeId: entregador.storeId } : {}),
-        },
-      },
-      orderBy: { createdAt: 'asc' },
-      take: 20,
-      select: {
-        id: true,
-        earningCents: true,
-        distanceMeters: true,
-        order: {
-          select: {
-            number: true,
-            totalCents: true,
-            addressSnapshot: true,
-            store: { select: { name: true, street: true, number: true, neighborhood: true } },
-          },
-        },
-      },
-    }),
-    prisma.delivery.findMany({
-      where: { courierId: entregador.id, status: { in: ['ACCEPTED', 'PICKED_UP'] } },
-      orderBy: { acceptedAt: 'asc' },
-      select: {
-        id: true,
-        status: true,
-        earningCents: true,
-        order: {
-          select: {
-            number: true,
-            customerName: true,
-            customerPhone: true,
-            totalCents: true,
-            addressSnapshot: true,
-            ageConfirmedAt: true,
-            prescriptionImageId: true,
-            payment: { select: { method: true, status: true, changeForCents: true } },
-            store: {
-              select: { name: true, phone: true, street: true, number: true, neighborhood: true },
-            },
-          },
-        },
-      },
-    }),
-    prisma.delivery.aggregate({
-      where: { courierId: entregador.id, status: 'DELIVERED', deliveredAt: { gte: inicioDoDia } },
-      _sum: { earningCents: true },
-      _count: true,
-    }),
-  ]);
+  const {
+    entregador,
+    ganhosDeHoje,
+    ganhosAvulsos,
+    disponiveis,
+    minhas,
+    avulsasAbertas,
+    avulsasMinhas,
+  } = await carregarPainelDoEntregador(
+    contexto.courierId,
+    await corridasRecusadas(contexto.courierId),
+  );
 
   const channel = REALTIME_CHANNELS.courier(entregador.id);
-
-  // Corridas avulsas: as abertas da cidade (ou só da loja, para entregador de
-  // loja) e as que já são dele.
-  const selectDaAvulsa = {
-    id: true,
-    status: true,
-    customerName: true,
-    customerPhone: true,
-    street: true,
-    number: true,
-    neighborhood: true,
-    referencePoint: true,
-    notes: true,
-    feeCents: true,
-    collectCents: true,
-    store: {
-      select: {
-        name: true,
-        phone: true,
-        whatsapp: true,
-        street: true,
-        number: true,
-        neighborhood: true,
-      },
-    },
-  } as const;
-  const [avulsasAbertas, avulsasMinhas, ganhosAvulsos] = await Promise.all([
-    prisma.errand.findMany({
-      where: {
-        status: 'OPEN',
-        courierId: null,
-        cityId: entregador.cityId,
-        ...(entregador.storeId ? { storeId: entregador.storeId } : {}),
-      },
-      orderBy: { createdAt: 'asc' },
-      take: 20,
-      select: selectDaAvulsa,
-    }),
-    prisma.errand.findMany({
-      where: { courierId: entregador.id, status: { in: ['ACCEPTED', 'PICKED_UP'] } },
-      orderBy: { acceptedAt: 'asc' },
-      select: selectDaAvulsa,
-    }),
-    prisma.errand.aggregate({
-      where: { courierId: entregador.id, status: 'DELIVERED', deliveredAt: { gte: inicioDoDia } },
-      _sum: { feeCents: true },
-      _count: true,
-    }),
-  ]);
 
   const paraTela = (corrida: (typeof avulsasAbertas)[number]): CorridaAvulsa => ({
     id: corrida.id,
@@ -187,12 +69,7 @@ export default async function EntregadorPage() {
         nota: Number(entregador.ratingAverage),
         daLoja: entregador.storeId != null,
       }}
-      // O total do dia soma as entregas do app e as corridas avulsas: para
-      // quem vive de entrega, o número de cima precisa ser o dia inteiro.
-      ganhosDeHoje={{
-        centavos: (ganhos._sum.earningCents ?? 0) + (ganhosAvulsos._sum.feeCents ?? 0),
-        entregas: ganhos._count + ganhosAvulsos._count,
-      }}
+      ganhosDeHoje={ganhosDeHoje}
       disponiveis={disponiveis}
       minhas={minhas}
       realtime={{
@@ -207,10 +84,7 @@ export default async function EntregadorPage() {
       <CorridasAvulsas
         abertas={avulsasAbertas.map(paraTela)}
         minhas={avulsasMinhas.map(paraTela)}
-        ganhosDeHoje={{
-          centavos: ganhosAvulsos._sum.feeCents ?? 0,
-          corridas: ganhosAvulsos._count,
-        }}
+        ganhosDeHoje={ganhosAvulsos}
       />
     </PainelDoEntregador>
   );

@@ -1,13 +1,9 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { prisma } from '@rapidinho/database';
 import { apiHandler, requireUser } from '@rapidinho/auth';
-import { capturarErro, getStorage } from '@rapidinho/services';
-import {
-  InvalidImageError,
-  isPrivateContext,
-  processAndStoreImage,
-} from '@rapidinho/services/images';
+import { capturarErro } from '@rapidinho/services';
+import { InvalidImageError } from '@rapidinho/services/images';
+import { guardarImagem } from '@rapidinho/services/regras/upload';
 import { ASPECT_RATIOS, MAX_UPLOAD_BYTES } from '@rapidinho/shared';
 
 export const runtime = 'nodejs';
@@ -47,33 +43,9 @@ export const POST = apiHandler(async (request: Request) => {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const processed = await processAndStoreImage(buffer, context, getStorage());
+    const imagem = await guardarImagem({ buffer, context, userId: user.id });
 
-    const asset = await prisma.mediaAsset.create({
-      data: {
-        context,
-        originalKey: processed.originalKey,
-        thumbKey: processed.thumbKey,
-        mediumKey: processed.mediumKey,
-        largeKey: processed.largeKey,
-        blurDataUrl: processed.blurDataUrl,
-        mimeType: processed.mimeType,
-        width: processed.width,
-        height: processed.height,
-        sizeBytes: processed.sizeBytes,
-        checksum: processed.checksum,
-        isProcessed: true,
-        uploadedById: user.id,
-      },
-      select: { id: true, mediumKey: true },
-    });
-
-    const storage = getStorage();
-    const url = isPrivateContext(context)
-      ? await storage.getSignedUrl(asset.mediumKey ?? processed.mediumKey)
-      : storage.getPublicUrl(asset.mediumKey ?? processed.mediumKey);
-
-    return NextResponse.json({ id: asset.id, url }, { status: 201 });
+    return NextResponse.json(imagem, { status: 201 });
   } catch (error) {
     if (error instanceof InvalidImageError) {
       return NextResponse.json({ error: error.message }, { status: 422 });

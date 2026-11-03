@@ -2,10 +2,16 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { Prisma, prisma } from '@rapidinho/database';
-import { capturarErro, notificarUsuario, publishRealtimeMany } from '@rapidinho/services';
+import { capturarErro } from '@rapidinho/services';
+import {
+  aceitarCorridaAvulsaDoEntregador,
+  aceitarCorridaDoPedido,
+  alterarDisponibilidadeDoEntregador,
+  avancarCorridaAvulsaDoEntregador,
+  avancarCorridaDoPedido,
+  registrarPosicaoDoEntregador,
+} from '@rapidinho/services/regras';
 import { AuthorizationError, requireCourier } from '@rapidinho/auth';
-import { avisoDeStatusAoCliente, REALTIME_CHANNELS, REALTIME_EVENTS } from '@rapidinho/shared';
 import type { ActionResult } from '@/lib/action-state';
 
 /**
@@ -37,63 +43,12 @@ async function comEntregador(
 
 const idSchema = z.object({ deliveryId: z.string().min(1) });
 
-/**
- * Aceita uma corrida.
- *
- * O `updateMany` com `courierId: null` no filtro é o que evita dois
- * entregadores pegarem a mesma entrega: quem chegar depois atualiza zero
- * linhas e recebe o aviso, em vez de sobrescrever o primeiro.
- */
 export async function aceitarCorrida(entrada: unknown): Promise<ActionResult> {
   return comEntregador(async (courierId) => {
     const { deliveryId } = idSchema.parse(entrada);
-
-    // Mesmo recorte da lista de corridas: entregador de loja só pega corrida
-    // da própria loja, e o da plataforma, só da sua cidade. Sem isto, um id
-    // de corrida de outra cidade (ou de outra loja) era aceito direto.
-    const entregador = await prisma.courier.findUniqueOrThrow({
-      where: { id: courierId },
-      select: { cityId: true, storeId: true },
-    });
-
-    const entrega = await prisma.delivery.findFirst({
-      where: {
-        id: deliveryId,
-        status: 'PENDING',
-        courierId: null,
-        order: {
-          cityId: entregador.cityId,
-          ...(entregador.storeId ? { storeId: entregador.storeId } : {}),
-        },
-      },
-      select: { id: true, orderId: true, order: { select: { storeId: true, number: true } } },
-    });
-
-    if (!entrega) {
-      return { ok: false, message: 'Essa corrida já foi aceita por outro entregador.' };
-    }
-
-    const { count } = await prisma.delivery.updateMany({
-      where: { id: entrega.id, courierId: null, status: 'PENDING' },
-      data: { courierId, status: 'ACCEPTED', assignedAt: new Date(), acceptedAt: new Date() },
-    });
-
-    if (count === 0) {
-      return { ok: false, message: 'Essa corrida já foi aceita por outro entregador.' };
-    }
-
-    await publishRealtimeMany(
-      [
-        REALTIME_CHANNELS.store(entrega.order.storeId),
-        REALTIME_CHANNELS.order(entrega.orderId),
-        REALTIME_CHANNELS.courier(courierId),
-      ],
-      REALTIME_EVENTS.deliveryAssigned,
-      { deliveryId: entrega.id, orderId: entrega.orderId, number: entrega.order.number },
-    );
-
-    revalidatePath('/entregador');
-    return { ok: true, message: `Corrida do pedido #${entrega.order.number} é sua.` };
+    const resultado = await aceitarCorridaDoPedido(courierId, deliveryId);
+    if (resultado.ok) revalidatePath('/entregador');
+    return resultado;
   });
 }
 
@@ -105,107 +60,9 @@ const avancoSchema = z.object({
 /** Avança a corrida e sincroniza o status do pedido. */
 export async function avancarCorrida(entrada: unknown): Promise<ActionResult> {
   return comEntregador(async (courierId) => {
-    const dados = avancoSchema.parse(entrada);
-
-    const entrega = await prisma.delivery.findFirst({
-      where: { id: dados.deliveryId, courierId },
-      select: {
-        id: true,
-        status: true,
-        orderId: true,
-        order: { select: { storeId: true, number: true, status: true, userId: true } },
-      },
-    });
-
-    if (!entrega) return { ok: false, message: 'Corrida não encontrada.' };
-
-    const permitido: Record<string, string[]> = {
-      ACCEPTED: ['PICKED_UP'],
-      PICKED_UP: ['DELIVERED'],
-    };
-
-    if (!permitido[entrega.status]?.includes(dados.status)) {
-      return { ok: false, message: 'Essa mudança não é possível agora.' };
-    }
-
-    const agora = new Date();
-    // O status do pedido acompanha o da entrega: o cliente olha o pedido, não
-    // a corrida, e os dois não podem contar histórias diferentes.
-    const statusDoPedido = dados.status === 'PICKED_UP' ? 'OUT_FOR_DELIVERY' : 'DELIVERED';
-
-    // Corrida e pedido condicionados ao que foi lido: dois toques não contam a
-    // entrega duas vezes, e um pedido cancelado pela loja não vira entregue.
-    // Sem a linha, o update falha (P2025) e a transação inteira volta.
-    try {
-      await prisma.$transaction([
-        prisma.delivery.update({
-          where: { id: entrega.id, status: entrega.status },
-          data: {
-            status: dados.status,
-            ...(dados.status === 'PICKED_UP' ? { pickedUpAt: agora } : { deliveredAt: agora }),
-          },
-        }),
-        prisma.order.update({
-          where: {
-            id: entrega.orderId,
-            status: { notIn: ['CANCELLED', 'REJECTED', 'DELIVERED'] },
-          },
-          data: {
-            status: statusDoPedido,
-            ...(dados.status === 'PICKED_UP' ? { dispatchedAt: agora } : { deliveredAt: agora }),
-          },
-        }),
-        prisma.orderStatusHistory.create({
-          data: { orderId: entrega.orderId, status: statusDoPedido },
-        }),
-        ...(dados.status === 'DELIVERED'
-          ? [
-              prisma.courier.update({
-                where: { id: courierId },
-                data: { deliveryCount: { increment: 1 } },
-              }),
-            ]
-          : []),
-      ]);
-    } catch (erro) {
-      if (erro instanceof Prisma.PrismaClientKnownRequestError && erro.code === 'P2025') {
-        return { ok: false, message: 'Este pedido mudou (talvez foi cancelado). Atualize a tela.' };
-      }
-      throw erro;
-    }
-
-    await publishRealtimeMany(
-      [
-        REALTIME_CHANNELS.store(entrega.order.storeId),
-        REALTIME_CHANNELS.order(entrega.orderId),
-        REALTIME_CHANNELS.courier(courierId),
-      ],
-      REALTIME_EVENTS.deliveryStatusChanged,
-      { deliveryId: entrega.id, orderId: entrega.orderId, status: dados.status },
-    );
-
-    // Mesmo aviso que o cliente recebe quando é a loja que avança: com
-    // entregador da plataforma, "saiu" e "chegou" são marcados aqui, e sem
-    // isto quem fechou o app só descobria o pedido na porta.
-    if (entrega.order.userId) {
-      await notificarUsuario({
-        userId: entrega.order.userId,
-        title: `Pedido #${entrega.order.number}`,
-        ...avisoDeStatusAoCliente(entrega.orderId, statusDoPedido),
-        canais: ['PUSH', 'WHATSAPP'],
-        entity: { type: 'Order', id: entrega.orderId },
-        tag: `pedido-${entrega.orderId}`,
-      });
-    }
-
-    revalidatePath('/entregador');
-    return {
-      ok: true,
-      message:
-        dados.status === 'PICKED_UP'
-          ? 'Pedido retirado. Boa entrega!'
-          : `Pedido #${entrega.order.number} entregue.`,
-    };
+    const resultado = await avancarCorridaDoPedido(courierId, avancoSchema.parse(entrada));
+    if (resultado.ok) revalidatePath('/entregador');
+    return resultado;
   });
 }
 
@@ -215,13 +72,9 @@ export async function alterarDisponibilidade(entrada: unknown): Promise<ActionRe
   return comEntregador(async (courierId) => {
     const { online } = disponibilidadeSchema.parse(entrada);
 
-    await prisma.courier.update({
-      where: { id: courierId },
-      data: { isOnline: online, lastSeenAt: new Date() },
-    });
-
-    revalidatePath('/entregador');
-    return { ok: true, message: online ? 'Você está online.' : 'Você está offline.' };
+    const resultado = await alterarDisponibilidadeDoEntregador(courierId, online);
+    if (resultado.ok) revalidatePath('/entregador');
+    return resultado;
   });
 }
 
@@ -230,26 +83,14 @@ const localizacaoSchema = z.object({
   longitude: z.number().min(-180).max(180),
 });
 
-/** Posição do entregador, para a loja e o cliente acompanharem. */
+/**
+ * Posição do entregador, só durante corrida. Sem revalidatePath: isto roda a cada
+ * poucos segundos, e recarregar a página toda vez seria pior que não ter posição.
+ */
 export async function atualizarLocalizacao(entrada: unknown): Promise<ActionResult> {
-  return comEntregador(async (courierId) => {
-    const dados = localizacaoSchema.parse(entrada);
-
-    await prisma.courier.update({
-      where: { id: courierId },
-      data: { latitude: dados.latitude, longitude: dados.longitude, lastSeenAt: new Date() },
-    });
-
-    // Sem revalidatePath: isto roda a cada poucos segundos e recarregar a
-    // página toda vez seria pior que não ter localização.
-    await publishRealtimeMany(
-      [REALTIME_CHANNELS.courier(courierId)],
-      REALTIME_EVENTS.courierLocation,
-      dados,
-    );
-
-    return { ok: true };
-  });
+  return comEntregador(async (courierId) =>
+    registrarPosicaoDoEntregador(courierId, localizacaoSchema.parse(entrada)),
+  );
 }
 
 /* ------------------------------------------------------------------------ */
@@ -258,39 +99,12 @@ export async function atualizarLocalizacao(entrada: unknown): Promise<ActionResu
 
 const corridaSchema = z.object({ corridaId: z.string().min(10).max(40) });
 
-/**
- * Aceita uma corrida avulsa (chamada pela loja, fora do app).
- *
- * Mesma trava da corrida de pedido: o `updateMany` só pega a corrida se ela
- * ainda estiver aberta e sem dono, então dois entregadores tocando juntos não
- * ficam os dois com ela. O entregador de loja só pega as da própria loja.
- */
 export async function aceitarCorridaAvulsa(entrada: unknown): Promise<ActionResult> {
   return comEntregador(async (courierId) => {
     const { corridaId } = corridaSchema.parse(entrada);
-
-    const entregador = await prisma.courier.findUniqueOrThrow({
-      where: { id: courierId },
-      select: { cityId: true, storeId: true },
-    });
-
-    const { count } = await prisma.errand.updateMany({
-      where: {
-        id: corridaId,
-        status: 'OPEN',
-        courierId: null,
-        cityId: entregador.cityId,
-        ...(entregador.storeId ? { storeId: entregador.storeId } : {}),
-      },
-      data: { courierId, status: 'ACCEPTED', acceptedAt: new Date() },
-    });
-
-    if (count === 0) {
-      return { ok: false, message: 'Essa corrida já foi aceita por outro entregador.' };
-    }
-
-    revalidatePath('/entregador');
-    return { ok: true, message: 'Corrida aceita. Vá até a loja buscar.' };
+    const resultado = await aceitarCorridaAvulsaDoEntregador(courierId, corridaId);
+    if (resultado.ok) revalidatePath('/entregador');
+    return resultado;
   });
 }
 
@@ -301,24 +115,9 @@ const avancoAvulsaSchema = z.object({
 
 export async function avancarCorridaAvulsa(entrada: unknown): Promise<ActionResult> {
   return comEntregador(async (courierId) => {
-    const { corridaId, status } = avancoAvulsaSchema.parse(entrada);
-    const de = status === 'PICKED_UP' ? 'ACCEPTED' : 'PICKED_UP';
-
-    // Só o dono da corrida, e só na ordem: aceita → retirada → entregue.
-    const { count } = await prisma.errand.updateMany({
-      where: { id: corridaId, courierId, status: de },
-      data: {
-        status,
-        ...(status === 'PICKED_UP' ? { pickedUpAt: new Date() } : { deliveredAt: new Date() }),
-      },
-    });
-
-    if (count === 0) return { ok: false, message: 'Esta corrida não está mais com você.' };
-
-    revalidatePath('/entregador');
-    return {
-      ok: true,
-      message: status === 'PICKED_UP' ? 'Boa entrega!' : 'Corrida concluída. Valeu!',
-    };
+    const dados = avancoAvulsaSchema.parse(entrada);
+    const resultado = await avancarCorridaAvulsaDoEntregador(courierId, dados);
+    if (resultado.ok) revalidatePath('/entregador');
+    return resultado;
   });
 }
