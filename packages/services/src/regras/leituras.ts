@@ -3,20 +3,27 @@ import {
   isActiveStatus,
   ORDER_STATUS_CUSTOMER_MESSAGE,
   ORDER_STATUS_LABEL,
+  faixaDeTempo,
   type OrderStatus,
 } from '@rapidinho/shared';
 import type {
   CarrinhoDaLoja,
+  Endereco,
   EnderecoDoPedido,
+  FormaDePagamento,
   PedidoDetalhado,
   PedidoResumido,
+  ResumoDoCheckout,
   StatusDoPagamento,
   Usuario,
   Veiculo,
 } from '@rapidinho/shared/app-api';
-import type { CarrinhoResolvido } from './carrinho';
+import { carregarCarrinho, type CarrinhoResolvido } from './carrinho';
+import { calcularCheckout, formasDePagamentoAceitas } from './checkout';
+import { listarEnderecos } from './enderecos';
 import { CORRIDA_ATIVA } from './entregador';
 import { STATUS_CANCELAVEIS_PELO_CLIENTE } from './pedidos';
+import { falha, type Resultado } from './resultado';
 import { termosPendentes } from './termos';
 
 /**
@@ -399,3 +406,135 @@ export async function registrarDispositivo(dados: {
   });
 }
 
+
+export function paraEnderecoDoApp(
+  endereco: Awaited<ReturnType<typeof listarEnderecos>>[number],
+): Endereco {
+  return {
+    id: endereco.id,
+    rotulo: endereco.label,
+    rua: endereco.street,
+    numero: endereco.number,
+    complemento: endereco.complement,
+    bairro: endereco.neighborhood,
+    bairroId: endereco.neighborhoodId,
+    referencia: endereco.referencePoint,
+    cep: endereco.zipCode,
+    cidade: {
+      id: endereco.city.id,
+      slug: endereco.city.slug,
+      nome: endereco.city.name,
+      uf: endereco.city.state,
+    },
+    latitude: endereco.latitude,
+    longitude: endereco.longitude,
+    padrao: endereco.isDefault,
+  };
+}
+
+/**
+ * Pré-visualização do checkout: os mesmos cálculos da criação do pedido. Sem
+ * gateway: no app o Pix é só o da chave da loja, e cartão online não existe.
+ */
+export async function resumoDoCheckoutDoApp(
+  userId: string,
+  parametros: {
+    lojaId: string;
+    tipo?: 'DELIVERY' | 'PICKUP';
+    enderecoId?: string;
+    cupom?: string;
+  },
+): Promise<Resultado<{ resumo: ResumoDoCheckout }>> {
+  const [carrinho, loja, enderecos, ultimoPagamento] = await Promise.all([
+    carregarCarrinho(userId, parametros.lojaId),
+    prisma.store.findFirst({
+      where: { id: parametros.lojaId, status: 'ACTIVE', deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        cityId: true,
+        acceptsPickup: true,
+        acceptsPix: true,
+        pixKey: true,
+        settlementMode: true,
+        acceptsCardOnline: true,
+        acceptsCashOnDelivery: true,
+        acceptsCardOnDelivery: true,
+        avgPrepTimeMinutes: true,
+        avgDeliveryTimeMinutes: true,
+        segment: true,
+        city: { select: { slug: true } },
+      },
+    }),
+    listarEnderecos(userId, { lojaId: parametros.lojaId }),
+    prisma.payment.findFirst({
+      where: { order: { userId } },
+      orderBy: { createdAt: 'desc' },
+      select: { method: true },
+    }),
+  ]);
+
+  if (!loja) return falha('Loja indisponível.', 'LOJA_INDISPONIVEL');
+  if (!carrinho || carrinho.itens.length === 0) {
+    return falha('Seu carrinho está vazio.', 'CARRINHO_VAZIO');
+  }
+
+  const tipo = parametros.tipo === 'PICKUP' && loja.acceptsPickup ? 'PICKUP' : 'DELIVERY';
+  const enderecoEscolhidoId =
+    parametros.enderecoId ??
+    enderecos.find((endereco) => endereco.isDefault)?.id ??
+    enderecos[0]?.id ??
+    null;
+
+  const valores = await calcularCheckout({
+    carrinho,
+    userId,
+    cityId: loja.cityId,
+    tipo,
+    addressId: enderecoEscolhidoId,
+    couponCode: parametros.cupom ?? null,
+  });
+
+  const aceitas = formasDePagamentoAceitas(loja, { pixPeloGateway: false });
+  const formasDePagamento = (['PIX', 'CASH_ON_DELIVERY', 'CARD_ON_DELIVERY'] as const).filter(
+    (forma): forma is FormaDePagamento => aceitas[forma],
+  );
+  const sugerido = formasDePagamento.find((forma) => forma === ultimoPagamento?.method);
+
+  return {
+    ok: true,
+    resumo: {
+      loja: {
+        id: loja.id,
+        nome: loja.name,
+        slug: loja.slug,
+        cidadeSlug: loja.city.slug,
+        aceitaRetirada: loja.acceptsPickup,
+        ehMercado: loja.segment === 'MARKET',
+        ...faixaDeTempo(loja.avgPrepTimeMinutes, loja.avgDeliveryTimeMinutes),
+      },
+      carrinho: paraCarrinhoDoApp(carrinho, loja.city.slug),
+      tipo,
+      enderecos: enderecos.map(paraEnderecoDoApp),
+      enderecoEscolhidoId,
+      formasDePagamento,
+      pagamentoSugerido: sugerido ?? null,
+      exigencias: {
+        maioridade: carrinho.exigeMaioridade,
+        receita: carrinho.exigeReceita,
+        temPesavel: carrinho.itens.some((item) => item.sellingUnit === 'WEIGHT_KG'),
+      },
+      valores: {
+        subtotalCents: valores.subtotalCents,
+        taxaEntregaCents: valores.deliveryFeeCents,
+        motivoDaTaxa: valores.deliveryFeeReason,
+        descontoCents: valores.discountCents,
+        freteGratisPorCupom: valores.freteGratisPorCupom,
+        totalCents: valores.totalCents,
+      },
+      mensagemDoCupom: valores.couponMessage,
+      bloqueio: valores.bloqueio,
+    },
+  };
+}
