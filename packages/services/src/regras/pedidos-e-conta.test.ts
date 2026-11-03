@@ -260,8 +260,8 @@ describe('endereços', () => {
   beforeEach(() => prisma.city!.findFirst!.mockResolvedValue({ id: 'c1' }));
 
   it('id de outra pessoa não salva nem mexe no padrão dela', async () => {
-    prisma.address!.updateMany!
-      .mockResolvedValueOnce({ count: 1 })
+    prisma
+      .address!.updateMany!.mockResolvedValueOnce({ count: 1 })
       .mockResolvedValueOnce({ count: 0 });
 
     expect(await salvarEnderecoDoCliente('u2', dados, 'alheio')).toMatchObject({
@@ -284,9 +284,9 @@ describe('endereços', () => {
 
   it('bairro de outra cidade é recusado', async () => {
     prisma.neighborhood!.findFirst!.mockResolvedValue(null);
-    expect(
-      await salvarEnderecoDoCliente('u1', { ...dados, neighborhoodId: 'b1' }),
-    ).toMatchObject({ codigo: 'DADOS_INVALIDOS' });
+    expect(await salvarEnderecoDoCliente('u1', { ...dados, neighborhoodId: 'b1' })).toMatchObject({
+      codigo: 'DADOS_INVALIDOS',
+    });
   });
 
   it('definir padrão e excluir filtram pelo dono', async () => {

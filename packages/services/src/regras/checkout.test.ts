@@ -137,7 +137,11 @@ function prepararPedidoValido() {
     zipCode: null,
   });
   prisma.product!.findMany!.mockResolvedValue([]);
-  prisma.order!.create!.mockResolvedValue({ id: 'o1', number: '02110001', status: 'PENDING_PAYMENT' });
+  prisma.order!.create!.mockResolvedValue({
+    id: 'o1',
+    number: '02110001',
+    status: 'PENDING_PAYMENT',
+  });
 }
 
 beforeEach(() => {
@@ -157,9 +161,9 @@ describe('formasDePagamentoAceitas', () => {
 
   it('no app, Pix só com a chave da própria loja', () => {
     expect(formasDePagamentoAceitas(base, { pixPeloGateway: false }).PIX).toBe(false);
-    expect(
-      formasDePagamentoAceitas({ ...base, pixKey: 'x' }, { pixPeloGateway: false }).PIX,
-    ).toBe(true);
+    expect(formasDePagamentoAceitas({ ...base, pixKey: 'x' }, { pixPeloGateway: false }).PIX).toBe(
+      true,
+    );
   });
 
   it('cartão online fica fora mesmo com o campo ligado na loja', () => {
@@ -172,9 +176,7 @@ describe('calcularCheckout', () => {
     id: 'k1',
     storeId: 'l1',
     subtotalCents: 2000,
-    itens: [
-      { nome: 'Arroz', unitTotalCents: 1000, quantidade: 2, totalCents: 2000 },
-    ],
+    itens: [{ nome: 'Arroz', unitTotalCents: 1000, quantidade: 2, totalCents: 2000 }],
     temIndisponivel: false,
     loja: { commissionRate: 0 },
   } as never;
@@ -384,9 +386,7 @@ describe('criarPedido', () => {
 
     it('envio gêmeo que perde a corrida responde com o pedido do vencedor', async () => {
       prisma.order!.findUnique!.mockResolvedValueOnce(null).mockResolvedValue(existente);
-      prisma.order!.create!.mockRejectedValue(
-        erroDoPrisma('P2002', ['userId', 'idempotencyKey']),
-      );
+      prisma.order!.create!.mockRejectedValue(erroDoPrisma('P2002', ['userId', 'idempotencyKey']));
 
       expect(await criarPedido(entrada({ chaveDeIdempotencia: chave }))).toMatchObject({
         ok: true,

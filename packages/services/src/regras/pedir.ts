@@ -69,7 +69,6 @@ export interface PedidoMontado {
 export type RespostaDaMontagem =
   { ok: true; pedido: PedidoMontado } | { ok: false; message: string };
 
-
 /** Nota mínima para um produto contar como resposta ao item. */
 const NOTA_MINIMA = 0.5;
 /** Mais de três lojas deixa de ser atalho e vira trabalho. */

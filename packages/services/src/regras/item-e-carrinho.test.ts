@@ -45,7 +45,9 @@ describe('validarItem', () => {
     prisma.product!.findFirst!.mockResolvedValue(
       produto({ sellingUnit: 'WEIGHT_KG', minWeightGrams: 200 }),
     );
-    expect(await validarItem('l1', item())).toMatchObject({ message: 'Escolha o peso que você quer.' });
+    expect(await validarItem('l1', item())).toMatchObject({
+      message: 'Escolha o peso que você quer.',
+    });
     expect(await validarItem('l1', item({ weightGrams: 100 }))).toMatchObject({
       message: 'O mínimo é 200 g.',
     });

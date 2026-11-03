@@ -749,7 +749,6 @@ export async function criarPedido(entrada: EntradaDoPedido): Promise<PedidoCriad
     await prisma.user.update({ where: { id: usuario.id }, data: { name: dados.customerName } });
   }
 
-
   return {
     ok: true,
     message: `Pedido #${pedido.number} enviado!`,

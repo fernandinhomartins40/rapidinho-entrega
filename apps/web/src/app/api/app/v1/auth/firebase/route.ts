@@ -36,7 +36,10 @@ export const POST = rotaDoApp(async (request: Request) => {
 
   if (!validacao.ok) {
     if (validacao.motivo === 'indisponivel') {
-      throw new ErroDaRota('Não foi possível entrar agora. Tente de novo.', 'FIREBASE_INDISPONIVEL');
+      throw new ErroDaRota(
+        'Não foi possível entrar agora. Tente de novo.',
+        'FIREBASE_INDISPONIVEL',
+      );
     }
     throw new ErroDaRota('Não foi possível confirmar seu telefone.', 'TOKEN_FIREBASE_INVALIDO');
   }

@@ -38,7 +38,9 @@ describe('R3-015: cupom de frete grátis', () => {
     if (!cupom.valid) throw new Error(cupom.reason);
     const valores = taxaEDescontoDoPedido(taxaCents, cupom);
     return calculateOrderTotals({
-      items: [{ productName: 'x', unitPriceCents: subtotalCents, quantity: 1, sellingUnit: 'UNIT' }],
+      items: [
+        { productName: 'x', unitPriceCents: subtotalCents, quantity: 1, sellingUnit: 'UNIT' },
+      ],
       deliveryFeeCents: valores.deliveryFeeCents,
       discountCents: valores.discountCents,
     });

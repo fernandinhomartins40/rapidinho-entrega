@@ -53,7 +53,10 @@ function respostaDeErro(
   codigo: CodigoDeErro,
   cabecalhos?: Record<string, string>,
 ): NextResponse<ErroDaApiDoApp> {
-  return NextResponse.json({ erro, codigo }, { status, ...(cabecalhos ? { headers: cabecalhos } : {}) });
+  return NextResponse.json(
+    { erro, codigo },
+    { status, ...(cabecalhos ? { headers: cabecalhos } : {}) },
+  );
 }
 
 export function erroParaResposta(error: unknown): NextResponse<ErroDaApiDoApp> {

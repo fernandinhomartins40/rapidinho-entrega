@@ -45,7 +45,9 @@ async function clienteDeTeste(sufixo: string) {
 }
 
 async function main() {
-  const cidade = await prisma.city.findFirst({ where: { isActive: true, stores: { some: { status: 'ACTIVE' } } } });
+  const cidade = await prisma.city.findFirst({
+    where: { isActive: true, stores: { some: { status: 'ACTIVE' } } },
+  });
   const produto = await prisma.product.findFirst({
     where: {
       deletedAt: null,
@@ -71,7 +73,10 @@ async function main() {
     conferir('vitrine', vitrine.status === 200 && Array.isArray(vitrine.corpo?.lojas));
     conferir('cidade inexistente 404', (await chamar('cidades/nao-existe/vitrine')).status === 404);
     conferir('busca', (await chamar(`cidades/${cidade.slug}/busca?q=ar`)).status === 200);
-    conferir('produto', (await chamar(`cidades/${cidade.slug}/produtos/${produto.id}`)).status === 200);
+    conferir(
+      'produto',
+      (await chamar(`cidades/${cidade.slug}/produtos/${produto.id}`)).status === 200,
+    );
 
     // ---- auth
     const firebase = await chamar('auth/firebase', undefined, {
@@ -90,23 +95,43 @@ async function main() {
     conferir('eu com token lixo 401', (await chamar('eu', 'lixo')).status === 401);
     const eu = await chamar('eu', ana.token);
     conferir('eu', eu.corpo?.id === ana.id && typeof eu.corpo?.termosPendentes === 'boolean');
-    const nome = await chamar('eu', ana.token, { method: 'PATCH', body: JSON.stringify({ nome: 'A' }) });
-    conferir('PATCH eu valida (422 DADOS_INVALIDOS)', nome.status === 422 && nome.corpo?.codigo === 'DADOS_INVALIDOS');
+    const nome = await chamar('eu', ana.token, {
+      method: 'PATCH',
+      body: JSON.stringify({ nome: 'A' }),
+    });
+    conferir(
+      'PATCH eu valida (422 DADOS_INVALIDOS)',
+      nome.status === 422 && nome.corpo?.codigo === 'DADOS_INVALIDOS',
+    );
 
     // ---- endereços
     const endereco = await chamar('enderecos', ana.token, {
       method: 'POST',
-      body: JSON.stringify({ rua: 'Rua Teste', bairro: 'Centro', referencia: 'Perto da igreja', cidadeId: cidade.id }),
+      body: JSON.stringify({
+        rua: 'Rua Teste',
+        bairro: 'Centro',
+        referencia: 'Perto da igreja',
+        cidadeId: cidade.id,
+      }),
     });
     const enderecoId = endereco.corpo?.id as string;
     conferir('cria endereço', endereco.status === 201 && endereco.corpo?.padrao === true);
-    conferir('IDOR endereço GET', (await chamar(`enderecos/${enderecoId}`, bia.token)).status === 404);
-    conferir('IDOR endereço DELETE', (await chamar(`enderecos/${enderecoId}`, bia.token, { method: 'DELETE' })).status === 404);
+    conferir(
+      'IDOR endereço GET',
+      (await chamar(`enderecos/${enderecoId}`, bia.token)).status === 404,
+    );
+    conferir(
+      'IDOR endereço DELETE',
+      (await chamar(`enderecos/${enderecoId}`, bia.token, { method: 'DELETE' })).status === 404,
+    );
 
     // ---- carrinho
     const item = await chamar('carrinho/itens', ana.token, {
       method: 'POST',
-      body: JSON.stringify({ lojaId: produto.storeId, item: { produtoId: produto.id, quantidade: 2 } }),
+      body: JSON.stringify({
+        lojaId: produto.storeId,
+        item: { produtoId: produto.id, quantidade: 2 },
+      }),
     });
     const carrinhos = item.corpo?.carrinhos as { itens: { id: string }[] }[] | undefined;
     const itemId = carrinhos?.[0]?.itens[0]?.id;
@@ -119,49 +144,111 @@ async function main() {
     conferir('IDOR item do carrinho', alheio.status === 404);
 
     // ---- checkout e pedido
-    const resumo = await chamar(`checkout/resumo?lojaId=${produto.storeId}&enderecoId=${enderecoId}`, ana.token);
-    conferir('resumo do checkout', resumo.status === 200 && typeof (resumo.corpo?.valores as { totalCents?: number })?.totalCents === 'number');
+    const resumo = await chamar(
+      `checkout/resumo?lojaId=${produto.storeId}&enderecoId=${enderecoId}`,
+      ana.token,
+    );
+    conferir(
+      'resumo do checkout',
+      resumo.status === 200 &&
+        typeof (resumo.corpo?.valores as { totalCents?: number })?.totalCents === 'number',
+    );
     const vazio = await chamar('pedidos', bia.token, {
       method: 'POST',
-      body: JSON.stringify({ chaveDeIdempotencia: 'teste-vazio-123', lojaId: produto.storeId, tipo: 'PICKUP', formaDePagamento: 'CASH_ON_DELIVERY' }),
+      body: JSON.stringify({
+        chaveDeIdempotencia: 'teste-vazio-123',
+        lojaId: produto.storeId,
+        tipo: 'PICKUP',
+        formaDePagamento: 'CASH_ON_DELIVERY',
+      }),
     });
-    conferir('pedido de carrinho vazio 409', vazio.status === 409 && vazio.corpo?.codigo === 'CARRINHO_VAZIO', JSON.stringify(vazio));
+    conferir(
+      'pedido de carrinho vazio 409',
+      vazio.status === 409 && vazio.corpo?.codigo === 'CARRINHO_VAZIO',
+      JSON.stringify(vazio),
+    );
     const cartao = await chamar('pedidos', ana.token, {
       method: 'POST',
-      body: JSON.stringify({ chaveDeIdempotencia: 'teste-cartao-1', lojaId: produto.storeId, formaDePagamento: 'CREDIT_CARD_ONLINE' }),
+      body: JSON.stringify({
+        chaveDeIdempotencia: 'teste-cartao-1',
+        lojaId: produto.storeId,
+        formaDePagamento: 'CREDIT_CARD_ONLINE',
+      }),
     });
     conferir('cartão online recusado (422)', cartao.status === 422);
 
     // Pedido real só se a loja estiver aberta: o resumo diz.
     if (!resumo.corpo?.bloqueio) {
-      const corpo = JSON.stringify({ chaveDeIdempotencia: `teste-${MARCA}`, lojaId: produto.storeId, enderecoId, formaDePagamento: 'CASH_ON_DELIVERY' });
+      const corpo = JSON.stringify({
+        chaveDeIdempotencia: `teste-${MARCA}`,
+        lojaId: produto.storeId,
+        enderecoId,
+        formaDePagamento: 'CASH_ON_DELIVERY',
+      });
       const [p1, p2] = await Promise.all([
         chamar('pedidos', ana.token, { method: 'POST', body: corpo }),
         chamar('pedidos', ana.token, { method: 'POST', body: corpo }),
       ]);
-      conferir('idempotência: dois envios, um pedido', p1.corpo?.id === p2.corpo?.id && !!p1.corpo?.id, JSON.stringify([p1, p2]));
+      conferir(
+        'idempotência: dois envios, um pedido',
+        p1.corpo?.id === p2.corpo?.id && !!p1.corpo?.id,
+        JSON.stringify([p1, p2]),
+      );
       const pedidoId = p1.corpo?.id as string;
       conferir('IDOR pedido GET', (await chamar(`pedidos/${pedidoId}`, bia.token)).status === 404);
-      conferir('IDOR pedido cancelar', (await chamar(`pedidos/${pedidoId}/cancelar`, bia.token, { method: 'POST' })).status === 404);
-      conferir('IDOR token de tempo real', (await chamar(`realtime/token?canal=pedido&id=${pedidoId}`, bia.token)).status === 404);
-      conferir('token de tempo real do dono', (await chamar(`realtime/token?canal=pedido&id=${pedidoId}`, ana.token)).corpo?.canal === `order:${pedidoId}`);
+      conferir(
+        'IDOR pedido cancelar',
+        (await chamar(`pedidos/${pedidoId}/cancelar`, bia.token, { method: 'POST' })).status ===
+          404,
+      );
+      conferir(
+        'IDOR token de tempo real',
+        (await chamar(`realtime/token?canal=pedido&id=${pedidoId}`, bia.token)).status === 404,
+      );
+      conferir(
+        'token de tempo real do dono',
+        (await chamar(`realtime/token?canal=pedido&id=${pedidoId}`, ana.token)).corpo?.canal ===
+          `order:${pedidoId}`,
+      );
       const cancelado = await chamar(`pedidos/${pedidoId}/cancelar`, ana.token, { method: 'POST' });
-      conferir('dono cancela antes do aceite', cancelado.status === 200 || cancelado.status === 409, JSON.stringify(cancelado));
+      conferir(
+        'dono cancela antes do aceite',
+        cancelado.status === 200 || cancelado.status === 409,
+        JSON.stringify(cancelado),
+      );
     } else {
-      console.log(`aviso: loja fechada (${String(resumo.corpo.bloqueio)}); pedido real não testado`);
+      console.log(
+        `aviso: loja fechada (${String(resumo.corpo.bloqueio)}); pedido real não testado`,
+      );
     }
 
     // ---- favoritos, dispositivos, entregador, uploads
-    const favorito = await chamar('favoritos/alternar', ana.token, { method: 'POST', body: JSON.stringify({ lojaId: produto.storeId }) });
+    const favorito = await chamar('favoritos/alternar', ana.token, {
+      method: 'POST',
+      body: JSON.stringify({ lojaId: produto.storeId }),
+    });
     conferir('alterna favorito', favorito.corpo?.favorita === true);
     const aparelho = await chamar('dispositivos', ana.token, {
       method: 'POST',
-      body: JSON.stringify({ expoPushToken: `ExponentPushToken[teste${Date.now()}]`, plataforma: 'android' }),
+      body: JSON.stringify({
+        expoPushToken: `ExponentPushToken[teste${Date.now()}]`,
+        plataforma: 'android',
+      }),
     });
     conferir('registra aparelho', aparelho.status === 200, JSON.stringify(aparelho));
-    conferir('cliente no painel do entregador 403', (await chamar('entregador/painel', ana.token)).status === 403);
-    conferir('localização sem token 401', (await chamar('entregador/localizacao', undefined, { method: 'POST', body: '{}' })).status === 401);
-    conferir('upload sem token 401', (await chamar('uploads', undefined, { method: 'POST' })).status === 401);
+    conferir(
+      'cliente no painel do entregador 403',
+      (await chamar('entregador/painel', ana.token)).status === 403,
+    );
+    conferir(
+      'localização sem token 401',
+      (await chamar('entregador/localizacao', undefined, { method: 'POST', body: '{}' })).status ===
+        401,
+    );
+    conferir(
+      'upload sem token 401',
+      (await chamar('uploads', undefined, { method: 'POST' })).status === 401,
+    );
 
     // ---- exclusão e saída
     const sair = await chamar('auth/sair', bia.token, { method: 'POST' });
@@ -170,7 +257,10 @@ async function main() {
     conferir('aparelho preso à sessão', aparelhos === 1);
   } finally {
     const ids = [ana.id, bia.id];
-    const pedidos = await prisma.order.findMany({ where: { userId: { in: ids } }, select: { id: true } });
+    const pedidos = await prisma.order.findMany({
+      where: { userId: { in: ids } },
+      select: { id: true },
+    });
     await prisma.order.deleteMany({ where: { id: { in: pedidos.map((pedido) => pedido.id) } } });
     await prisma.consentRecord.deleteMany({ where: { userId: { in: ids } } });
     await prisma.user.deleteMany({ where: { id: { in: ids } } });

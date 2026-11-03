@@ -41,7 +41,9 @@ export async function atividadeQueImpedeExclusao(userId: string): Promise<string
     const storeId = { in: lojas.map((loja) => loja.storeId) };
     const [pedidosDaLoja, avulsasDaLoja] = await Promise.all([
       prisma.order.count({ where: { storeId, status: PEDIDO_EM_ANDAMENTO } }),
-      prisma.errand.count({ where: { storeId, status: { in: ['OPEN', 'ACCEPTED', 'PICKED_UP'] } } }),
+      prisma.errand.count({
+        where: { storeId, status: { in: ['OPEN', 'ACCEPTED', 'PICKED_UP'] } },
+      }),
     ]);
     if (pedidosDaLoja + avulsasDaLoja > 0) {
       return 'Sua loja tem pedidos em andamento. Conclua todos para excluir a conta.';

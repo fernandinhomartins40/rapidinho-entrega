@@ -28,9 +28,19 @@ function gerarPar() {
   execFileSync(
     'openssl',
     [
-      'req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '1',
-      '-subj', '/CN=securetoken',
-      '-keyout', arquivoDaChave, '-out', arquivoDoCertificado,
+      'req',
+      '-x509',
+      '-newkey',
+      'rsa:2048',
+      '-nodes',
+      '-days',
+      '1',
+      '-subj',
+      '/CN=securetoken',
+      '-keyout',
+      arquivoDaChave,
+      '-out',
+      arquivoDoCertificado,
     ],
     { stdio: 'ignore' },
   );

@@ -45,7 +45,5 @@ export const POST = rotaDoApp(async (request: Request) => {
 
   const dados = await lerCorpo(request, entradaSchema);
 
-  return okCom(
-    exigirOk(await enviarDocumentoDoEntregador({ courierId, userId: user.id }, dados)),
-  );
+  return okCom(exigirOk(await enviarDocumentoDoEntregador({ courierId, userId: user.id }, dados)));
 });

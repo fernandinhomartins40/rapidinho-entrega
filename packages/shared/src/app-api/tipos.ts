@@ -57,12 +57,7 @@ export interface RespostaOk {
 // ---------------------------------------------------------------------------
 
 export type Papel =
-  | 'CUSTOMER'
-  | 'STORE_OWNER'
-  | 'STORE_STAFF'
-  | 'COURIER'
-  | 'ADMIN'
-  | 'SUPER_ADMIN';
+  'CUSTOMER' | 'STORE_OWNER' | 'STORE_STAFF' | 'COURIER' | 'ADMIN' | 'SUPER_ADMIN';
 
 export type Segmento = 'MARKET' | 'PHARMACY' | 'RESTAURANT' | 'OTHER';
 
@@ -78,13 +73,7 @@ export type StatusDoPedido =
   | 'REJECTED';
 
 export type StatusDaEntrega =
-  | 'PENDING'
-  | 'ASSIGNED'
-  | 'ACCEPTED'
-  | 'PICKED_UP'
-  | 'DELIVERED'
-  | 'CANCELLED'
-  | 'REFUSED';
+  'PENDING' | 'ASSIGNED' | 'ACCEPTED' | 'PICKED_UP' | 'DELIVERED' | 'CANCELLED' | 'REFUSED';
 
 export type StatusDoEntregador = 'PENDING_APPROVAL' | 'ACTIVE' | 'SUSPENDED' | 'REJECTED';
 
@@ -94,13 +83,7 @@ export type TipoDePedido = 'DELIVERY' | 'PICKUP';
 export type FormaDePagamento = 'PIX' | 'CASH_ON_DELIVERY' | 'CARD_ON_DELIVERY';
 
 export type StatusDoPagamento =
-  | 'PENDING'
-  | 'AUTHORIZED'
-  | 'PAID'
-  | 'REFUNDED'
-  | 'FAILED'
-  | 'CANCELLED'
-  | 'ON_DELIVERY';
+  'PENDING' | 'AUTHORIZED' | 'PAID' | 'REFUNDED' | 'FAILED' | 'CANCELLED' | 'ON_DELIVERY';
 
 export type PoliticaDeSubstituicao = 'SUBSTITUTE_SIMILAR' | 'CONTACT_ME' | 'REMOVE_ITEM';
 

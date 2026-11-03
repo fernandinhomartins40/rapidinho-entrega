@@ -545,7 +545,14 @@ export async function lojaDoApp(
           produtos: categoria.products.map(mapear),
         })),
       ...(loja.products.length > 0
-        ? [{ id: 'sem-categoria', nome: 'Outros', descricao: null, produtos: loja.products.map(mapear) }]
+        ? [
+            {
+              id: 'sem-categoria',
+              nome: 'Outros',
+              descricao: null,
+              produtos: loja.products.map(mapear),
+            },
+          ]
         : []),
     ],
     pizza:
@@ -572,7 +579,8 @@ export async function lojaDoApp(
             extras: loja.pizzaExtras.map((extra) => ({
               id: extra.id,
               nome: extra.name,
-              tipo: extra.kind === 'CRUST' ? 'CRUST' : extra.kind === 'TOPPING' ? 'TOPPING' : 'EDGE',
+              tipo:
+                extra.kind === 'CRUST' ? 'CRUST' : extra.kind === 'TOPPING' ? 'TOPPING' : 'EDGE',
               precoCents: extra.priceCents,
             })),
           },
@@ -587,10 +595,7 @@ export async function lojaDoApp(
   };
 }
 
-export async function produtoDoApp(
-  citySlug: string,
-  id: string,
-): Promise<ProdutoDetalhado | null> {
+export async function produtoDoApp(citySlug: string, id: string): Promise<ProdutoDetalhado | null> {
   const agora = new Date();
 
   const produto = await prisma.product.findFirst({

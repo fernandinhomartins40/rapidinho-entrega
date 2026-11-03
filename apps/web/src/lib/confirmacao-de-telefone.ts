@@ -5,8 +5,7 @@ import { capturarErro } from '@rapidinho/services';
 import { enviarCodigoParaOTelefone } from './telefone-confirmado';
 
 export type EnvioDoCodigo =
-  | { ok: true; message: string; devCode?: string }
-  | { ok: false; message: string };
+  { ok: true; message: string; devCode?: string } | { ok: false; message: string };
 
 /** Primeiro passo dos cadastros públicos: manda o código por SMS. */
 export async function enviarCodigoDeCadastro(telefoneDigitado: string): Promise<EnvioDoCodigo> {

@@ -1,11 +1,6 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import {
-  cadastroDeEntregador,
-  ErroDaRota,
-  exigirUsuarioDoToken,
-  rotaDoApp,
-} from '@rapidinho/auth';
+import { cadastroDeEntregador, ErroDaRota, exigirUsuarioDoToken, rotaDoApp } from '@rapidinho/auth';
 import { capturarErro } from '@rapidinho/services';
 import { InvalidImageError } from '@rapidinho/services/images';
 import { guardarImagem } from '@rapidinho/services/regras/upload';

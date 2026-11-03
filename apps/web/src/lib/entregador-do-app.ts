@@ -1,4 +1,4 @@
-import { carregarPainelDoEntregador, enderecoDoSnapshot } from '@rapidinho/services/regras';
+import { type carregarPainelDoEntregador, enderecoDoSnapshot } from '@rapidinho/services/regras';
 import type {
   CorridaAvulsa,
   PainelDoEntregador,

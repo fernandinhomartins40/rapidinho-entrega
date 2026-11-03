@@ -1,11 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { rotaDoApp } from '@rapidinho/auth';
-import {
-  CHAVE_DE_PRATO,
-  criarSessaoDeFome,
-  MAXIMO_DE_PRATOS,
-} from '@rapidinho/services/regras';
+import { CHAVE_DE_PRATO, criarSessaoDeFome, MAXIMO_DE_PRATOS } from '@rapidinho/services/regras';
 import { RATE_LIMITS } from '@rapidinho/shared';
 import { exigirOk, lerCorpo, limitarPorIp } from '@/lib/api-do-app';
 

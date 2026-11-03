@@ -125,7 +125,9 @@ describe('exigências', () => {
   it('quem não é entregador é 403', async () => {
     sessaoNoBanco(30 * DIA);
     courier.findUnique.mockResolvedValue(null);
-    await expect(exigirEntregadorDoToken(pedido('Bearer x'))).rejects.toMatchObject({ status: 403 });
+    await expect(exigirEntregadorDoToken(pedido('Bearer x'))).rejects.toMatchObject({
+      status: 403,
+    });
   });
 });
 

@@ -152,7 +152,10 @@ export async function repetirPedido(
   };
 }
 
-export async function avaliarPedidoDoCliente(userId: string, dados: ReviewInput): Promise<Resultado> {
+export async function avaliarPedidoDoCliente(
+  userId: string,
+  dados: ReviewInput,
+): Promise<Resultado> {
   const pedido = await prisma.order.findFirst({
     where: { id: dados.orderId, userId, status: 'DELIVERED' },
     select: {

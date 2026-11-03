@@ -60,10 +60,7 @@ export async function usuarioDoApp(userId: string): Promise<Usuario | null> {
   };
 }
 
-export function paraCarrinhoDoApp(
-  carrinho: CarrinhoResolvido,
-  cidadeSlug: string,
-): CarrinhoDaLoja {
+export function paraCarrinhoDoApp(carrinho: CarrinhoResolvido, cidadeSlug: string): CarrinhoDaLoja {
   return {
     id: carrinho.id,
     lojaId: carrinho.storeId,
@@ -405,7 +402,6 @@ export async function registrarDispositivo(dados: {
     create: { ...campos, expoPushToken: dados.expoPushToken },
   });
 }
-
 
 export function paraEnderecoDoApp(
   endereco: Awaited<ReturnType<typeof listarEnderecos>>[number],
