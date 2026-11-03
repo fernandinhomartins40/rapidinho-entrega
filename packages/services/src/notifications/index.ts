@@ -1,6 +1,6 @@
 import { prisma } from '@rapidinho/database';
 import type { PushPayload } from '@rapidinho/shared';
-import { getEmail, getPush, getWhatsApp } from '../providers';
+import { getEmail, getExpoPush, getPush, getWhatsApp } from '../providers';
 import { logger } from '../logger';
 
 /**
@@ -44,6 +44,7 @@ export async function notificarUsuario(entrada: NotificacaoInput): Promise<void>
 
   await Promise.allSettled([
     entrada.canais.includes('PUSH') ? enviarPush(entrada) : null,
+    entrada.canais.includes('PUSH') ? enviarExpoPush(entrada) : null,
     entrada.canais.includes('WHATSAPP') && usuario.phone
       ? enviarWhatsApp(entrada, usuario.phone)
       : null,
@@ -118,6 +119,36 @@ async function enviarPush(entrada: NotificacaoInput): Promise<void> {
   }
 
   await registrar(entrada, 'PUSH', algumaFoi ? 'SENT' : 'FAILED');
+}
+
+/** Aparelhos com o app nativo. O site segue pelo Web Push, acima. */
+async function enviarExpoPush(entrada: NotificacaoInput): Promise<void> {
+  const aparelhos = await prisma.pushDevice.findMany({
+    where: { userId: entrada.userId },
+    select: { expoPushToken: true },
+  });
+
+  if (aparelhos.length === 0) return;
+
+  try {
+    const resultado = await getExpoPush().send({
+      tokens: aparelhos.map((aparelho) => aparelho.expoPushToken),
+      title: entrada.title,
+      body: entrada.body,
+      ...(entrada.url ? { data: { url: entrada.url } } : {}),
+    });
+
+    if (resultado.invalidos.length > 0) {
+      await prisma.pushDevice.deleteMany({
+        where: { expoPushToken: { in: resultado.invalidos } },
+      });
+    }
+
+    await registrar(entrada, 'PUSH', resultado.enviados > 0 ? 'SENT' : 'FAILED');
+  } catch (erro) {
+    logger.error({ err: erro, userId: entrada.userId }, '[expo-push] falha ao enviar');
+    await registrar(entrada, 'PUSH', 'FAILED', 'Falha na Expo Push API');
+  }
 }
 
 async function enviarWhatsApp(entrada: NotificacaoInput, phone: string): Promise<void> {

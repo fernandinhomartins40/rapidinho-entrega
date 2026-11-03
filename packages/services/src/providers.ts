@@ -19,6 +19,11 @@ import { createFakePaymentGateway } from './payments/fake';
 import { createFakeEmailProvider, createResendEmailProvider } from './messaging/email';
 import { createNoopPushProvider, createWebPushProvider } from './messaging/push';
 import { createMercadoPagoGateway } from './payments/mercadopago';
+import {
+  createConsoleExpoPushProvider,
+  createExpoPushProvider,
+  type ExpoPushProvider,
+} from './messaging/expo-push';
 
 /**
  * Fábricas dos serviços externos.
@@ -34,6 +39,7 @@ let otpSenderInstance: OtpSender | null = null;
 let paymentGatewayInstance: PaymentGateway | null = null;
 let emailInstance: EmailProvider | null = null;
 let pushInstance: PushProvider | null = null;
+let expoPushInstance: ExpoPushProvider | null = null;
 
 export function getStorage(): StorageProvider {
   if (storageInstance) return storageInstance;
@@ -158,4 +164,18 @@ export function getPush(): PushProvider {
       : createNoopPushProvider();
 
   return pushInstance;
+}
+
+export function getExpoPush(): ExpoPushProvider {
+  if (expoPushInstance) return expoPushInstance;
+
+  const env = parseServerEnv();
+  // Sem escolha explícita, só produção sai para a Expo: teste e desenvolvimento
+  // nunca avisam um aparelho de verdade.
+  const provedor = env.EXPO_PUSH_PROVIDER ?? (env.NODE_ENV === 'production' ? 'expo' : 'console');
+
+  expoPushInstance =
+    provedor === 'expo' ? createExpoPushProvider() : createConsoleExpoPushProvider();
+
+  return expoPushInstance;
 }

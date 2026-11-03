@@ -11,7 +11,11 @@
     "./images": "./src/images/processor.ts",
     "./messaging": "./src/messaging/index.ts",
     "./rate-limit": "./src/rate-limit.ts",
-    "./observability": "./src/observability.ts"
+    "./observability": "./src/observability.ts",
+    "./regras": "./src/regras/index.ts",
+    "./regras/pedir": "./src/regras/pedir.ts",
+    "./regras/termos": "./src/regras/termos.ts",
+    "./regras/upload": "./src/regras/upload.ts"
   },
   "scripts": {
     "lint": "eslint .",
