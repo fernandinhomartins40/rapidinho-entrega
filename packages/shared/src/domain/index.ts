@@ -10,3 +10,6 @@ export * from './notification-segment';
 export * from './shopping-list';
 export * from './cravings';
 export * from './separacao';
+export * from './midia';
+export * from './sabores';
+export * from './produto';

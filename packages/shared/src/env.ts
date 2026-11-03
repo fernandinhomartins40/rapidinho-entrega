@@ -63,6 +63,14 @@ const serverEnvSchema = z.object({
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().optional(),
 
+  /// `expo`: envia pelo serviço da Expo. `console`: só registra no log. Sem
+  /// valor: `expo` em produção e `console` no resto, para teste nunca sair.
+  EXPO_PUSH_PROVIDER: z.preprocess(vazioComoAusente, z.enum(['expo', 'console']).optional()),
+
+  /// Projeto do Firebase Phone Auth. Não é segredo: só diz de quem aceitar o
+  /// idToken. Vazio desliga `auth/firebase`.
+  FIREBASE_PROJECT_ID: z.preprocess(vazioComoAusente, z.string().optional()),
+
   SENTRY_DSN: z.string().optional(),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 });

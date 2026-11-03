@@ -150,5 +150,15 @@ export const RATE_LIMITS = {
   search: { points: 60, durationSeconds: 60 },
   checkout: { points: 10, durationSeconds: 300 },
   upload: { points: 30, durationSeconds: 300 },
+  /** App nativo: escrita comum (carrinho, endereço, avaliação), por usuário. */
+  appEscrita: { points: 60, durationSeconds: 60 },
+  /** Troca do idToken do Firebase pela sessão, por IP: folga para CGNAT. */
+  appFirebase: { points: 30, durationSeconds: 900 },
+  /** App nativo: consulta do SMS reverso, feita de tempos em tempos. */
+  appConferirSms: { points: 240, durationSeconds: 900 },
+  /** Contagem de banner, por IP: folga para CGNAT, trava quem infla a métrica. */
+  appBanner: { points: 120, durationSeconds: 60 },
+  /** Posição do entregador: um ponto a cada poucos segundos. */
+  appLocalizacao: { points: 60, durationSeconds: 60 },
 } as const;
 export * from './marca';

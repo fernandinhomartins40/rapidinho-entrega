@@ -8,6 +8,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./domain": "./src/domain/index.ts",
+    "./domain/midia": "./src/domain/midia.ts",
+    "./domain/sabores": "./src/domain/sabores.ts",
     "./schemas": "./src/schemas/index.ts",
     "./services": "./src/services/index.ts",
     "./constants": "./src/constants/index.ts",
@@ -16,7 +18,8 @@
     "./realtime/token": "./src/realtime/token.ts",
     "./security": "./src/security/csp.ts",
     "./senha": "./src/security/senha.ts",
-    "./app-api": "./src/app-api/tipos.ts"
+    "./app-api": "./src/app-api/tipos.ts",
+    "./app-api/configuracao": "./src/app-api/configuracao.ts"
   },
   "scripts": {
     "lint": "eslint .",

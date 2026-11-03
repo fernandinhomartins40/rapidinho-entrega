@@ -191,3 +191,32 @@ export function timeToMinute(time: string): number {
   const [hours = '0', minutes = '0'] = time.split(':');
   return Number(hours) * 60 + Number(minutes);
 }
+
+/**
+ * Texto curto do horário para a vitrine do app. Dizer quando abre vale mais que
+ * "fechada": é o que traz o cliente de volta. Pausa e feriado não têm próxima
+ * abertura calculada, então mostram o motivo.
+ */
+export function rotuloDoHorario(abertura: StoreOpenResult, agora: Date = new Date()): string {
+  if (abertura.isOpen) return 'Aberta agora';
+
+  if (abertura.nextOpensAt) {
+    const horario = minuteToTime(abertura.nextOpensAt.minute);
+    return abertura.nextOpensAt.weekday === toLocalMoment(agora).weekday
+      ? `Abre às ${horario}`
+      : `Abre ${weekdayLabel(abertura.nextOpensAt.weekday)} às ${horario}`;
+  }
+
+  return abertura.reason ?? 'Fechada';
+}
+
+/** Folga da previsão: o tempo da loja é média, e o app mostra uma faixa. */
+export const FOLGA_DO_TEMPO_MINUTOS = 10;
+
+export function faixaDeTempo(
+  preparoMinutos: number,
+  entregaMinutos: number,
+): { tempoMin: number; tempoMax: number } {
+  const tempoMin = preparoMinutos + entregaMinutos;
+  return { tempoMin, tempoMax: tempoMin + FOLGA_DO_TEMPO_MINUTOS };
+}
