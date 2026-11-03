@@ -229,8 +229,8 @@ describe('calcularCheckout', () => {
     expect((await calcular()).bloqueio).toContain('Faltam 10,00 reais');
   });
 
-  // Só a taxa: o total ainda desconta o frete duas vezes (R3-015, outra frente).
-  it('cupom de frete grátis zera a taxa', async () => {
+  // R3-015: a taxa não pode sair duas vezes (zerada e descontada).
+  it('cupom de frete grátis desconta a taxa uma vez só', async () => {
     prisma.coupon!.findFirst!.mockResolvedValue({
       id: 'cp',
       code: 'FRETE',
@@ -253,7 +253,12 @@ describe('calcularCheckout', () => {
     prisma.order!.count!.mockResolvedValue(0);
 
     expect(await calcular({ couponCode: ' frete ' })).toMatchObject({
-      deliveryFeeCents: 0,
+      subtotalCents: 2000,
+      deliveryFeeCents: 500,
+      discountCents: 500,
+      totalCents: 2000,
+      freteGratisPorCupom: true,
+      deliveryFeeReason: 'Entrega grátis pelo cupom',
       couponId: 'cp',
     });
   });

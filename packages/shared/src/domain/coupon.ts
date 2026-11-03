@@ -96,3 +96,18 @@ export function applyCoupon(coupon: CouponRule, context: CouponContext): CouponR
     freeDelivery: false,
   };
 }
+
+/**
+ * Taxa e desconto que vão para o pedido depois do cupom.
+ *
+ * Frete grátis já vem como desconto do valor da taxa; zerar a taxa também
+ * tirava o mesmo valor duas vezes (R3-015). A taxa fica registrada como é,
+ * porque é dela que sai o valor da corrida, e o desconto mostra o custo do cupom.
+ */
+export function taxaEDescontoDoPedido(
+  deliveryFeeCents: number,
+  cupom: CouponResult | null,
+): { deliveryFeeCents: number; discountCents: number } {
+  if (!cupom || !cupom.valid) return { deliveryFeeCents, discountCents: 0 };
+  return { deliveryFeeCents, discountCents: cupom.discountCents };
+}

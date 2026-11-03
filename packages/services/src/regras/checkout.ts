@@ -1,6 +1,7 @@
 import { Prisma, prisma } from '@rapidinho/database';
 import {
   applyCoupon,
+  taxaEDescontoDoPedido,
   buildPixBrCode,
   calculateDeliveryFee,
   CARTAO_ONLINE_DISPONIVEL,
@@ -198,12 +199,11 @@ export async function calcularCheckout({
       );
 
       if (resultado.valid) {
-        discountCents = resultado.discountCents;
+        ({ deliveryFeeCents, discountCents } = taxaEDescontoDoPedido(deliveryFeeCents, resultado));
         freteGratisPorCupom = resultado.freeDelivery;
         couponId = cupom.id;
 
         if (resultado.freeDelivery) {
-          deliveryFeeCents = 0;
           deliveryFeeReason = 'Entrega grátis pelo cupom';
         }
       } else {
