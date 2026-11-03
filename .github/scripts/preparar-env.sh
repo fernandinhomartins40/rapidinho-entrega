@@ -157,6 +157,10 @@ if [ -n "${SMSDEV_API_KEY:-}" ]; then
   gravar_env "OTP_PROVIDER" "sms"
 fi
 
+# Login por SMS do app nativo (Firebase Phone Auth). O id do projeto não é
+# segredo: o servidor só confere a assinatura do idToken com as chaves públicas
+# do Google. Sem ele, /api/app/v1/auth/firebase responde FIREBASE_DESLIGADO.
+garantir_env "FIREBASE_PROJECT_ID" "rapidinho-entrega"
 
 # Telefone do super admin. Sem ele o seed essencial não cria administrador
 # nenhum, e é assim de propósito: cair para um número fixo daria acesso ao

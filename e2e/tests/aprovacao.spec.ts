@@ -40,7 +40,14 @@ test.describe('aprovação de loja', () => {
     await page.getByLabel('CPF ou CNPJ').fill(cpfValido());
     await page.getByLabel('Seu nome').fill('Responsável de Teste');
     // Telefone novo a cada execução: o cadastro cria a conta junto.
-    await page.getByLabel('WhatsApp').fill(`(44) 98${marca.slice(0, 3)}-${marca.slice(3)}1`);
+    await page.getByLabel(/WhatsApp/).fill(`(44) 98${marca.slice(0, 3)}-${marca.slice(3)}1`);
+    // O cadastro só é aceito com o código do SMS (R3-060). Em desenvolvimento a
+    // tela mostra o código junto do aviso de envio.
+    await page.getByRole('button', { name: 'Enviar código' }).click();
+    const aviso = page.getByText(/desenvolvimento: \d{6}/);
+    await aviso.waitFor({ state: 'visible', timeout: 20_000 });
+    const codigo = (await aviso.textContent())?.match(/desenvolvimento: (\d{6})/)?.[1] ?? '';
+    await page.locator('#codigo').fill(codigo);
     // E-mail e senha são o acesso do lojista ao painel.
     await page.getByLabel('E-mail').fill(`lojista-${marca}@e2e.rapidinho.test`);
     // Pelo id: o rótulo "Senha" também casaria com "Repita a senha".

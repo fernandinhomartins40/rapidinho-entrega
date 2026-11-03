@@ -553,8 +553,7 @@ export async function carregarPainelDoEntregador(courierId: string, ocultas: str
 }
 
 /** Rótulo guardado em `CourierDocument.label`, que é texto livre no banco. */
-const TIPOS_DE_DOCUMENTO = ['CNH', 'CRLV', 'OUTRO'] as const;
-export type TipoDeDocumento = (typeof TIPOS_DE_DOCUMENTO)[number];
+export type TipoDeDocumento = 'CNH' | 'CRLV' | 'OUTRO';
 
 export async function listarDocumentosDoEntregador(courierId: string) {
   return prisma.courier.findUniqueOrThrow({
