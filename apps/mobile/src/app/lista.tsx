@@ -26,7 +26,7 @@ import { chamar } from '@/api/cliente';
 import { Botao, dinheiro, T, Toque } from '@/componentes/base';
 import { useFolgaInferior } from '@/componentes/folga';
 import { Cartao } from '@/componentes/formulario';
-import { TopoEscuro } from '@/componentes/topo';
+import { TopoDaTela } from '@/componentes/topo';
 import { cores, elevacao, espaco, fontes, raio } from '@/tema/tokens';
 
 const ENTREGADOR = require('@/assets/marca/entregador.png');
@@ -94,23 +94,21 @@ export default function PedidoPorLista() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: folga }}
       >
-        <TopoEscuro voltar titulo="Pedido por lista" Icone={ClipboardList}>
+        <TopoDaTela voltar titulo="Pedido por lista" Icone={ClipboardList}>
           <View style={estilos.chamada}>
             <View style={{ flex: 1, gap: espaco.xs }}>
-              <T v="titulo1" cor={cores.textoNaNoite}>
-                Diga o que você precisa.
-              </T>
-              <T v="titulo2" cor={cores.amarelo}>
+              <T v="titulo2">Diga o que você precisa.</T>
+              <T v="titulo3" cor={cores.marca}>
                 A gente acha e monta.
               </T>
-              <T v="legenda" cor={cores.textoNaNoiteFraco}>
+              <T v="legenda" cor={cores.textoMedio}>
                 Escreva sua lista, um item por linha. Procuramos nas lojas abertas e montamos o
                 pedido no menor número de lojas.
               </T>
             </View>
             <Image source={ENTREGADOR} style={estilos.entregador} contentFit="contain" />
           </View>
-        </TopoEscuro>
+        </TopoDaTela>
 
         <View style={estilos.corpo}>
           <View style={[estilos.caixa, elevacao.alta]}>

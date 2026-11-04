@@ -6,7 +6,7 @@ import { FlatList, StyleSheet, View } from 'react-native';
 import type { Vitrine } from '@contrato';
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { Botao, EstadoDaTela, ErroDaTela, Esqueleto } from '@/componentes/base';
-import { BotaoNoTopo, Pilulas, TopoEscuro } from '@/componentes/topo';
+import { BotaoNoTopo, Pilulas, TopoDaTela } from '@/componentes/topo';
 import { useFolgaInferior } from '@/componentes/folga';
 import { CartaoDeLoja } from '@/componentes/vitrine';
 import { chaveDaCategoria, iconeDaCategoria } from '@/tema/categorias';
@@ -38,7 +38,7 @@ export default function Categoria() {
   return (
     <View style={estilos.tela}>
       <Stack.Screen options={{ headerShown: false }} />
-      <TopoEscuro
+      <TopoDaTela
         voltar
         titulo={info?.nome ?? 'Categoria'}
         subtitulo="Confira as lojas abertas e peça agora."
@@ -57,7 +57,7 @@ export default function Categoria() {
             ]}
           />
         ) : null}
-      </TopoEscuro>
+      </TopoDaTela>
 
       {vitrine.isError ? (
         <ErroDaTela

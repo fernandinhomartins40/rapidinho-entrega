@@ -1,5 +1,3 @@
-import { Image } from 'expo-image';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
 import { ArrowLeft } from 'lucide-react-native';
@@ -7,40 +5,17 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T, Toque } from '@/componentes/base';
-import { cores, degradeDaMarca, degradeDaNoite, espaco, raio, toqueMinimo } from '@/tema/tokens';
-
-const LETREIRO = require('@/assets/marca/letreiro.png');
-
-/** Faixas de luz laranja no canto: o brilho que acompanha a marca no topo. */
-function Brilho() {
-  return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      <LinearGradient
-        colors={['rgba(255,138,31,0)', 'rgba(255,110,31,0.85)', 'rgba(255,168,40,0)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[estilos.faixa, { top: -40, right: -90, width: 260, height: 70 }]}
-      />
-      <LinearGradient
-        colors={['rgba(255,138,31,0)', 'rgba(255,90,31,0.55)', 'rgba(255,168,40,0)']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[estilos.faixa, { top: 30, right: -120, width: 300, height: 34 }]}
-      />
-    </View>
-  );
-}
+import { cores, elevacao, espaco, raio, toqueMinimo } from '@/tema/tokens';
 
 /**
- * Topo azul-noite com brilho laranja, usado em toda tela principal. Leva o
- * letreiro quando é tela de entrada; título e ícone nas demais.
+ * Topo branco das telas, com cantos arredondados embaixo. A cor fica nos
+ * detalhes (ícone, botões), para a tela respirar.
  */
-export function TopoEscuro({
+export function TopoDaTela({
   titulo,
   subtitulo,
   Icone,
   voltar,
-  letreiro,
   direita,
   children,
   estilo,
@@ -49,7 +24,6 @@ export function TopoEscuro({
   subtitulo?: string;
   Icone?: LucideIcon;
   voltar?: boolean;
-  letreiro?: boolean;
   direita?: ReactNode;
   children?: ReactNode;
   estilo?: StyleProp<ViewStyle>;
@@ -57,14 +31,8 @@ export function TopoEscuro({
   const topo = useSafeAreaInsets().top;
 
   return (
-    <LinearGradient
-      colors={degradeDaNoite}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[estilos.topo, { paddingTop: topo + espaco.s }, estilo]}
-    >
-      <Brilho />
-      {letreiro || voltar || direita ? (
+    <View style={[estilos.topo, elevacao.baixa, { paddingTop: topo + espaco.s }, estilo]}>
+      {voltar || direita ? (
         <View style={estilos.barra}>
           {voltar ? (
             <Toque
@@ -72,37 +40,28 @@ export function TopoEscuro({
               onPress={() => router.back()}
               style={estilos.botaoRedondo}
             >
-              <ArrowLeft size={22} color={cores.textoNaNoite} />
+              <ArrowLeft size={24} color={cores.marca} />
             </Toque>
           ) : (
             <View style={estilos.vazio} />
           )}
-          {letreiro ? (
-            <Image
-              source={LETREIRO}
-              style={estilos.letreiro}
-              contentFit="contain"
-              accessibilityLabel="Rapidinho Entrega"
-            />
-          ) : (
-            <View style={{ flex: 1 }} />
-          )}
+          <View style={{ flex: 1 }} />
           <View style={estilos.direita}>{direita}</View>
         </View>
       ) : null}
       {titulo ? (
         <View style={estilos.titulo}>
           {Icone ? (
-            <LinearGradient colors={degradeDaMarca} style={estilos.icone}>
-              <Icone size={26} color={cores.textoNaCor} strokeWidth={2.2} />
-            </LinearGradient>
+            <View style={estilos.icone}>
+              <Icone size={24} color={cores.marca} strokeWidth={2.2} />
+            </View>
           ) : null}
           <View style={{ flex: 1 }}>
-            <T v="titulo1" cor={cores.textoNaNoite} numberOfLines={2}>
+            <T v="titulo1" numberOfLines={2}>
               {titulo}
             </T>
             {subtitulo ? (
-              <T v="legenda" cor={cores.textoNaNoiteFraco}>
+              <T v="legenda" cor={cores.textoMedio}>
                 {subtitulo}
               </T>
             ) : null}
@@ -110,7 +69,7 @@ export function TopoEscuro({
         </View>
       ) : null}
       {children}
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -127,7 +86,7 @@ export function BotaoNoTopo({
 }) {
   return (
     <Toque accessibilityLabel={rotulo} onPress={aoTocar} style={estilos.botaoRedondo}>
-      <Icone size={22} color={cores.textoNaNoite} />
+      <Icone size={24} color={cores.marca} />
       {aviso ? (
         <View style={estilos.aviso}>
           <T v="mini" cor={cores.textoNaCor}>
@@ -139,13 +98,13 @@ export function BotaoNoTopo({
   );
 }
 
-/** Filtros em pílula: o escolhido fica laranja, os outros brancos. */
+/** Filtros em pílula: a escolhida ganha moldura e fundo laranja-claro. */
 export function Pilulas<C extends string>({
   opcoes,
   valor,
   aoMudar,
 }: {
-  opcoes: { chave: C; rotulo: string }[];
+  opcoes: { chave: C; rotulo: string; Icone?: LucideIcon; cor?: string }[];
   valor: C;
   aoMudar: (c: C) => void;
 }) {
@@ -164,25 +123,12 @@ export function Pilulas<C extends string>({
             accessibilityState={{ selected: ligada }}
             accessibilityLabel={o.rotulo}
             onPress={() => aoMudar(o.chave)}
+            style={[estilos.pilula, ligada && estilos.pilulaLigada]}
           >
-            {ligada ? (
-              <LinearGradient
-                colors={degradeDaMarca}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={estilos.pilula}
-              >
-                <T v="corpoForte" cor={cores.textoNaCor}>
-                  {o.rotulo}
-                </T>
-              </LinearGradient>
-            ) : (
-              <View style={[estilos.pilula, estilos.pilulaApagada]}>
-                <T v="corpoForte" cor={cores.texto}>
-                  {o.rotulo}
-                </T>
-              </View>
-            )}
+            {o.Icone ? <o.Icone size={20} color={o.cor ?? cores.marca} strokeWidth={2.2} /> : null}
+            <T v="corpoForte" cor={ligada ? cores.marcaEscura : cores.texto}>
+              {o.rotulo}
+            </T>
           </Toque>
         );
       })}
@@ -192,25 +138,23 @@ export function Pilulas<C extends string>({
 
 const estilos = StyleSheet.create({
   topo: {
+    backgroundColor: cores.superficie,
     paddingHorizontal: espaco.l,
-    paddingBottom: espaco.xl,
+    paddingBottom: espaco.l,
     gap: espaco.m,
-    borderBottomLeftRadius: raio.folha + 8,
-    borderBottomRightRadius: raio.folha + 8,
-    overflow: 'hidden',
+    borderBottomLeftRadius: raio.folha,
+    borderBottomRightRadius: raio.folha,
+    zIndex: 1,
   },
-  faixa: { position: 'absolute', borderRadius: raio.total, transform: [{ rotate: '-28deg' }] },
   barra: { flexDirection: 'row', alignItems: 'center', gap: espaco.s },
   vazio: { width: toqueMinimo },
   direita: { minWidth: toqueMinimo, alignItems: 'flex-end' },
-  letreiro: { flex: 1, height: 52 },
   botaoRedondo: {
     width: toqueMinimo,
     height: toqueMinimo,
     borderRadius: raio.total,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.12)',
   },
   aviso: {
     position: 'absolute',
@@ -226,19 +170,23 @@ const estilos = StyleSheet.create({
   },
   titulo: { flexDirection: 'row', alignItems: 'center', gap: espaco.m },
   icone: {
-    width: 52,
-    height: 52,
+    width: 48,
+    height: 48,
     borderRadius: raio.grande,
+    backgroundColor: cores.marcaClara,
     alignItems: 'center',
     justifyContent: 'center',
   },
   pilulas: { gap: espaco.s, paddingRight: espaco.l },
   pilula: {
-    minHeight: 40,
+    minHeight: 44,
     paddingHorizontal: espaco.l,
-    borderRadius: raio.total,
+    borderRadius: raio.medio,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: espaco.s,
   },
-  pilulaApagada: { backgroundColor: cores.superficie },
+  pilulaLigada: { borderColor: cores.marca, backgroundColor: cores.marcaClara },
 });

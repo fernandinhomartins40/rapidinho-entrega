@@ -233,6 +233,9 @@ export interface ProdutoDaVitrine {
   tempoMin: number;
   /** Entre os mais pedidos da cidade nesta hora do dia. */
   emAlta: boolean;
+  /** Preço "de", riscado, quando o produto está em promoção. */
+  precoDeCents?: number | null;
+  lojaLogoUrl?: string | null;
 }
 
 export interface LojaDaVitrine {
@@ -260,12 +263,40 @@ export interface LojaDaVitrine {
   precoDeBalcao: boolean;
 }
 
+/**
+ * Formato de cada seção de campanha da home. O app desenha os tipos que
+ * conhece e ignora os demais, para tipo novo não exigir atualização do app.
+ *
+ * - PRODUTOS: banner largo (1200×400) e produtos em linha.
+ * - COLECOES: cartões em pé (600×800), cada um um banner.
+ * - FAIXA: um banner largo sozinho (1200×400).
+ * - LOJAS: logos das lojas da campanha.
+ */
+export type TipoDeSecao = 'PRODUTOS' | 'COLECOES' | 'FAIXA' | 'LOJAS';
+
+export interface SecaoDaVitrine {
+  id: string;
+  tipo: TipoDeSecao | (string & {});
+  titulo: string;
+  subtitulo: string | null;
+  /** Segmento da campanha; null aparece em todas as abas da home. */
+  segmento: Segmento | null;
+  banner: BannerDaVitrine | null;
+  banners: BannerDaVitrine[];
+  produtos: ProdutoDaVitrine[];
+  lojas: LojaDaVitrine[];
+  /** Destino do "ver tudo"; sem destino, o link não aparece. */
+  verTudo: { lojaSlug: string | null; categoriaSlug: string | null; linkUrl: string | null } | null;
+}
+
 export interface Vitrine {
   cidade: Cidade;
   banners: BannerDaVitrine[];
   categorias: CategoriaDaVitrine[];
   saindoAgora: ProdutoDaVitrine[];
   lojas: LojaDaVitrine[];
+  /** Seções de campanha montadas no painel; servidor antigo não manda. */
+  secoes?: SecaoDaVitrine[];
 }
 
 export interface ProdutoDoCardapio {

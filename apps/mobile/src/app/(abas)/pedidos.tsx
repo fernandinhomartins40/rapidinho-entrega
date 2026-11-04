@@ -10,7 +10,7 @@ import { chamar, ErroDaApi } from '@/api/cliente';
 import { useSessao } from '@/api/sessao';
 import { Botao, dinheiro, ErroDaTela, Esqueleto, T, Toque } from '@/componentes/base';
 import { SeloDoStatus, TrilhaDoPedido } from '@/componentes/pedido';
-import { Pilulas, TopoEscuro } from '@/componentes/topo';
+import { Pilulas, TopoDaTela } from '@/componentes/topo';
 import { cores, elevacao, espaco, raio } from '@/tema/tokens';
 
 const MASCOTE = require('@/assets/marca/mascote.png');
@@ -38,7 +38,7 @@ export default function Pedidos() {
 
   return (
     <View style={estilos.tela}>
-      <TopoEscuro titulo="Meus pedidos" Icone={ClipboardList}>
+      <TopoDaTela titulo="Meus pedidos" Icone={ClipboardList}>
         {usuario ? (
           <Pilulas<Filtro>
             valor={filtro}
@@ -50,7 +50,7 @@ export default function Pedidos() {
             ]}
           />
         ) : null}
-      </TopoEscuro>
+      </TopoDaTela>
 
       {!usuario ? (
         <Vazio

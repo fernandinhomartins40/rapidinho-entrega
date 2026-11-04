@@ -9,7 +9,7 @@ import { avisarErro } from '@/api/carrinho';
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { useSessao } from '@/api/sessao';
 import { Botao, ErroDaTela, Esqueleto, T, Toque } from '@/componentes/base';
-import { TopoEscuro } from '@/componentes/topo';
+import { TopoDaTela } from '@/componentes/topo';
 import { CartaoDeLoja } from '@/componentes/vitrine';
 import { cores, elevacao, espaco, raio, toqueMinimo } from '@/tema/tokens';
 
@@ -40,7 +40,7 @@ export default function Favoritos() {
 
   return (
     <View style={estilos.tela}>
-      <TopoEscuro titulo="Favoritos" Icone={Heart} subtitulo="Suas lojas preferidas, a um toque." />
+      <TopoDaTela titulo="Favoritos" Icone={Heart} subtitulo="Suas lojas preferidas, a um toque." />
       {!usuario ? (
         <Vazio
           texto="Entre com seu celular para guardar suas lojas preferidas."

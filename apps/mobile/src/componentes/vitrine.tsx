@@ -3,13 +3,14 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { ChevronRight, Star } from 'lucide-react-native';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { FlatList, Linking, StyleSheet, useWindowDimensions, View } from 'react-native';
 import type {
   BannerDaVitrine,
   CategoriaDaVitrine,
   LojaDaVitrine,
   ProdutoDaVitrine,
+  SecaoDaVitrine,
 } from '@contrato';
 import { chamar } from '@/api/cliente';
 import { chaveDaCategoria, iconeDaCategoria } from '@/tema/categorias';
@@ -36,7 +37,7 @@ function BannerDaMarca({ altura, nomeDaCidade }: { altura: number; nomeDaCidade:
       colors={degradeDoSol}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={[estilos.banner, estilos.bannerDaMarca, { height: altura }, elevacao.alta]}
+      style={[estilos.banner, estilos.bannerDaMarca, { height: altura }]}
     >
       <View style={estilos.bannerDaMarcaTexto}>
         <T v="titulo1" cor={cores.noite} style={estilos.inclinado}>
@@ -66,7 +67,7 @@ export function CarrosselDeCampanhas({
 }) {
   const { width } = useWindowDimensions();
   const largura = width - espaco.l * 2;
-  const altura = Math.round(largura * 0.46);
+  const altura = Math.round(largura * 0.42);
   const lista = useRef<FlatList<BannerDaVitrine>>(null);
   const [atual, setAtual] = useState(0);
   const vistos = useRef(new Set<string>());
@@ -130,20 +131,14 @@ export function CarrosselDeCampanhas({
                 contarClique.mutate(item.id);
                 abrirBanner(item, cidade);
               }}
-              style={[estilos.banner, { height: altura }, elevacao.alta]}
+              style={[estilos.banner, { height: altura }]}
             >
               <Foto url={item.imagemUrl} categoria="outros" estilo={StyleSheet.absoluteFill} />
-              <LinearGradient
-                colors={['transparent', 'rgba(28,26,46,0.85)']}
-                style={estilos.bannerTexto}
-              >
-                {item.cupom ? (
+              {item.cupom ? (
+                <View style={estilos.cupom}>
                   <Selo texto={`CUPOM ${item.cupom}`} cor={cores.noite} fundo={cores.amarelo} />
-                ) : null}
-                <T v="titulo2" cor={cores.textoNaCor} numberOfLines={2}>
-                  {item.titulo}
-                </T>
-              </LinearGradient>
+                </View>
+              ) : null}
             </Toque>
           </View>
         )}
@@ -159,7 +154,7 @@ export function CarrosselDeCampanhas({
   );
 }
 
-/** Blocos coloridos de atalho: cada segmento com sua cor, ícone branco no meio. */
+/** Atalhos por categoria: ícone colorido num círculo claro, nome embaixo. */
 export function FaixaDeCategorias({
   categorias,
   cidade,
@@ -177,6 +172,7 @@ export function FaixaDeCategorias({
       renderItem={({ item }) => {
         const chave = chaveDaCategoria(item.slug, item.segmento);
         const Icone = iconeDaCategoria(chave);
+        const tom = coresDaCategoria[chave];
         return (
           <Toque
             accessibilityLabel={item.nome}
@@ -188,14 +184,9 @@ export function FaixaDeCategorias({
             }
             style={estilos.categoria}
           >
-            <LinearGradient
-              colors={coresDaCategoria[chave].degrade}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={[estilos.categoriaIcone, elevacao.baixa]}
-            >
-              <Icone size={34} color={cores.textoNaCor} strokeWidth={2.2} />
-            </LinearGradient>
+            <View style={[estilos.categoriaIcone, { backgroundColor: tom.fundo }]}>
+              <Icone size={30} color={tom.cor} strokeWidth={2.2} />
+            </View>
             <T v="legenda" numberOfLines={1} style={estilos.centro}>
               {item.nome}
             </T>
@@ -206,63 +197,84 @@ export function FaixaDeCategorias({
   );
 }
 
-/** Atalho grande em cartão: "Não sabe o que pedir?", "Pedir por lista". */
+/** Bloco da home: título, uma frase e "ver tudo", com o conteúdo embaixo. */
+export function Secao({
+  titulo,
+  subtitulo,
+  verTudo,
+  fundo,
+  children,
+}: {
+  titulo: string;
+  subtitulo?: string;
+  verTudo?: () => void;
+  /** Cartão cinza em volta, como as vitrines de produto. */
+  fundo?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <View style={[estilos.secao, fundo && estilos.secaoComFundo]}>
+      <View style={[estilos.secaoTopo, !fundo && { paddingHorizontal: espaco.l }]}>
+        <View style={estilos.flex}>
+          <T v="titulo2">{titulo}</T>
+          {subtitulo ? (
+            <T v="legenda" cor={cores.textoMedio}>
+              {subtitulo}
+            </T>
+          ) : null}
+        </View>
+        {verTudo ? (
+          <Toque
+            accessibilityLabel={`Ver tudo: ${titulo}`}
+            onPress={verTudo}
+            style={estilos.verTudo}
+          >
+            <T v="corpoForte" cor={cores.marca}>
+              ver tudo
+            </T>
+            <ChevronRight size={18} color={cores.marca} />
+          </Toque>
+        ) : null}
+      </View>
+      {children}
+    </View>
+  );
+}
+
+/** Atalho em cartão branco: "Pedir por lista" e afins. */
 export function CartaoDeAtalho({
   Icone,
   titulo,
   texto,
   aoTocar,
-  escuro,
-  acao,
 }: {
   Icone: typeof Star;
   titulo: string;
   texto: string;
   aoTocar: () => void;
-  escuro?: boolean;
-  acao?: string;
 }) {
   return (
     <Toque
       accessibilityLabel={titulo}
       encolhe={0.985}
       onPress={aoTocar}
-      style={[estilos.atalho, escuro && estilos.atalhoEscuro, elevacao.baixa]}
+      style={[estilos.atalho, elevacao.baixa]}
     >
-      <LinearGradient
-        colors={escuro ? degradeDoSol : coresDaCategoria.comida.degrade}
-        style={estilos.atalhoIcone}
-      >
-        <Icone size={28} color={escuro ? cores.noite : cores.textoNaCor} strokeWidth={2.2} />
-      </LinearGradient>
+      <View style={estilos.atalhoIcone}>
+        <Icone size={26} color={cores.marca} strokeWidth={2.2} />
+      </View>
       <View style={estilos.flex}>
-        <T v="titulo3" cor={escuro ? cores.amarelo : cores.texto}>
-          {titulo}
-        </T>
-        <T v="legenda" cor={escuro ? cores.textoNaNoite : cores.textoMedio}>
+        <T v="titulo3">{titulo}</T>
+        <T v="legenda" cor={cores.textoMedio}>
           {texto}
         </T>
-        {acao ? (
-          <LinearGradient
-            colors={degradeDoSol}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={estilos.atalhoAcao}
-          >
-            <T v="corpoForte" cor={cores.noite}>
-              {acao}
-            </T>
-            <ChevronRight size={18} color={cores.noite} />
-          </LinearGradient>
-        ) : null}
       </View>
-      {acao ? null : (
-        <ChevronRight size={22} color={escuro ? cores.textoNaNoite : cores.textoMedio} />
-      )}
+      <ChevronRight size={22} color={cores.marca} />
     </Toque>
   );
 }
 
+/** Produto na vitrine: foto grande, preço em destaque, nome e loja. */
 export function CartaoDeProduto({
   produto,
   cidade,
@@ -277,7 +289,7 @@ export function CartaoDeProduto({
       onPress={() =>
         router.push({ pathname: '/produto/[cidade]/[id]', params: { cidade, id: produto.id } })
       }
-      style={[estilos.produto, elevacao.baixa]}
+      style={estilos.produto}
     >
       <Foto
         url={produto.imagemUrl}
@@ -285,22 +297,199 @@ export function CartaoDeProduto({
         Icone={iconeDaCategoria(chave)}
         estilo={estilos.produtoFoto}
       />
-      <View style={estilos.produtoTexto}>
-        <T v="corpoForte" numberOfLines={2}>
-          {produto.nome}
-        </T>
-        <T v="legenda" cor={cores.textoMedio} numberOfLines={1}>
-          {produto.lojaNome}
-        </T>
-        <T v="titulo3" cor={cores.marca}>
-          {dinheiro(produto.precoCents)}
-        </T>
-      </View>
+      <T v="titulo3" cor={cores.sucesso} style={estilos.produtoPreco}>
+        {dinheiro(produto.precoCents)}
+      </T>
+      {produto.precoDeCents && produto.precoDeCents > produto.precoCents ? (
+        <View style={estilos.linha}>
+          <Selo
+            texto={`-${dinheiro(produto.precoDeCents - produto.precoCents)}`}
+            cor={cores.textoNaCor}
+            fundo={cores.sucesso}
+          />
+          <T v="legenda" cor={cores.textoMedio} style={estilos.riscado}>
+            {dinheiro(produto.precoDeCents)}
+          </T>
+        </View>
+      ) : null}
+      <T v="corpo" numberOfLines={2}>
+        {produto.nome}
+      </T>
+      <T v="legenda" cor={cores.textoMedio} numberOfLines={1}>
+        {produto.lojaNome}
+      </T>
     </Toque>
   );
 }
 
-export function CartaoDeLoja({ loja, cidade }: { loja: LojaDaVitrine; cidade: string }) {
+/** Loja em destaque: só a logo e o nome, em cartão branco. */
+export function LogoDeLoja({ loja, cidade }: { loja: LojaDaVitrine; cidade: string }) {
+  const chave = chaveDaCategoria(loja.categoriaSlug, loja.segmento);
+  return (
+    <Toque
+      accessibilityLabel={loja.nome}
+      onPress={() =>
+        router.push({ pathname: '/loja/[cidade]/[loja]', params: { cidade, loja: loja.slug } })
+      }
+      style={[estilos.logoCartao, !loja.aberta && estilos.lojaFechada]}
+    >
+      <Foto
+        url={loja.logoUrl ?? loja.capaUrl}
+        categoria={chave}
+        Icone={iconeDaCategoria(chave)}
+        tamanhoDoIcone={36}
+        estilo={estilos.logoFoto}
+      />
+      <T v="legenda" numberOfLines={2} style={estilos.centro}>
+        {loja.nome}
+      </T>
+    </Toque>
+  );
+}
+
+/** Um banner tocável numa proporção fixa: faixa larga ou cartão em pé. */
+function BannerTocavel({
+  banner,
+  cidade,
+  largura,
+  altura,
+}: {
+  banner: BannerDaVitrine;
+  cidade: string;
+  largura: number | `${number}%`;
+  altura: number;
+}) {
+  const contarClique = useMutation({
+    mutationFn: (id: string) => chamar(`banners/${id}/clique`, { metodo: 'POST' }),
+  });
+  return (
+    <Toque
+      accessibilityLabel={banner.titulo}
+      encolhe={0.985}
+      onPress={() => {
+        contarClique.mutate(banner.id);
+        abrirBanner(banner, cidade);
+      }}
+      style={[estilos.banner, { width: largura, height: altura }]}
+    >
+      <Foto url={banner.imagemUrl} categoria="outros" estilo={StyleSheet.absoluteFill} />
+    </Toque>
+  );
+}
+
+function abrirVerTudo(destino: NonNullable<SecaoDaVitrine['verTudo']>, cidade: string) {
+  if (destino.lojaSlug) {
+    router.push({ pathname: '/loja/[cidade]/[loja]', params: { cidade, loja: destino.lojaSlug } });
+  } else if (destino.categoriaSlug) {
+    router.push({
+      pathname: '/categoria/[cidade]/[categoria]',
+      params: { cidade, categoria: destino.categoriaSlug },
+    });
+  } else if (destino.linkUrl) {
+    void Linking.openURL(destino.linkUrl);
+  }
+}
+
+/**
+ * Seção de campanha montada no painel. Tipo que esta versão não conhece não
+ * aparece: o painel pode ganhar formato novo sem quebrar o app instalado.
+ */
+export function SecaoDeCampanha({ secao, cidade }: { secao: SecaoDaVitrine; cidade: string }) {
+  const { width } = useWindowDimensions();
+  const destino = secao.verTudo;
+  const verTudo =
+    destino && (destino.lojaSlug || destino.categoriaSlug || destino.linkUrl)
+      ? () => abrirVerTudo(destino, cidade)
+      : undefined;
+
+  // Dentro do cartão cinza: margem da tela e o respiro interno.
+  const larguraNoCartao = width - espaco.l * 4;
+
+  switch (secao.tipo) {
+    case 'PRODUTOS':
+      if (secao.produtos.length === 0) return null;
+      return (
+        <Secao
+          titulo={secao.titulo}
+          subtitulo={secao.subtitulo ?? undefined}
+          verTudo={verTudo}
+          fundo
+        >
+          {secao.banner ? (
+            <BannerTocavel
+              banner={secao.banner}
+              cidade={cidade}
+              largura="100%"
+              altura={Math.round(larguraNoCartao / 3)}
+            />
+          ) : null}
+          <FlatList
+            data={secao.produtos}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(produto) => produto.id}
+            contentContainerStyle={{ gap: espaco.m }}
+            renderItem={({ item }) => <CartaoDeProduto produto={item} cidade={cidade} />}
+          />
+        </Secao>
+      );
+    case 'COLECOES':
+      if (secao.banners.length === 0) return null;
+      return (
+        <Secao titulo={secao.titulo} subtitulo={secao.subtitulo ?? undefined} verTudo={verTudo}>
+          <FlatList
+            data={secao.banners}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(banner) => banner.id}
+            contentContainerStyle={estilos.faixa}
+            renderItem={({ item }) => (
+              <BannerTocavel banner={item} cidade={cidade} largura={150} altura={200} />
+            )}
+          />
+        </Secao>
+      );
+    case 'FAIXA':
+      if (!secao.banner) return null;
+      return (
+        <View style={{ paddingHorizontal: espaco.l }}>
+          <BannerTocavel
+            banner={secao.banner}
+            cidade={cidade}
+            largura="100%"
+            altura={Math.round((width - espaco.l * 2) / 3)}
+          />
+        </View>
+      );
+    case 'LOJAS':
+      if (secao.lojas.length === 0) return null;
+      return (
+        <Secao titulo={secao.titulo} subtitulo={secao.subtitulo ?? undefined} verTudo={verTudo}>
+          <FlatList
+            data={secao.lojas}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(loja) => loja.id}
+            contentContainerStyle={estilos.faixa}
+            renderItem={({ item }) => <LogoDeLoja loja={item} cidade={cidade} />}
+          />
+        </Secao>
+      );
+    default:
+      return null;
+  }
+}
+
+/** `agrupada`: linha dentro de uma lista com divisórias; sem ela, cartão solto. */
+export function CartaoDeLoja({
+  loja,
+  cidade,
+  agrupada,
+}: {
+  loja: LojaDaVitrine;
+  cidade: string;
+  agrupada?: boolean;
+}) {
   const chave = chaveDaCategoria(loja.categoriaSlug, loja.segmento);
   const Icone = iconeDaCategoria(chave);
 
@@ -311,46 +500,46 @@ export function CartaoDeLoja({ loja, cidade }: { loja: LojaDaVitrine; cidade: st
       onPress={() =>
         router.push({ pathname: '/loja/[cidade]/[loja]', params: { cidade, loja: loja.slug } })
       }
-      style={[estilos.loja, elevacao.baixa, !loja.aberta && estilos.lojaFechada]}
+      style={[
+        estilos.loja,
+        !agrupada && [estilos.lojaSolta, elevacao.baixa],
+        !loja.aberta && estilos.lojaFechada,
+      ]}
     >
       <Foto
-        url={loja.capaUrl ?? loja.logoUrl}
+        url={loja.logoUrl ?? loja.capaUrl}
         categoria={chave}
         Icone={Icone}
-        tamanhoDoIcone={40}
+        tamanhoDoIcone={28}
         estilo={estilos.lojaFoto}
       />
       <View style={estilos.lojaDados}>
-        <T v="titulo3" numberOfLines={1}>
+        <T v="corpoForte" numberOfLines={1}>
           {loja.nome}
         </T>
         <View style={estilos.linha}>
-          <Star size={15} color={cores.amarelo} fill={cores.amarelo} />
-          <T v="corpoForte">{loja.avaliacoes ? loja.nota.toFixed(1) : 'Nova'}</T>
-          {loja.avaliacoes ? (
-            <T v="legenda" cor={cores.textoMedio}>
-              ({loja.avaliacoes})
-            </T>
-          ) : null}
+          <Star size={14} color={cores.amarelo} fill={cores.amarelo} />
+          <T v="legenda" cor={cores.aviso}>
+            {loja.avaliacoes ? loja.nota.toFixed(1) : 'Nova'}
+          </T>
+          <T v="legenda" cor={cores.textoMedio} numberOfLines={1} style={estilos.flex}>
+            {` · ${loja.categoria} · ${loja.tempoMin}-${loja.tempoMax} min`}
+          </T>
         </View>
-        <T v="legenda" cor={cores.textoMedio} numberOfLines={1}>
-          {`${loja.categoria} · ${loja.tempoMin}-${loja.tempoMax} min`}
-        </T>
-        <T v="legenda" cor={loja.taxaGratis ? cores.sucesso : cores.textoMedio}>
-          {loja.taxaGratis ? 'Entrega grátis' : `Taxa ${dinheiro(loja.taxaCents)}`}
-        </T>
         {loja.aberta ? (
-          <Selo texto="Aberta agora" cor={cores.sucesso} fundo={cores.sucessoClaro} />
+          <T v="legenda" cor={loja.taxaGratis ? cores.sucesso : cores.textoMedio}>
+            {loja.taxaGratis ? 'Entrega grátis' : `Entrega ${dinheiro(loja.taxaCents)}`}
+          </T>
         ) : (
-          <Selo texto={loja.rotuloHorario} cor={cores.perigo} fundo={cores.perigoClaro} />
+          <T v="legenda" cor={cores.perigo} numberOfLines={1}>
+            {loja.rotuloHorario}
+          </T>
         )}
       </View>
       {loja.patrocinada ? (
-        <View style={estilos.patrocinada}>
-          <T v="mini" cor={cores.textoMedio}>
-            Patrocinado
-          </T>
-        </View>
+        <T v="mini" cor={cores.textoFraco} style={estilos.patrocinada}>
+          Patrocinado
+        </T>
       ) : null}
     </Toque>
   );
@@ -365,27 +554,28 @@ const estilos = StyleSheet.create({
   bannerDaMarca: { flexDirection: 'row', alignItems: 'center' },
   bannerDaMarcaTexto: { flex: 1, paddingLeft: espaco.l, gap: espaco.xs },
   entregador: { width: '52%', height: '112%' },
-  bannerTexto: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    padding: espaco.l,
-    paddingTop: espaco.xxl,
-    gap: espaco.xs,
-  },
+  cupom: { position: 'absolute', left: espaco.m, bottom: espaco.m },
   pontos: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: espaco.m },
-  ponto: { width: 8, height: 8, borderRadius: 4, backgroundColor: cores.linha },
-  pontoAtivo: { width: 22, backgroundColor: cores.marca },
-  faixa: { paddingHorizontal: espaco.l, gap: espaco.m, paddingVertical: espaco.xs },
+  ponto: { width: 6, height: 6, borderRadius: 3, backgroundColor: cores.linha },
+  pontoAtivo: { width: 18, backgroundColor: cores.marca },
+  faixa: { paddingHorizontal: espaco.l, gap: espaco.s },
   categoria: { width: 76, alignItems: 'center', gap: espaco.s },
   categoriaIcone: {
-    width: 72,
-    height: 72,
-    borderRadius: raio.folha,
+    width: 64,
+    height: 64,
+    borderRadius: raio.total,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  secao: { gap: espaco.m },
+  secaoComFundo: {
+    marginHorizontal: espaco.l,
+    padding: espaco.l,
+    borderRadius: raio.folha,
+    backgroundColor: cores.superficie,
+  },
+  secaoTopo: { flexDirection: 'row', alignItems: 'flex-start', gap: espaco.m },
+  verTudo: { flexDirection: 'row', alignItems: 'center', minHeight: 32 },
   atalho: {
     marginHorizontal: espaco.l,
     flexDirection: 'row',
@@ -395,42 +585,44 @@ const estilos = StyleSheet.create({
     borderRadius: raio.folha,
     backgroundColor: cores.superficie,
   },
-  atalhoEscuro: { backgroundColor: cores.noite },
   atalhoIcone: {
-    width: 60,
-    height: 60,
+    width: 52,
+    height: 52,
     borderRadius: raio.grande,
+    backgroundColor: cores.marcaClara,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  atalhoAcao: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
+  produto: { width: 148, gap: 2 },
+  produtoFoto: { width: 148, height: 148, borderRadius: raio.grande },
+  produtoPreco: { marginTop: espaco.s },
+  riscado: { textDecorationLine: 'line-through' },
+  logoCartao: {
+    width: 108,
+    padding: espaco.s,
+    gap: espaco.s,
     alignItems: 'center',
-    gap: espaco.xs,
-    marginTop: espaco.s,
-    paddingHorizontal: espaco.l,
-    minHeight: 44,
-    borderRadius: raio.total,
-  },
-  produto: {
-    width: 168,
     borderRadius: raio.grande,
     backgroundColor: cores.superficie,
-    overflow: 'hidden',
   },
-  produtoFoto: { width: 168, height: 120 },
-  produtoTexto: { padding: espaco.m, gap: 2 },
+  logoFoto: { width: 88, height: 88, borderRadius: raio.grande },
   loja: {
-    marginHorizontal: espaco.l,
     flexDirection: 'row',
+    alignItems: 'center',
     gap: espaco.m,
-    padding: espaco.m,
-    borderRadius: raio.folha,
+    paddingVertical: espaco.m,
+    paddingHorizontal: espaco.l,
     backgroundColor: cores.superficie,
   },
-  lojaFechada: { opacity: 0.7 },
-  lojaFoto: { width: 112, height: 112, borderRadius: raio.grande },
-  lojaDados: { flex: 1, gap: 3, justifyContent: 'center' },
-  patrocinada: { position: 'absolute', top: espaco.s, right: espaco.m },
+  lojaSolta: { marginHorizontal: espaco.l, borderRadius: raio.folha },
+  lojaFechada: { opacity: 0.6 },
+  lojaFoto: {
+    width: 60,
+    height: 60,
+    borderRadius: raio.grande,
+    borderWidth: 1,
+    borderColor: cores.linha,
+  },
+  lojaDados: { flex: 1, gap: 2 },
+  patrocinada: { position: 'absolute', top: espaco.s, right: espaco.l },
 });

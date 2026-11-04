@@ -8,6 +8,7 @@ import {
   ChevronRight,
   ClipboardList,
   FileText,
+  Heart,
   LogOut,
   MapPin,
   MessageCircle,
@@ -23,16 +24,8 @@ import { useFolgaInferior } from '@/componentes/folga';
 import { chamar, ErroDaApi, URL_DA_API } from '@/api/cliente';
 import { useSessao } from '@/api/sessao';
 import { Botao, T, Toque } from '@/componentes/base';
-import { TopoEscuro } from '@/componentes/topo';
-import {
-  cores,
-  degradeDaMarca,
-  degradeDaNoite,
-  elevacao,
-  espaco,
-  raio,
-  toqueMinimo,
-} from '@/tema/tokens';
+import { TopoDaTela } from '@/componentes/topo';
+import { cores, degradeDaMarca, elevacao, espaco, raio, toqueMinimo } from '@/tema/tokens';
 
 const abrirNoSite = (caminho: string) =>
   void WebBrowser.openBrowserAsync(`${URL_DA_API}${caminho}`);
@@ -52,7 +45,7 @@ export default function Conta() {
   if (!usuario) {
     return (
       <View style={estilos.tela}>
-        <TopoEscuro
+        <TopoDaTela
           titulo="Perfil"
           Icone={UserRound}
           subtitulo="Entre para salvar endereços e acompanhar pedidos."
@@ -105,12 +98,7 @@ export default function Conta() {
 
   return (
     <ScrollView style={estilos.tela} contentContainerStyle={{ paddingBottom: folga }}>
-      <LinearGradient
-        colors={degradeDaNoite}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={[estilos.topo, { paddingTop: topo + espaco.l }]}
-      >
+      <View style={[estilos.topo, elevacao.baixa, { paddingTop: topo + espaco.l }]}>
         <View style={estilos.perfil}>
           <LinearGradient colors={degradeDaMarca} style={estilos.avatar}>
             <T v="gigante" cor={cores.textoNaCor}>
@@ -118,27 +106,25 @@ export default function Conta() {
             </T>
           </LinearGradient>
           <View style={{ flex: 1 }}>
-            <T v="titulo1" cor={cores.textoNaNoite} numberOfLines={1}>
-              {usuario.nome ?? 'Cliente Rapidinho'}
+            <T v="titulo2" numberOfLines={1}>
+              {`e aí, ${usuario.nome?.trim().split(' ')[0] ?? 'cliente'}`}
             </T>
-            <T cor={cores.textoNaNoiteFraco}>{usuario.telefone}</T>
+            <T cor={cores.textoMedio}>{usuario.telefone}</T>
           </View>
         </View>
-        {/* Onda laranja no pé do topo, como na identidade da marca. */}
-        <LinearGradient
-          colors={['#FFB21A', '#FF6A1F']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={estilos.onda}
-        />
-      </LinearGradient>
+      </View>
 
-      <View style={[estilos.corpo, { marginTop: -espaco.xl }]}>
+      <View style={estilos.corpo}>
         <Grupo>
           <Item
             Icone={ClipboardList}
             titulo="Meus pedidos"
             aoTocar={() => router.navigate('/pedidos')}
+          />
+          <Item
+            Icone={Heart}
+            titulo="Lojas favoritas"
+            aoTocar={() => router.navigate('/favoritos')}
           />
           <Item Icone={MapPin} titulo="Meus endereços" aoTocar={() => router.push('/enderecos')} />
           <Item
@@ -216,29 +202,19 @@ function Item({
 const estilos = StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   topo: {
+    backgroundColor: cores.superficie,
     paddingHorizontal: espaco.l,
-    paddingBottom: espaco.xxl + espaco.xl,
-    overflow: 'hidden',
+    paddingBottom: espaco.xl,
+    borderBottomLeftRadius: raio.folha,
+    borderBottomRightRadius: raio.folha,
   },
   perfil: { flexDirection: 'row', alignItems: 'center', gap: espaco.l },
   avatar: {
-    width: 84,
-    height: 84,
+    width: 64,
+    height: 64,
     borderRadius: raio.total,
-    borderWidth: 3,
-    borderColor: cores.superficie,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  onda: {
-    position: 'absolute',
-    left: -40,
-    right: -40,
-    bottom: -70,
-    height: 110,
-    borderTopLeftRadius: 400,
-    borderTopRightRadius: 180,
-    transform: [{ rotate: '-4deg' }],
   },
   corpo: { padding: espaco.l, gap: espaco.l },
   grupo: {

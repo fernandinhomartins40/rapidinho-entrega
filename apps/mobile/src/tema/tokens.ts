@@ -8,17 +8,17 @@ export const cores = {
   vermelho: '#E6192B',
   amarelo: '#FFC400',
 
-  // Topo escuro das telas: azul-noite com brilho laranja, como a marca.
+  // Azul-noite da marca: banners e chamados fortes. O topo das telas é branco.
   noite: '#1C1A2E',
   noiteMedia: '#2A2742',
   noiteClara: '#3B3758',
   textoNaNoite: '#FFFFFF',
   textoNaNoiteFraco: 'rgba(255,255,255,0.72)',
 
-  fundo: '#F4F2F8',
+  fundo: '#F5F5F8',
   superficie: '#FFFFFF',
-  superficieAlta: '#EEEBF4',
-  linha: '#E4E0EC',
+  superficieAlta: '#EFEFF4',
+  linha: '#E6E6EC',
 
   texto: '#23140C',
   textoMedio: '#6F5B4F',
@@ -80,9 +80,9 @@ export const toqueMinimo = 48;
 
 function sombra(y: number, desfoque: number, opacidade: number, elevation: number): ViewStyle {
   return Platform.select({
-    android: { elevation, shadowColor: cores.marcaEscura },
+    android: { elevation, shadowColor: cores.noite },
     default: {
-      shadowColor: cores.marcaEscura,
+      shadowColor: cores.noite,
       shadowOffset: { width: 0, height: y },
       shadowRadius: desfoque,
       shadowOpacity: opacidade,
@@ -91,6 +91,6 @@ function sombra(y: number, desfoque: number, opacidade: number, elevation: numbe
 }
 
 export const elevacao = {
-  baixa: sombra(2, 8, 0.1, 2),
-  alta: sombra(6, 18, 0.18, 8),
+  baixa: sombra(2, 8, 0.06, 2),
+  alta: sombra(6, 18, 0.12, 6),
 } as const;

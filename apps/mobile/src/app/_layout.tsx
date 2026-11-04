@@ -55,12 +55,12 @@ export default function Raiz() {
         <QueryClientProvider client={consultas}>
           <ProvedorDeSessao>
             <ProvedorDeCidade>
-              <StatusBar style="light" />
+              <StatusBar style="dark" />
               <Stack
                 screenOptions={{
                   headerShadowVisible: false,
-                  headerStyle: { backgroundColor: cores.noite },
-                  headerTintColor: cores.textoNaNoite,
+                  headerStyle: { backgroundColor: cores.superficie },
+                  headerTintColor: cores.marca,
                   headerTitleStyle: { fontFamily: fontes.titulo, fontSize: 18 },
                   headerBackButtonDisplayMode: 'minimal',
                   contentStyle: { backgroundColor: cores.fundo },

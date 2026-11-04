@@ -8,7 +8,7 @@ import { useCidade } from '@/api/cidade';
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { dinheiro, EstadoDaTela, ErroDaTela, Esqueleto, T, Toque } from '@/componentes/base';
 import { useFolgaInferior } from '@/componentes/folga';
-import { TopoEscuro } from '@/componentes/topo';
+import { TopoDaTela } from '@/componentes/topo';
 import { CartaoDeLoja } from '@/componentes/vitrine';
 import { cores, elevacao, espaco, fontes, raio, toqueMinimo } from '@/tema/tokens';
 
@@ -38,7 +38,7 @@ export default function Busca() {
 
   return (
     <View style={estilos.tela}>
-      <TopoEscuro voltar titulo="Buscar" Icone={Search}>
+      <TopoDaTela voltar titulo="Buscar" Icone={Search}>
         <View style={[estilos.campo, elevacao.alta]}>
           <Search size={20} color={cores.marcaEscura} />
           <TextInput
@@ -61,7 +61,7 @@ export default function Busca() {
             </Toque>
           ) : null}
         </View>
-      </TopoEscuro>
+      </TopoDaTela>
 
       <ScrollView
         keyboardShouldPersistTaps="handled"
