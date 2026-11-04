@@ -71,6 +71,18 @@ const serverEnvSchema = z.object({
   /// idToken. Vazio desliga `auth/firebase`.
   FIREBASE_PROJECT_ID: z.preprocess(vazioComoAusente, z.string().optional()),
 
+  /// Conta de revisão da Google Play: o revisor não recebe SMS, então este
+  /// número fictício entra com o código fixo, conferido só no servidor. Os dois
+  /// vazios desligam `auth/revisao`.
+  APP_REVISAO_TELEFONE: z.preprocess(vazioComoAusente, z.string().optional()),
+  APP_REVISAO_CODIGO: z.preprocess(
+    vazioComoAusente,
+    z
+      .string()
+      .regex(/^\d{6}$/)
+      .optional(),
+  ),
+
   SENTRY_DSN: z.string().optional(),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 });

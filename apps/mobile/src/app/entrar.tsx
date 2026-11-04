@@ -38,6 +38,9 @@ export default function Entrar() {
   const [digitos, setDigitos] = useState('');
   const [aceite, setAceite] = useState(false);
   const [confirmacao, setConfirmacao] = useState<Confirmacao | null>(null);
+  // Conta de revisão da Google Play: o servidor confere o código, sem SMS.
+  const [revisao, setRevisao] = useState(false);
+  const noCodigo = confirmacao != null || revisao;
   const [codigo, setCodigo] = useState('');
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -54,7 +57,12 @@ export default function Entrar() {
     setErro(null);
     setOcupado(true);
     try {
-      setConfirmacao(await enviarCodigo(`+55${digitos}`));
+      const { revisao: daRevisao } = await chamar<{ revisao: boolean }>('auth/revisao', {
+        metodo: 'POST',
+        corpo: { telefone: digitos },
+      }).catch(() => ({ revisao: false }));
+      if (daRevisao) setRevisao(true);
+      else setConfirmacao(await enviarCodigo(`+55${digitos}`));
       setEspera(ESPERA_PARA_REENVIO);
       setTimeout(() => campoDoCodigo.current?.focus(), 300);
     } catch (e) {
@@ -65,15 +73,19 @@ export default function Entrar() {
   };
 
   const confirmar = async (valor: string) => {
-    if (!confirmacao || valor.length < 6) return;
+    if (!noCodigo || valor.length < 6) return;
     setErro(null);
     setOcupado(true);
     try {
-      const idToken = await conferirCodigo(confirmacao, valor);
-      const sessao = await chamar<SessaoCriada>('auth/firebase', {
-        metodo: 'POST',
-        corpo: { idToken },
-      });
+      const sessao = confirmacao
+        ? await chamar<SessaoCriada>('auth/firebase', {
+            metodo: 'POST',
+            corpo: { idToken: await conferirCodigo(confirmacao, valor) },
+          })
+        : await chamar<SessaoCriada>('auth/revisao', {
+            metodo: 'POST',
+            corpo: { telefone: digitos, codigo: valor },
+          });
       await entrar(sessao.token, sessao.usuario);
       // Quem marcou o aceite nesta tela já leu a versão vigente.
       if (sessao.usuario.termosPendentes) {
@@ -104,24 +116,30 @@ export default function Entrar() {
         >
           <Toque
             accessibilityLabel="Voltar"
-            onPress={() => (confirmacao ? setConfirmacao(null) : router.back())}
+            onPress={() => {
+              if (!noCodigo) return router.back();
+              setConfirmacao(null);
+              setRevisao(false);
+            }}
             style={estilos.voltar}
           >
             <ArrowLeft size={22} color={cores.textoNaCor} />
           </Toque>
           <Image source={MASCOTE} style={estilos.mascote} contentFit="contain" />
           <T v="gigante" cor={cores.textoNaCor}>
-            {confirmacao ? 'Digite o código' : 'Entre com seu celular'}
+            {noCodigo ? 'Digite o código' : 'Entre com seu celular'}
           </T>
           <T cor="rgba(255,255,255,0.9)">
-            {confirmacao
-              ? `Mandamos um SMS para ${mascarar(digitos)}.`
-              : 'Sem senha: confirmamos seu número por SMS.'}
+            {revisao
+              ? 'Conta de revisão: digite o código de acesso.'
+              : confirmacao
+                ? `Mandamos um SMS para ${mascarar(digitos)}.`
+                : 'Sem senha: confirmamos seu número por SMS.'}
           </T>
         </LinearGradient>
 
         <View style={estilos.corpo}>
-          {!confirmacao ? (
+          {!noCodigo ? (
             <>
               <View style={estilos.telefone}>
                 <T v="titulo3" cor={cores.textoMedio}>
