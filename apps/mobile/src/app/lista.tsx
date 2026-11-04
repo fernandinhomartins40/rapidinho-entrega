@@ -24,6 +24,7 @@ import { avisarErro, useExigirLogin } from '@/api/carrinho';
 import { useCidade } from '@/api/cidade';
 import { chamar } from '@/api/cliente';
 import { Botao, dinheiro, T, Toque } from '@/componentes/base';
+import { useFolgaInferior } from '@/componentes/folga';
 import { Cartao } from '@/componentes/formulario';
 import { TopoEscuro } from '@/componentes/topo';
 import { cores, elevacao, espaco, fontes, raio } from '@/tema/tokens';
@@ -46,6 +47,7 @@ const IDEIAS: { rotulo: string; Icone: LucideIcon; texto: string }[] = [
 ];
 
 export default function PedidoPorLista() {
+  const folga = useFolgaInferior(espaco.xxl);
   const { cidade } = useCidade();
   const consultas = useQueryClient();
   const exigirLogin = useExigirLogin();
@@ -90,7 +92,7 @@ export default function PedidoPorLista() {
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: espaco.xxl }}
+        contentContainerStyle={{ paddingBottom: folga }}
       >
         <TopoEscuro voltar titulo="Pedido por lista" Icone={ClipboardList}>
           <View style={estilos.chamada}>

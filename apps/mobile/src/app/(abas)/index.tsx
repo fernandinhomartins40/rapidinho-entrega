@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { ChevronDown, ClipboardList, MapPin, Search } from 'lucide-react-native';
 import { FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import type { ConfiguracaoDoApp, Vitrine } from '@contrato';
+import { useFolgaInferior } from '@/componentes/folga';
 import { useCidade } from '@/api/cidade';
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { useSessao } from '@/api/sessao';
@@ -18,6 +19,7 @@ import {
 import { cores, elevacao, espaco, raio, toqueMinimo } from '@/tema/tokens';
 
 export default function Inicio() {
+  const folga = useFolgaInferior(110);
   const { cidade } = useCidade();
   const { usuario } = useSessao();
   const primeiroNome = usuario?.nome?.trim().split(' ')[0];
@@ -38,7 +40,7 @@ export default function Inicio() {
   return (
     <ScrollView
       style={estilos.tela}
-      contentContainerStyle={estilos.conteudo}
+      contentContainerStyle={[estilos.conteudo, { paddingBottom: folga }]}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl
@@ -172,7 +174,7 @@ function EsqueletoDaHome() {
 const estilos = StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   // A barra de baixo flutua: o fim da lista não pode ficar escondido atrás dela.
-  conteudo: { gap: espaco.xl, paddingBottom: 110 },
+  conteudo: { gap: espaco.xl },
   linhaDoTopo: { flexDirection: 'row', alignItems: 'center', gap: espaco.m },
   cidade: {
     flexDirection: 'row',

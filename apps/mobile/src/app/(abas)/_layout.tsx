@@ -2,8 +2,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router, Tabs } from 'expo-router';
 import { Heart, House, ReceiptText, ShoppingCart, UserRound } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCarrinho } from '@/api/carrinho';
 import { T, Toque } from '@/componentes/base';
+import { ALTURA_DA_BARRA } from '@/componentes/folga';
 import { cores, degradeDaMarca, elevacao, fontes, raio } from '@/tema/tokens';
 
 /** O botão do meio não é aba: abre a sacola por cima de onde a pessoa está. */
@@ -42,6 +44,9 @@ function BotaoPedir() {
 }
 
 export default function Abas() {
+  // Os botões do Android desenham por cima do app; a barra cresce para baixo deles.
+  const baixo = useSafeAreaInsets().bottom;
+
   return (
     <Tabs
       screenOptions={{
@@ -49,7 +54,7 @@ export default function Abas() {
         tabBarActiveTintColor: cores.marca,
         tabBarInactiveTintColor: cores.textoMedio,
         tabBarLabelStyle: { fontFamily: fontes.corpoForte, fontSize: 12 },
-        tabBarStyle: estilos.barra,
+        tabBarStyle: [estilos.barra, { height: ALTURA_DA_BARRA + baixo, paddingBottom: baixo + 6 }],
       }}
     >
       <Tabs.Screen
@@ -86,7 +91,6 @@ const estilos = StyleSheet.create({
   barra: {
     backgroundColor: cores.superficie,
     borderTopWidth: 0,
-    height: 72,
     paddingTop: 6,
     borderTopLeftRadius: raio.folha,
     borderTopRightRadius: raio.folha,

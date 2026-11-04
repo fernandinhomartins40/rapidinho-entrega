@@ -149,7 +149,10 @@ export default function Checkout() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Stack.Screen options={{ title: r.loja.nome }} />
-      <ScrollView contentContainerStyle={estilos.corpo} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[estilos.corpo, { paddingBottom: baixo + 120 }]}
+        keyboardShouldPersistTaps="handled"
+      >
         {r.loja.aceitaRetirada ? (
           <View style={estilos.alternador}>
             {(['DELIVERY', 'PICKUP'] as const).map((t) => (

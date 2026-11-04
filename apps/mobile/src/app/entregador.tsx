@@ -15,6 +15,7 @@ import { avisarErro } from '@/api/carrinho';
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { useSessao } from '@/api/sessao';
 import { Botao, dinheiro, EstadoDaTela, ErroDaTela, Esqueleto, T } from '@/componentes/base';
+import { useFolgaInferior } from '@/componentes/folga';
 import { Cartao } from '@/componentes/formulario';
 import { cores, espaco, raio } from '@/tema/tokens';
 
@@ -24,6 +25,7 @@ const textoDoEndereco = (e: EnderecoDoPedido | null) =>
   e ? [`${e.rua}${e.numero ? `, ${e.numero}` : ''}`, e.bairro].join(' · ') : 'Retirada no balcão';
 
 export default function Entregador() {
+  const folga = useFolgaInferior(espaco.xxl);
   const { usuario } = useSessao();
   const aprovado = usuario?.entregador?.status === 'ACTIVE';
 
@@ -103,7 +105,7 @@ export default function Entregador() {
   return (
     <ScrollView
       style={estilos.tela}
-      contentContainerStyle={estilos.corpo}
+      contentContainerStyle={[estilos.corpo, { paddingBottom: folga }]}
       refreshControl={
         <RefreshControl
           refreshing={painel.isRefetching}

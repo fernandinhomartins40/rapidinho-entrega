@@ -10,7 +10,7 @@
     "backgroundColor": "#FFF8F2",
     "android": {
       "package": "br.com.rapidinhoentrega.app",
-      "versionCode": 5,
+      "versionCode": 6,
       "adaptiveIcon": {
         "backgroundColor": "#FF5A1F",
         "foregroundImage": "./assets/marca/icone-adaptativo.png"
@@ -36,8 +36,8 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#FF5A1F",
-          "image": "./assets/marca/abertura.png",
-          "imageWidth": 220
+          "image": "./assets/marca/abertura-android.png",
+          "imageWidth": 288
         }
       ],
       [

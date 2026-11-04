@@ -21,6 +21,7 @@ import type { PedidoDetalhado, StatusDoPedido } from '@contrato';
 import { avisarErro } from '@/api/carrinho';
 import { chamar, enviarImagem, ErroDaApi } from '@/api/cliente';
 import { Botao, dinheiro, ErroDaTela, Esqueleto, T, Toque } from '@/componentes/base';
+import { useFolgaInferior } from '@/componentes/folga';
 import { Campo, Cartao, Linha } from '@/componentes/formulario';
 import { cores, degradeDaMarca, espaco, raio, toqueMinimo } from '@/tema/tokens';
 
@@ -34,6 +35,7 @@ const ETAPAS: { status: StatusDoPedido[]; rotulo: string }[] = [
 ];
 
 export default function Pedido() {
+  const folga = useFolgaInferior(espaco.xxl);
   const { id } = useLocalSearchParams<{ id: string }>();
   const consultas = useQueryClient();
 
@@ -82,7 +84,7 @@ export default function Pedido() {
     <View style={estilos.tela}>
       <Stack.Screen options={{ title: `Pedido #${p.numero}` }} />
       <ScrollView
-        contentContainerStyle={estilos.corpo}
+        contentContainerStyle={[estilos.corpo, { paddingBottom: folga }]}
         refreshControl={
           <RefreshControl
             refreshing={pedido.isRefetching}

@@ -7,6 +7,7 @@ import type { ResultadoDaBusca } from '@contrato';
 import { useCidade } from '@/api/cidade';
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { dinheiro, EstadoDaTela, ErroDaTela, Esqueleto, T, Toque } from '@/componentes/base';
+import { useFolgaInferior } from '@/componentes/folga';
 import { TopoEscuro } from '@/componentes/topo';
 import { CartaoDeLoja } from '@/componentes/vitrine';
 import { cores, elevacao, espaco, fontes, raio, toqueMinimo } from '@/tema/tokens';
@@ -14,6 +15,7 @@ import { cores, elevacao, espaco, fontes, raio, toqueMinimo } from '@/tema/token
 const SUGESTOES = ['Pizza', 'Hambúrguer', 'Açaí', 'Arroz', 'Fralda', 'Refrigerante'];
 
 export default function Busca() {
+  const folga = useFolgaInferior(espaco.xxl);
   const { cidade } = useCidade();
   const [texto, setTexto] = useState('');
   const [termo, setTermo] = useState('');
@@ -61,7 +63,10 @@ export default function Busca() {
         </View>
       </TopoEscuro>
 
-      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={estilos.corpo}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={[estilos.corpo, { paddingBottom: folga }]}
+      >
         {termo.length < 2 ? (
           <View style={estilos.sugestoes}>
             <T v="titulo3">Mais buscados</T>

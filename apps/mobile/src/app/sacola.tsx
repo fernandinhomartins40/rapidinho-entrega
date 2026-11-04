@@ -6,10 +6,12 @@ import { useAlterarItem, useCarrinho } from '@/api/carrinho';
 import { ErroDaApi } from '@/api/cliente';
 import { useSessao } from '@/api/sessao';
 import { Botao, dinheiro, EstadoDaTela, ErroDaTela, Esqueleto, Foto, T } from '@/componentes/base';
+import { useFolgaInferior } from '@/componentes/folga';
 import { Cartao, Contador } from '@/componentes/formulario';
 import { cores, espaco, raio } from '@/tema/tokens';
 
 export default function Sacola() {
+  const folga = useFolgaInferior(espaco.xxl);
   const { usuario } = useSessao();
   const carrinho = useCarrinho();
 
@@ -37,7 +39,7 @@ export default function Sacola() {
       acao={<Botao titulo="Ver lojas" aoTocar={() => router.navigate('/')} />}
     />
   ) : (
-    <ScrollView contentContainerStyle={estilos.corpo}>
+    <ScrollView contentContainerStyle={[estilos.corpo, { paddingBottom: folga }]}>
       {carrinho.data.carrinhos.length > 1 ? (
         <T v="legenda" cor={cores.textoMedio}>
           Cada loja vira um pedido separado, com entrega própria.

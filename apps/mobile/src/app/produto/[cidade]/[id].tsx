@@ -106,7 +106,7 @@ export default function Produto() {
     <View style={estilos.tela}>
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 140 }}
+        contentContainerStyle={{ paddingBottom: baixo + 140 }}
         keyboardShouldPersistTaps="handled"
       >
         <View style={estilos.foto}>

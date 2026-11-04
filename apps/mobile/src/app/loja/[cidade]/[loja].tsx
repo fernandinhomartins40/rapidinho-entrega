@@ -13,7 +13,7 @@ import { cores, coresDaCategoria, elevacao, espaco, raio, toqueMinimo } from '@/
 
 export default function Loja() {
   const { cidade, loja: slug } = useLocalSearchParams<{ cidade: string; loja: string }>();
-  const topo = useSafeAreaInsets().top;
+  const { top: topo, bottom: baixo } = useSafeAreaInsets();
   const carrinho = useCarrinho();
 
   const loja = useQuery({
@@ -53,7 +53,7 @@ export default function Loja() {
           sections={secoes}
           keyExtractor={(p) => p.id}
           stickySectionHeadersEnabled={false}
-          contentContainerStyle={{ paddingBottom: itensNoCarrinho ? 120 : espaco.xxl }}
+          contentContainerStyle={{ paddingBottom: baixo + (itensNoCarrinho ? 120 : espaco.xxl) }}
           ListHeaderComponent={
             <View>
               <View style={estilos.capa}>
@@ -147,7 +147,7 @@ export default function Loja() {
       )}
 
       {itensNoCarrinho > 0 ? (
-        <View style={estilos.rodape}>
+        <View style={[estilos.rodape, { paddingBottom: baixo + espaco.l }]}>
           <Toque
             accessibilityLabel="Ver sacola"
             onPress={() => router.push('/sacola')}

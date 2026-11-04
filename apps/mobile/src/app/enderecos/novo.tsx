@@ -9,10 +9,12 @@ import { avisarErro } from '@/api/carrinho';
 import { useCidade } from '@/api/cidade';
 import { chamar } from '@/api/cliente';
 import { Botao, T } from '@/componentes/base';
+import { useFolgaInferior } from '@/componentes/folga';
 import { Campo } from '@/componentes/formulario';
 import { cores, espaco } from '@/tema/tokens';
 
 export default function NovoEndereco() {
+  const folga = useFolgaInferior(espaco.xxl);
   const consultas = useQueryClient();
   const { cidade, cidades } = useCidade();
   const cidadeAtual = cidades.find((c) => c.slug === cidade);
@@ -69,7 +71,10 @@ export default function NovoEndereco() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Stack.Screen options={{ title: 'Novo endereço' }} />
-      <ScrollView contentContainerStyle={estilos.corpo} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[estilos.corpo, { paddingBottom: folga }]}
+        keyboardShouldPersistTaps="handled"
+      >
         <Botao
           titulo="Usar minha localização"
           variante="secundario"

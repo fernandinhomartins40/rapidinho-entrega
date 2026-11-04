@@ -61,7 +61,7 @@ export default function MontarPizza() {
   return (
     <View style={estilos.tela}>
       <Stack.Screen options={{ title: 'Monte sua pizza' }} />
-      <ScrollView contentContainerStyle={estilos.corpo}>
+      <ScrollView contentContainerStyle={[estilos.corpo, { paddingBottom: baixo + 120 }]}>
         <T v="titulo3">1. Tamanho</T>
         {pizza.tamanhos.map((t) => (
           <Opcao

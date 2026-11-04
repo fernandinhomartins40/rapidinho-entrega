@@ -5,6 +5,7 @@ import { CalendarDays, ChevronRight, ClipboardList } from 'lucide-react-native';
 import { useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import type { PedidoResumido, RespostaPedidos } from '@contrato';
+import { useFolgaInferior } from '@/componentes/folga';
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { useSessao } from '@/api/sessao';
 import { Botao, dinheiro, ErroDaTela, Esqueleto, T, Toque } from '@/componentes/base';
@@ -17,6 +18,7 @@ const MASCOTE = require('@/assets/marca/mascote.png');
 type Filtro = 'todos' | 'andamento' | 'concluidos';
 
 export default function Pedidos() {
+  const folga = useFolgaInferior(110);
   const { usuario } = useSessao();
   const [filtro, setFiltro] = useState<Filtro>('todos');
 
@@ -72,7 +74,11 @@ export default function Pedidos() {
         <FlatList
           data={lista}
           keyExtractor={(p) => p.id}
-          contentContainerStyle={[estilos.lista, lista.length === 0 && { flexGrow: 1 }]}
+          contentContainerStyle={[
+            estilos.lista,
+            { paddingBottom: folga },
+            lista.length === 0 && { flexGrow: 1 },
+          ]}
           refreshControl={
             <RefreshControl
               refreshing={pedidos.isRefetching}

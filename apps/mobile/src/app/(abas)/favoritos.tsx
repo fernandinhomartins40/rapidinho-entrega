@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { Heart } from 'lucide-react-native';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import type { RespostaAlternarFavorito, RespostaFavoritos } from '@contrato';
+import { useFolgaInferior } from '@/componentes/folga';
 import { avisarErro } from '@/api/carrinho';
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { useSessao } from '@/api/sessao';
@@ -15,6 +16,7 @@ import { cores, elevacao, espaco, raio, toqueMinimo } from '@/tema/tokens';
 const MASCOTE = require('@/assets/marca/mascote.png');
 
 export default function Favoritos() {
+  const folga = useFolgaInferior(110);
   const { usuario } = useSessao();
   const consultas = useQueryClient();
 
@@ -62,7 +64,11 @@ export default function Favoritos() {
         <FlatList
           data={lojas}
           keyExtractor={(l) => l.id}
-          contentContainerStyle={[estilos.lista, lojas.length === 0 && { flexGrow: 1 }]}
+          contentContainerStyle={[
+            estilos.lista,
+            { paddingBottom: folga },
+            lojas.length === 0 && { flexGrow: 1 },
+          ]}
           refreshControl={
             <RefreshControl
               refreshing={favoritos.isRefetching}

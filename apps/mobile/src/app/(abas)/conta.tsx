@@ -19,6 +19,7 @@ import {
 import { Alert, Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ConfiguracaoDoApp } from '@contrato';
+import { useFolgaInferior } from '@/componentes/folga';
 import { chamar, ErroDaApi, URL_DA_API } from '@/api/cliente';
 import { useSessao } from '@/api/sessao';
 import { Botao, T, Toque } from '@/componentes/base';
@@ -38,6 +39,7 @@ const abrirNoSite = (caminho: string) =>
 
 export default function Conta() {
   const topo = useSafeAreaInsets().top;
+  const folga = useFolgaInferior(110);
   const { usuario, sair } = useSessao();
 
   const configuracao = useQuery({
@@ -102,7 +104,7 @@ export default function Conta() {
   const inicial = (usuario.nome ?? '?').trim().charAt(0).toUpperCase();
 
   return (
-    <ScrollView style={estilos.tela} contentContainerStyle={{ paddingBottom: 110 }}>
+    <ScrollView style={estilos.tela} contentContainerStyle={{ paddingBottom: folga }}>
       <LinearGradient
         colors={degradeDaNoite}
         start={{ x: 0, y: 0 }}

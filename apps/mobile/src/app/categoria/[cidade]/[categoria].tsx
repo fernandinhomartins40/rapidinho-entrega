@@ -7,6 +7,7 @@ import type { Vitrine } from '@contrato';
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { Botao, EstadoDaTela, ErroDaTela, Esqueleto } from '@/componentes/base';
 import { BotaoNoTopo, Pilulas, TopoEscuro } from '@/componentes/topo';
+import { useFolgaInferior } from '@/componentes/folga';
 import { CartaoDeLoja } from '@/componentes/vitrine';
 import { chaveDaCategoria, iconeDaCategoria } from '@/tema/categorias';
 import { cores, espaco, raio } from '@/tema/tokens';
@@ -16,6 +17,7 @@ import { cores, espaco, raio } from '@/tema/tokens';
  * as outras categorias do mesmo segmento viram filtros no topo.
  */
 export default function Categoria() {
+  const folga = useFolgaInferior(espaco.xxl);
   const { cidade, categoria } = useLocalSearchParams<{ cidade: string; categoria: string }>();
   const [filtro, setFiltro] = useState(categoria);
 
@@ -72,7 +74,11 @@ export default function Categoria() {
         <FlatList
           data={lojas}
           keyExtractor={(l) => l.id}
-          contentContainerStyle={[estilos.lista, lojas.length === 0 && { flexGrow: 1 }]}
+          contentContainerStyle={[
+            estilos.lista,
+            { paddingBottom: folga },
+            lojas.length === 0 && { flexGrow: 1 },
+          ]}
           ListEmptyComponent={
             <EstadoDaTela
               Icone={Store}
