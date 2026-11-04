@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { Button } from '@rapidinho/ui';
-import { formatCents, PAYMENT_METHOD_LABEL } from '@rapidinho/shared';
+import {
+  ehAjusteDoPrato,
+  formatCents,
+  linhaDoComplemento,
+  PAYMENT_METHOD_LABEL,
+} from '@rapidinho/shared';
 import {
   extrasDaPizza,
   formatarEndereco,
@@ -199,8 +204,11 @@ export function Comanda({
                 <p className="recuo">{item.flavors.map((sabor) => sabor.flavorName).join(' / ')}</p>
               ) : null}
               {item.complements.map((complemento) => (
-                <p key={complemento.id} className="recuo">
-                  + {complemento.quantity}x {complemento.optionName}
+                <p
+                  key={complemento.id}
+                  className={ehAjusteDoPrato(complemento.optionName) ? 'recuo negrito' : 'recuo'}
+                >
+                  {linhaDoComplemento(complemento.optionName, complemento.quantity)}
                 </p>
               ))}
               {(extrasDaPizza(item.pizzaExtras) ?? item.pizzaExtraName) ? (

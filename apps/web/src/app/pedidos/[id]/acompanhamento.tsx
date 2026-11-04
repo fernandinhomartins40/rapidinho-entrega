@@ -12,6 +12,7 @@ import {
   isFinalStatus,
   ORDER_STATUS_CUSTOMER_MESSAGE,
   ORDER_STATUS_LABEL,
+  linhaDoComplemento,
   ORDER_TIMELINE,
   PAYMENT_METHOD_LABEL,
   REALTIME_EVENTS,
@@ -311,7 +312,7 @@ export function AcompanhamentoDoPedido({ pedido, realtime }: Props) {
                 ) : null}
                 {item.complements.map((complemento) => (
                   <p key={complemento.id} className="text-muted-foreground pl-3">
-                    + {complemento.quantity}× {complemento.optionName}
+                    {linhaDoComplemento(complemento.optionName, complemento.quantity)}
                   </p>
                 ))}
                 {item.pizzaExtraName ? (

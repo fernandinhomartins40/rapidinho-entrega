@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Minus, Plus, Trash2 } from 'lucide-react';
 import { Badge, Button, Card, CardContent, Input, cn } from '@rapidinho/ui';
-import { formatCents, formatGrams } from '@rapidinho/shared';
+import { formatCents, formatGrams, linhaDoComplemento } from '@rapidinho/shared';
 import type { CarrinhoResolvido } from '@/lib/cart';
 import { alterarQuantidade, esvaziarCarrinho, removerItem, salvarObservacao } from './actions';
 
@@ -78,7 +78,19 @@ export function ListaDoCarrinho({
 
                 {item.complementos.map((complemento) => (
                   <p key={complemento.id} className="text-muted-foreground text-sm">
-                    + {complemento.quantidade}× {complemento.nome}
+                    {linhaDoComplemento(complemento.nome, complemento.quantidade)}
+                  </p>
+                ))}
+
+                {item.marmita?.linhas.map((linha) => (
+                  <p
+                    key={`${linha.grupo}-${linha.nome}`}
+                    className={cn(
+                      'text-sm',
+                      linha.grupo === 'Ajustes' ? 'font-semibold' : 'text-muted-foreground',
+                    )}
+                  >
+                    {linha.grupo === 'Ajustes' ? linha.nome : `${linha.grupo}: ${linha.nome}`}
                   </p>
                 ))}
 

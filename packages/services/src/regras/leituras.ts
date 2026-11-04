@@ -100,6 +100,7 @@ export function paraCarrinhoDoApp(carrinho: CarrinhoResolvido, cidadeSlug: strin
             extraPrecoCents: item.pizza.extraPrecoCents,
           }
         : null,
+      marmita: item.marmita,
       unitarioCents: item.unitTotalCents,
       totalCents: item.totalCents,
     })),

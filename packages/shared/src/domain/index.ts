@@ -12,4 +12,5 @@ export * from './cravings';
 export * from './separacao';
 export * from './midia';
 export * from './sabores';
+export * from './marmita';
 export * from './produto';

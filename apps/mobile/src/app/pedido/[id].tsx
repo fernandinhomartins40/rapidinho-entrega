@@ -23,6 +23,7 @@ import { chamar, enviarImagem, ErroDaApi } from '@/api/cliente';
 import { Botao, dinheiro, ErroDaTela, Esqueleto, T, Toque } from '@/componentes/base';
 import { useFolgaInferior } from '@/componentes/folga';
 import { Campo, Cartao, Linha } from '@/componentes/formulario';
+import { ehAjusteDoPrato, linhaDoComplemento } from '@/componentes/linhas';
 import { cores, degradeDaMarca, espaco, raio, toqueMinimo } from '@/tema/tokens';
 
 /** As etapas que o cliente reconhece, na ordem em que acontecem. */
@@ -144,6 +145,15 @@ export default function Pedido() {
                       .join(' · ')}
                   </T>
                 ) : null}
+                {item.complementos.map((complemento) => (
+                  <T
+                    key={complemento.id}
+                    v="legenda"
+                    cor={ehAjusteDoPrato(complemento.nome) ? cores.perigo : cores.textoMedio}
+                  >
+                    {linhaDoComplemento(complemento.nome, complemento.quantidade)}
+                  </T>
+                ))}
                 {item.statusDaSeparacao === 'MISSING' ? (
                   <T v="legenda" cor={cores.perigo}>
                     Faltou na loja

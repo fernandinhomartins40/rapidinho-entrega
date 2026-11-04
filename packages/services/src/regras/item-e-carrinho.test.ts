@@ -12,6 +12,7 @@ const item = (extra = {}) => ({
   complements: [],
   pizzaExtraIds: [],
   flavorIds: [],
+  marmita: [],
   ...extra,
 });
 
@@ -237,6 +238,8 @@ describe('carregarCarrinho', () => {
             image: null,
           },
           pizzaSize: null,
+          marmitaSize: null,
+          marmita: [],
           pizzaExtras: [],
           complements: [],
           flavors: [],

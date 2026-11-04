@@ -350,6 +350,30 @@ export interface CardapioDePizza {
   extras: ExtraDePizza[];
 }
 
+export interface TamanhoDeMarmita {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  precoCents: number;
+  maxMisturas: number;
+}
+
+export interface ItemDeMarmita {
+  id: string;
+  nome: string;
+  /** NO_PRATO: vem no prato (sem, pouco, mais); MISTURA: escolhe; EXTRA: pago. */
+  tipo: 'NO_PRATO' | 'MISTURA' | 'EXTRA';
+  grupo: string | null;
+  /** Acréscimo da mistura ou preço do extra. */
+  precoCents: number;
+}
+
+/** Só o cardápio de hoje: o do dia da semana, sem o que acabou. */
+export interface CardapioDeMarmita {
+  tamanhos: TamanhoDeMarmita[];
+  itens: ItemDeMarmita[];
+}
+
 export interface ComentarioDaLoja {
   id: string;
   nota: number;
@@ -375,6 +399,8 @@ export interface LojaDetalhada extends LojaDaVitrine {
   secoes: SecaoDoCardapio[];
   /** Null quando a loja não vende pizza montada. */
   pizza: CardapioDePizza | null;
+  /** Null quando a loja não vende marmita montada ou não tem mistura hoje. */
+  marmita?: CardapioDeMarmita | null;
   comentarios: ComentarioDaLoja[];
 }
 
@@ -472,6 +498,11 @@ export interface ItemDoCarrinho {
   maiorDeIdade: boolean;
   complementos: ComplementoNoCarrinho[];
   pizza: PizzaNoCarrinho | null;
+  /** Linhas prontas: "Mistura: Frango", "Ajustes: SEM feijão". */
+  marmita?: {
+    tamanho: string;
+    linhas: { grupo: string; nome: string; precoCents: number }[];
+  } | null;
   unitarioCents: number;
   totalCents: number;
 }
@@ -498,7 +529,7 @@ export interface RespostaCarrinho {
 }
 
 export interface ItemParaOCarrinho {
-  /** Obrigatório, exceto para pizza montada (que informa `pizzaTamanhoId`). */
+  /** Obrigatório, exceto para pizza ou marmita montada (que informam o tamanho). */
   produtoId?: string;
   quantidade?: number;
   /** Produto vendido por peso. */
@@ -509,6 +540,9 @@ export interface ItemParaOCarrinho {
   /** Borda, massa e adicionais: uma borda e uma massa no máximo. */
   pizzaExtraIds?: string[];
   saborIds?: string[];
+  marmitaTamanhoId?: string;
+  /** Só o que muda o prato; item do prato sem ajuste vem "normal". */
+  marmita?: { itemId: string; ajuste: 'SEM' | 'POUCO' | 'MAIS' | 'ESCOLHIDO' }[];
 }
 
 export interface EntradaAdicionarAoCarrinho {

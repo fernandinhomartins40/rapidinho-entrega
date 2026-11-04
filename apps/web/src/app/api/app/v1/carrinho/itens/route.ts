@@ -20,6 +20,15 @@ const entradaSchema = z.object({
     pizzaTamanhoId: z.string().min(1).optional(),
     pizzaExtraIds: z.array(z.string().min(1)).optional(),
     saborIds: z.array(z.string().min(1)).optional(),
+    marmitaTamanhoId: z.string().min(1).optional(),
+    marmita: z
+      .array(
+        z.object({
+          itemId: z.string().min(1),
+          ajuste: z.enum(['SEM', 'POUCO', 'MAIS', 'ESCOLHIDO']),
+        }),
+      )
+      .optional(),
   }),
 });
 
@@ -48,6 +57,8 @@ export const POST = rotaDoApp(async (request: Request) => {
         pizzaSizeId: item.pizzaTamanhoId,
         pizzaExtraIds: item.pizzaExtraIds,
         flavorIds: item.saborIds,
+        marmitaSizeId: item.marmitaTamanhoId,
+        marmita: item.marmita,
       },
     }),
   );

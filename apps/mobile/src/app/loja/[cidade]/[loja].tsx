@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, Bike, Clock, Pizza, ShoppingBag, Star } from 'lucide-react-native';
@@ -9,6 +10,7 @@ import { useCarrinho } from '@/api/carrinho';
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { dinheiro, ErroDaTela, Esqueleto, Foto, Selo, T, Toque } from '@/componentes/base';
 import { chaveDaCategoria, iconeDaCategoria } from '@/tema/categorias';
+import { icone3dDaCategoria } from '@/tema/icones';
 import { cores, coresDaCategoria, elevacao, espaco, raio, toqueMinimo } from '@/tema/tokens';
 
 export default function Loja() {
@@ -130,6 +132,32 @@ export default function Loja() {
                         Escolha o tamanho, até{' '}
                         {Math.max(...dados.pizza.tamanhos.map((t) => t.maxSabores))} sabores e a
                         borda
+                      </T>
+                    </View>
+                  </Toque>
+                ) : null}
+                {dados.marmita ? (
+                  <Toque
+                    accessibilityLabel="Montar marmita"
+                    onPress={() =>
+                      router.push({
+                        pathname: '/marmita/[cidade]/[loja]',
+                        params: { cidade, loja: slug },
+                      })
+                    }
+                    style={estilos.pizza}
+                  >
+                    <Image
+                      source={icone3dDaCategoria('marmitas', 'comida')}
+                      style={estilos.iconeDaMarmita}
+                      contentFit="contain"
+                    />
+                    <View style={{ flex: 1 }}>
+                      <T v="titulo3">Monte sua marmita</T>
+                      <T v="legenda" cor={cores.textoMedio}>
+                        Cardápio de hoje a partir de{' '}
+                        {dinheiro(Math.min(...dados.marmita.tamanhos.map((t) => t.precoCents)))}.
+                        Tire o que não gosta.
                       </T>
                     </View>
                   </Toque>
@@ -276,6 +304,7 @@ const estilos = StyleSheet.create({
     borderRadius: raio.total,
     backgroundColor: cores.superficieAlta,
   },
+  iconeDaMarmita: { width: 44, height: 44 },
   pizza: {
     flexDirection: 'row',
     alignItems: 'center',

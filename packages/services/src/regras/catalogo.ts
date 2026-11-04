@@ -3,6 +3,7 @@ import {
   faixaDeTempo,
   imagemExibivel,
   isStoreOpen,
+  marmitaNoCardapioHoje,
   rotuloDoHorario,
   saborDisponivelAgora,
   SELECT_IMAGEM,
@@ -465,6 +466,16 @@ export async function lojaDoApp(
         orderBy: { sortOrder: 'asc' },
         select: { id: true, name: true, description: true, maxFlavors: true, slices: true },
       },
+      marmitaSizes: {
+        where: { isActive: true },
+        orderBy: [{ sortOrder: 'asc' }, { priceCents: 'asc' }],
+        select: { id: true, name: true, description: true, priceCents: true, maxMisturas: true },
+      },
+      marmitaItems: {
+        where: marmitaNoCardapioHoje(agora),
+        orderBy: [{ kind: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
+        select: { id: true, name: true, kind: true, groupName: true, priceCents: true },
+      },
       pizzaFlavors: {
         where: saborDisponivelAgora(agora),
         orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
@@ -582,6 +593,26 @@ export async function lojaDoApp(
               tipo:
                 extra.kind === 'CRUST' ? 'CRUST' : extra.kind === 'TOPPING' ? 'TOPPING' : 'EDGE',
               precoCents: extra.priceCents,
+            })),
+          },
+    // Sem mistura hoje não há marmita para montar: o cartão some do cardápio.
+    marmita:
+      loja.marmitaSizes.length === 0 || !loja.marmitaItems.some((item) => item.kind === 'MISTURA')
+        ? null
+        : {
+            tamanhos: loja.marmitaSizes.map((tamanho) => ({
+              id: tamanho.id,
+              nome: tamanho.name,
+              descricao: tamanho.description,
+              precoCents: tamanho.priceCents,
+              maxMisturas: tamanho.maxMisturas,
+            })),
+            itens: loja.marmitaItems.map((item) => ({
+              id: item.id,
+              nome: item.name,
+              tipo: item.kind,
+              grupo: item.groupName,
+              precoCents: item.priceCents,
             })),
           },
     comentarios: comentarios.map((avaliacao) => ({

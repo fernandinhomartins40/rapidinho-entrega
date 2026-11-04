@@ -5,9 +5,13 @@ import {
   calculateOrderTotals,
   COMISSAO_HABILITADA,
   imagemExibivel,
+  linhasDaMarmita,
+  marmitaForaDoCardapio,
+  precoDaMarmita,
   saborForaDoAr,
   SELECT_IMAGEM,
   type CartItemInput,
+  type EscolhaDaMarmita,
   type CartItemPricingInput,
   type OrderTotals,
 } from '@rapidinho/shared';
@@ -62,6 +66,11 @@ export interface ItemDoCarrinho {
     /// Nomes dos extras juntos e a soma dos preços, para a tela e o snapshot.
     extra: string | null;
     extraPrecoCents: number;
+  } | null;
+  marmita: {
+    tamanho: string;
+    /** Prontas para a comanda: "Mistura: Frango", "Ajustes: SEM feijão". */
+    linhas: { grupo: string; nome: string; precoCents: number }[];
   } | null;
   unitTotalCents: number;
   totalCents: number;
@@ -134,6 +143,22 @@ export async function carregarCarrinho(
             },
           },
           pizzaSize: { select: { id: true, name: true, maxFlavors: true } },
+          marmitaSize: { select: { name: true, priceCents: true, isActive: true } },
+          marmita: {
+            select: {
+              ajuste: true,
+              item: {
+                select: {
+                  name: true,
+                  kind: true,
+                  priceCents: true,
+                  isAvailable: true,
+                  pausedUntil: true,
+                  weekdays: true,
+                },
+              },
+            },
+          },
           pizzaExtras: {
             select: {
               extra: {
@@ -203,65 +228,84 @@ export async function carregarCarrinho(
       optionId: complemento.option.id,
     }));
 
-    const entrada: CartItemPricingInput = item.pizzaSize
+    const escolhasDaMarmita: EscolhaDaMarmita[] = item.marmita.map((escolha) => ({
+      nome: escolha.item.name,
+      papel: escolha.item.kind,
+      ajuste: escolha.ajuste,
+      precoCents: escolha.item.priceCents,
+    }));
+
+    const entrada: CartItemPricingInput = item.marmitaSize
       ? {
-          productName: `Pizza ${item.pizzaSize.name}`,
-          unitPriceCents: 0,
+          productName: `Marmita ${item.marmitaSize.name}`,
+          unitPriceCents: precoDaMarmita(item.marmitaSize.priceCents, escolhasDaMarmita),
           quantity: item.quantity,
           sellingUnit: 'UNIT',
-          complements: complementos.map((c) => ({
-            optionId: c.optionId,
-            groupName: c.groupName,
-            optionName: c.nome,
-            priceCents: c.precoCents,
-            quantity: c.quantidade,
-          })),
-          pizza: {
-            rule: regraDePizza,
-            maxFlavors: item.pizzaSize.maxFlavors,
-            extraPriceCents: precoDosExtras,
-            flavors: item.flavors.map((sabor) => ({
-              flavorId: sabor.flavor.id,
-              name: sabor.flavor.name,
-              priceCents:
-                sabor.flavor.prices.find((preco) => preco.sizeId === item.pizzaSize?.id)
-                  ?.priceCents ?? 0,
-            })),
-          },
         }
-      : {
-          productName: item.product?.name ?? 'Produto',
-          unitPriceCents: item.product?.priceCents ?? 0,
-          quantity: item.quantity,
-          sellingUnit: (item.product?.sellingUnit ?? 'UNIT') as 'UNIT' | 'WEIGHT_KG',
-          weightGrams: item.weightGrams,
-          complements: complementos.map((c) => ({
-            optionId: c.optionId,
-            groupName: c.groupName,
-            optionName: c.nome,
-            priceCents: c.precoCents,
-            quantity: c.quantidade,
-          })),
-        };
+      : item.pizzaSize
+        ? {
+            productName: `Pizza ${item.pizzaSize.name}`,
+            unitPriceCents: 0,
+            quantity: item.quantity,
+            sellingUnit: 'UNIT',
+            complements: complementos.map((c) => ({
+              optionId: c.optionId,
+              groupName: c.groupName,
+              optionName: c.nome,
+              priceCents: c.precoCents,
+              quantity: c.quantidade,
+            })),
+            pizza: {
+              rule: regraDePizza,
+              maxFlavors: item.pizzaSize.maxFlavors,
+              extraPriceCents: precoDosExtras,
+              flavors: item.flavors.map((sabor) => ({
+                flavorId: sabor.flavor.id,
+                name: sabor.flavor.name,
+                priceCents:
+                  sabor.flavor.prices.find((preco) => preco.sizeId === item.pizzaSize?.id)
+                    ?.priceCents ?? 0,
+              })),
+            },
+          }
+        : {
+            productName: item.product?.name ?? 'Produto',
+            unitPriceCents: item.product?.priceCents ?? 0,
+            quantity: item.quantity,
+            sellingUnit: (item.product?.sellingUnit ?? 'UNIT') as 'UNIT' | 'WEIGHT_KG',
+            weightGrams: item.weightGrams,
+            complements: complementos.map((c) => ({
+              optionId: c.optionId,
+              groupName: c.groupName,
+              optionName: c.nome,
+              priceCents: c.precoCents,
+              quantity: c.quantidade,
+            })),
+          };
 
     const preco = calculateCartItem(entrada);
 
     // Um item vira indisponível quando qualquer peça dele sai do ar: o
     // produto, um sabor ou um complemento escolhido. Avisar antes do checkout
     // é melhor que a loja recusar o pedido depois.
-    const produtoForaDoAr = item.pizzaSize
-      ? item.flavors.some((sabor) => saborForaDoAr(sabor.flavor)) ||
-        extras.some((extra) => !extra.disponivel)
-      : !item.product ||
-        item.product.deletedAt != null ||
-        !item.product.isAvailable ||
-        (item.product.pausedUntil != null && item.product.pausedUntil > new Date());
+    // Marmita montada ontem: o cardápio de hoje pode não ter a mesma mistura.
+    const produtoForaDoAr = item.marmitaSize
+      ? !item.marmitaSize.isActive ||
+        item.marmita.some((escolha) => marmitaForaDoCardapio(escolha.item))
+      : item.pizzaSize
+        ? item.flavors.some((sabor) => saborForaDoAr(sabor.flavor)) ||
+          extras.some((extra) => !extra.disponivel)
+        : !item.product ||
+          item.product.deletedAt != null ||
+          !item.product.isAvailable ||
+          (item.product.pausedUntil != null && item.product.pausedUntil > new Date());
 
     // Estoque controlado pela loja: não dá para pedir mais do que ela tem.
     // Produto por peso não conta unidade (o estoque dele é da balança).
     const estoque = item.product?.stockQuantity ?? null;
     const semEstoque =
       !item.pizzaSize &&
+      !item.marmitaSize &&
       item.product?.sellingUnit !== 'WEIGHT_KG' &&
       estoque != null &&
       estoque < item.quantity;
@@ -284,9 +328,11 @@ export async function carregarCarrinho(
     itens.push({
       id: item.id,
       productId: item.product?.id ?? null,
-      nome: item.pizzaSize
-        ? `Pizza ${item.pizzaSize.name}`
-        : (item.product?.name ?? 'Produto removido'),
+      nome: item.marmitaSize
+        ? `Marmita ${item.marmitaSize.name}`
+        : item.pizzaSize
+          ? `Pizza ${item.pizzaSize.name}`
+          : (item.product?.name ?? 'Produto removido'),
       quantidade: item.quantity,
       weightGrams: item.weightGrams,
       sellingUnit: (item.product?.sellingUnit ?? 'UNIT') as 'UNIT' | 'WEIGHT_KG',
@@ -318,6 +364,9 @@ export async function carregarCarrinho(
             extra: extras.length ? extras.map((extra) => extra.nome).join(' + ') : null,
             extraPrecoCents: precoDosExtras,
           }
+        : null,
+      marmita: item.marmitaSize
+        ? { tamanho: item.marmitaSize.name, linhas: linhasDaMarmita(escolhasDaMarmita) }
         : null,
       unitTotalCents: preco.unitTotalCents,
       totalCents: preco.totalCents,
@@ -411,6 +460,7 @@ export async function gravarItemNoCarrinho(cartId: string, item: CartItemInput):
     item.complements.length === 0 &&
     item.flavorIds.length === 0 &&
     item.pizzaSizeId == null &&
+    item.marmitaSizeId == null &&
     !item.notes;
 
   if (simples) {
@@ -421,6 +471,7 @@ export async function gravarItemNoCarrinho(cartId: string, item: CartItemInput):
         weightGrams: item.weightGrams ?? null,
         notes: null,
         pizzaSizeId: null,
+        marmitaSizeId: null,
         complements: { none: {} },
         flavors: { none: {} },
       },
@@ -452,6 +503,10 @@ export async function gravarItemNoCarrinho(cartId: string, item: CartItemInput):
         })),
       },
       flavors: { create: item.flavorIds.map((flavorId) => ({ flavorId })) },
+      marmitaSizeId: item.marmitaSizeId ?? null,
+      marmita: {
+        create: item.marmita.map((escolha) => ({ itemId: escolha.itemId, ajuste: escolha.ajuste })),
+      },
     },
   });
 }

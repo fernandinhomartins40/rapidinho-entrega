@@ -23,6 +23,8 @@ import {
   isActiveStatus,
   nextStatuses,
   ORDER_STATUS_LABEL,
+  ehAjusteDoPrato,
+  linhaDoComplemento,
   PAYMENT_METHOD_LABEL,
   REALTIME_EVENTS,
   whatsappLink,
@@ -499,8 +501,15 @@ function CartaoDePedido({
                 </p>
               ) : null}
               {item.complements.map((complemento) => (
-                <p key={complemento.id} className="text-muted-foreground pl-4">
-                  + {complemento.quantity}× {complemento.optionName}
+                <p
+                  key={complemento.id}
+                  className={
+                    ehAjusteDoPrato(complemento.optionName)
+                      ? 'text-warning-text pl-4 font-semibold'
+                      : 'text-muted-foreground pl-4'
+                  }
+                >
+                  {linhaDoComplemento(complemento.optionName, complemento.quantity)}
                 </p>
               ))}
               {(extrasDaPizza(item.pizzaExtras) ?? item.pizzaExtraName) ? (

@@ -10,7 +10,7 @@
     "backgroundColor": "#FFF8F2",
     "android": {
       "package": "br.com.rapidinhoentrega.app",
-      "versionCode": 7,
+      "versionCode": 8,
       "adaptiveIcon": {
         "backgroundColor": "#FF5A1F",
         "foregroundImage": "./assets/marca/icone-adaptativo.png"

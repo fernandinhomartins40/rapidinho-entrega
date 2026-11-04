@@ -1,5 +1,5 @@
 import { prisma } from '@rapidinho/database';
-import { saborDisponivelAgora, type CartItemInput } from '@rapidinho/shared';
+import { marmitaNoCardapioHoje, saborDisponivelAgora, type CartItemInput } from '@rapidinho/shared';
 
 /**
  * As regras de um item antes de ele entrar no carrinho — de cada ramo.
@@ -13,6 +13,8 @@ import { saborDisponivelAgora, type CartItemInput } from '@rapidinho/shared';
  * - Pizzaria: tamanho ativo, sabores disponíveis e com preço naquele tamanho,
  *   até o máximo do tamanho; no máximo uma borda e uma massa; adicionais
  *   quantos quiser.
+ * - Marmita: tamanho ativo; itens do cardápio de hoje; de uma mistura até o
+ *   máximo do tamanho; "sem/pouco/mais" só no que vem no prato.
  * - Mercado: produto por peso com peso escolhido, acima do mínimo; estoque.
  * - Farmácia: remédio controlado (Portaria 344/98) não se vende à distância.
  */
@@ -36,6 +38,51 @@ export async function validarItem(
   if (item.pizzaSizeId) {
     const regra = await validarPizza(storeId, item);
     if (!regra.ok) return regra;
+  }
+
+  if (item.marmitaSizeId) {
+    const regra = await validarMarmita(storeId, item);
+    if (!regra.ok) return regra;
+  }
+
+  return { ok: true };
+}
+
+async function validarMarmita(storeId: string, item: ItemDoCarrinho): Promise<ResultadoDaRegra> {
+  const tamanho = await prisma.marmitaSize.findFirst({
+    where: { id: item.marmitaSizeId!, storeId, isActive: true },
+    select: { name: true, maxMisturas: true },
+  });
+  if (!tamanho) return falha('Tamanho de marmita não encontrado.');
+
+  const ids = item.marmita.map((escolha) => escolha.itemId);
+  if (new Set(ids).size !== ids.length) return falha('Um item da marmita veio repetido.');
+
+  // Só item do cardápio de HOJE desta loja: o de outro dia ou esgotado não passa.
+  const itens = ids.length
+    ? await prisma.marmitaItem.findMany({
+        where: { id: { in: ids }, storeId, ...marmitaNoCardapioHoje() },
+        select: { id: true, kind: true },
+      })
+    : [];
+  if (itens.length !== ids.length) {
+    return falha('Um item escolhido saiu do cardápio de hoje. Atualize a tela e monte de novo.');
+  }
+
+  const papel = new Map(itens.map((cardapio) => [cardapio.id, cardapio.kind]));
+  for (const escolha of item.marmita) {
+    const doPrato = papel.get(escolha.itemId) === 'NO_PRATO';
+    if (doPrato === (escolha.ajuste === 'ESCOLHIDO')) {
+      return falha('Escolha inválida na marmita.');
+    }
+  }
+
+  const misturas = item.marmita.filter((escolha) => papel.get(escolha.itemId) === 'MISTURA');
+  if (misturas.length === 0) return falha('Escolha a mistura da marmita.');
+  if (misturas.length > tamanho.maxMisturas) {
+    return falha(
+      `A marmita ${tamanho.name} leva no máximo ${tamanho.maxMisturas} ${tamanho.maxMisturas === 1 ? 'mistura' : 'misturas'}.`,
+    );
   }
 
   return { ok: true };

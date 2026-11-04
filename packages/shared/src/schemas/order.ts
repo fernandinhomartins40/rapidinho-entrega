@@ -41,10 +41,22 @@ export const cartItemSchema = z
     /** Borda, massa e adicionais da pizza (uma borda e uma massa no máximo). */
     pizzaExtraIds: z.array(cuidSchema).max(12).default([]),
     flavorIds: z.array(cuidSchema).max(8).default([]),
+    marmitaSizeId: cuidSchema.optional(),
+    /** Só o que muda o prato: misturas e extras escolhidos, e "sem/pouco/mais". */
+    marmita: z
+      .array(
+        z.object({
+          itemId: cuidSchema,
+          ajuste: z.enum(['SEM', 'POUCO', 'MAIS', 'ESCOLHIDO']),
+        }),
+      )
+      .max(60)
+      .default([]),
   })
-  .refine((data) => data.productId != null || data.pizzaSizeId != null, {
-    message: 'Item inválido: informe o produto ou o tamanho da pizza',
-  })
+  .refine(
+    (data) => data.productId != null || data.pizzaSizeId != null || data.marmitaSizeId != null,
+    { message: 'Item inválido: informe o produto, o tamanho da pizza ou o da marmita' },
+  )
   .refine((data) => data.pizzaSizeId == null || data.flavorIds.length > 0, {
     message: 'Escolha pelo menos um sabor',
     path: ['flavorIds'],

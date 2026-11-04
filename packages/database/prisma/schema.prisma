@@ -92,6 +92,26 @@ enum SellingUnit {
 enum ProductType {
   SIMPLE
   PIZZA
+  MARMITA
+}
+
+/// Papel do item no cardápio da marmita.
+enum MarmitaKind {
+  /// Vem no prato; o cliente pode pedir sem, pouco ou mais.
+  NO_PRATO
+  /// A carne do dia: o cliente escolhe até o máximo do tamanho.
+  MISTURA
+  /// Adicional pago, fora do prato (ovo frito, farofa extra).
+  EXTRA
+}
+
+/// O que o cliente fez com cada item da marmita.
+enum MarmitaAjuste {
+  SEM
+  POUCO
+  MAIS
+  /// Mistura ou extra escolhido.
+  ESCOLHIDO
 }
 
 /// Regra de preço quando a pizza tem mais de um sabor.
@@ -636,6 +656,8 @@ model Store {
   pizzaSizes       PizzaSize[]
   pizzaFlavors     PizzaFlavor[]
   pizzaExtras      PizzaExtra[]
+  marmitaSizes     MarmitaSize[]
+  marmitaItems     MarmitaItem[]
   orders           Order[]
   carts            Cart[]
   coupons          Coupon[]
@@ -997,6 +1019,71 @@ model PizzaExtra {
 }
 
 // =============================================================================
+// MARMITA — tamanho com preço fixo e cardápio da semana, ajustável no dia
+// =============================================================================
+
+model MarmitaSize {
+  id          String  @id @default(cuid())
+  storeId     String
+  store       Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  priceCents  Int
+  /// Quantas misturas cabem neste tamanho.
+  maxMisturas Int     @default(1)
+  sortOrder   Int     @default(0)
+  isActive    Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cartItems CartItem[]
+
+  @@unique([storeId, name])
+  @@index([storeId, sortOrder])
+  @@map("marmita_sizes")
+}
+
+model MarmitaItem {
+  id          String      @id @default(cuid())
+  storeId     String
+  store       Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name        String
+  kind        MarmitaKind @default(NO_PRATO)
+  /// Agrupamento na tela (Base, Acompanhamentos, Salada).
+  groupName   String?
+  /// Acréscimo da mistura especial ou preço do extra. Zero no que vem no prato.
+  priceCents  Int         @default(0)
+  /// Dias da semana em que sai (0 = domingo ... 6 = sábado); vazio = todo dia.
+  weekdays    Int[]       @default([])
+  /// "Acabou hoje": sai do cardápio e volta sozinho no prazo.
+  pausedUntil DateTime?
+  isAvailable Boolean     @default(true)
+  sortOrder   Int         @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cartChoices CartItemMarmita[]
+
+  @@index([storeId, kind, sortOrder])
+  @@map("marmita_items")
+}
+
+/// Escolha do cliente: "normal" não é gravado, só o que muda o prato.
+model CartItemMarmita {
+  id         String        @id @default(cuid())
+  cartItemId String
+  cartItem   CartItem      @relation(fields: [cartItemId], references: [id], onDelete: Cascade)
+  itemId     String
+  item       MarmitaItem   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  ajuste     MarmitaAjuste
+
+  @@unique([cartItemId, itemId])
+  @@map("cart_item_marmita")
+}
+
+// =============================================================================
 // ENDEREÇOS — o interior não tem CEP nem número confiável
 // =============================================================================
 
@@ -1083,6 +1170,10 @@ model CartItem {
   pizzaExtraId String?
   pizzaExtra   PizzaExtra? @relation(fields: [pizzaExtraId], references: [id], onDelete: SetNull)
 
+  // Marmita
+  marmitaSizeId String?
+  marmitaSize   MarmitaSize? @relation(fields: [marmitaSizeId], references: [id], onDelete: Cascade)
+
   notes String?
 
   createdAt DateTime @default(now())
@@ -1091,6 +1182,7 @@ model CartItem {
   complements CartItemComplement[]
   flavors     CartItemPizzaFlavor[]
   pizzaExtras CartItemPizzaExtra[]
+  marmita     CartItemMarmita[]
 
   @@index([cartId])
   @@map("cart_items")

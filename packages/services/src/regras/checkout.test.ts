@@ -110,6 +110,8 @@ const carrinhoDoBanco = (extra = {}) => ({
         image: null,
       },
       pizzaSize: null,
+      marmitaSize: null,
+      marmita: [],
       pizzaExtras: [],
       complements: [],
       flavors: [],

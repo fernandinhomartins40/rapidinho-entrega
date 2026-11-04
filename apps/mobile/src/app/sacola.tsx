@@ -8,6 +8,7 @@ import { useSessao } from '@/api/sessao';
 import { Botao, dinheiro, EstadoDaTela, ErroDaTela, Esqueleto, Foto, T } from '@/componentes/base';
 import { useFolgaInferior } from '@/componentes/folga';
 import { Cartao, Contador } from '@/componentes/formulario';
+import { ehAjusteDoPrato } from '@/componentes/linhas';
 import { cores, espaco, raio } from '@/tema/tokens';
 
 export default function Sacola() {
@@ -83,6 +84,15 @@ function CarrinhoDeUmaLoja({ carrinho }: { carrinho: CarrinhoDaLoja }) {
                 {item.complementos.map((c) => c.nome).join(', ')}
               </T>
             ) : null}
+            {item.marmita?.linhas.map((linha) => (
+              <T
+                key={`${linha.grupo}-${linha.nome}`}
+                v="legenda"
+                cor={ehAjusteDoPrato(linha.nome) ? cores.perigo : cores.textoMedio}
+              >
+                {ehAjusteDoPrato(linha.nome) ? linha.nome : `${linha.grupo}: ${linha.nome}`}
+              </T>
+            ))}
             {item.gramas ? (
               <T v="legenda" cor={cores.textoMedio}>
                 {item.gramas} g

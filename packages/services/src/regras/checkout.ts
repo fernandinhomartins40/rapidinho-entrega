@@ -609,7 +609,7 @@ export async function criarPedido(entrada: EntradaDoPedido): Promise<PedidoCriad
             create: carrinho.itens.map((item) => ({
               productId: item.productId,
               productName: item.nome,
-              productType: item.pizza ? 'PIZZA' : 'SIMPLE',
+              productType: item.pizza ? 'PIZZA' : item.marmita ? 'MARMITA' : 'SIMPLE',
               quantity: item.quantidade,
               weightGrams: item.weightGrams,
               unitPriceCents: item.unitTotalCents,
@@ -617,14 +617,24 @@ export async function criarPedido(entrada: EntradaDoPedido): Promise<PedidoCriad
               notes: item.observacao,
               pizzaSizeName: item.pizza?.tamanho ?? null,
               pizzaExtraName: item.pizza?.extra ?? null,
+              // A marmita vira linhas de complemento: comanda, painel e
+              // acompanhamento já sabem mostrar "Ajustes: SEM feijão".
               complements: {
-                create: item.complementos.map((complemento) => ({
-                  optionId: complemento.optionId,
-                  groupName: complemento.grupo,
-                  optionName: complemento.nome,
-                  quantity: complemento.quantidade,
-                  priceCents: complemento.precoCents,
-                })),
+                create: [
+                  ...item.complementos.map((complemento) => ({
+                    optionId: complemento.optionId,
+                    groupName: complemento.grupo,
+                    optionName: complemento.nome,
+                    quantity: complemento.quantidade,
+                    priceCents: complemento.precoCents,
+                  })),
+                  ...(item.marmita?.linhas ?? []).map((linha) => ({
+                    groupName: linha.grupo,
+                    optionName: linha.nome,
+                    quantity: 1,
+                    priceCents: linha.precoCents,
+                  })),
+                ],
               },
               flavors: {
                 create: (item.pizza?.sabores ?? []).map((sabor) => ({

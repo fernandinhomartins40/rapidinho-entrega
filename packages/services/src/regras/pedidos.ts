@@ -111,6 +111,8 @@ export async function repetirPedido(
       flavorIds: original.flavors
         .map((sabor) => sabor.flavorId)
         .filter((id): id is string => id != null),
+      // Marmita não se repete: o cardápio de hoje é outro.
+      marmita: [],
     };
 
     // Sabor apagado: a pizza não é mais a mesma, melhor não adivinhar.
