@@ -13,7 +13,8 @@ import type {
   SecaoDaVitrine,
 } from '@contrato';
 import { chamar } from '@/api/cliente';
-import { chaveDaCategoria, iconeDaCategoria } from '@/tema/categorias';
+import { chaveDaCategoria } from '@/tema/categorias';
+import { icone3dDaCategoria, type Icone3d } from '@/tema/icones';
 import { cores, coresDaCategoria, degradeDoSol, elevacao, espaco, raio } from '@/tema/tokens';
 import { dinheiro, Foto, Selo, T, Toque } from './base';
 
@@ -171,7 +172,6 @@ export function FaixaDeCategorias({
       contentContainerStyle={estilos.faixa}
       renderItem={({ item }) => {
         const chave = chaveDaCategoria(item.slug, item.segmento);
-        const Icone = iconeDaCategoria(chave);
         const tom = coresDaCategoria[chave];
         return (
           <Toque
@@ -185,7 +185,11 @@ export function FaixaDeCategorias({
             style={estilos.categoria}
           >
             <View style={[estilos.categoriaIcone, { backgroundColor: tom.fundo }]}>
-              <Icone size={30} color={tom.cor} strokeWidth={2.2} />
+              <Image
+                source={icone3dDaCategoria(item.slug, chave)}
+                style={estilos.categoriaImagem}
+                contentFit="contain"
+              />
             </View>
             <T v="legenda" numberOfLines={1} style={estilos.centro}>
               {item.nome}
@@ -248,7 +252,7 @@ export function CartaoDeAtalho({
   texto,
   aoTocar,
 }: {
-  Icone: typeof Star;
+  Icone: Icone3d;
   titulo: string;
   texto: string;
   aoTocar: () => void;
@@ -260,9 +264,7 @@ export function CartaoDeAtalho({
       onPress={aoTocar}
       style={[estilos.atalho, elevacao.baixa]}
     >
-      <View style={estilos.atalhoIcone}>
-        <Icone size={26} color={cores.marca} strokeWidth={2.2} />
-      </View>
+      <Image source={Icone} style={estilos.atalhoIcone} contentFit="contain" />
       <View style={estilos.flex}>
         <T v="titulo3">{titulo}</T>
         <T v="legenda" cor={cores.textoMedio}>
@@ -294,7 +296,7 @@ export function CartaoDeProduto({
       <Foto
         url={produto.imagemUrl}
         categoria={chave}
-        Icone={iconeDaCategoria(chave)}
+        reserva={icone3dDaCategoria(produto.categoriaSlug, chave)}
         estilo={estilos.produtoFoto}
       />
       <T v="titulo3" cor={cores.sucesso} style={estilos.produtoPreco}>
@@ -336,8 +338,7 @@ export function LogoDeLoja({ loja, cidade }: { loja: LojaDaVitrine; cidade: stri
       <Foto
         url={loja.logoUrl ?? loja.capaUrl}
         categoria={chave}
-        Icone={iconeDaCategoria(chave)}
-        tamanhoDoIcone={36}
+        reserva={icone3dDaCategoria(loja.categoriaSlug, chave)}
         estilo={estilos.logoFoto}
       />
       <T v="legenda" numberOfLines={2} style={estilos.centro}>
@@ -491,7 +492,6 @@ export function CartaoDeLoja({
   agrupada?: boolean;
 }) {
   const chave = chaveDaCategoria(loja.categoriaSlug, loja.segmento);
-  const Icone = iconeDaCategoria(chave);
 
   return (
     <Toque
@@ -509,8 +509,7 @@ export function CartaoDeLoja({
       <Foto
         url={loja.logoUrl ?? loja.capaUrl}
         categoria={chave}
-        Icone={Icone}
-        tamanhoDoIcone={28}
+        reserva={icone3dDaCategoria(loja.categoriaSlug, chave)}
         estilo={estilos.lojaFoto}
       />
       <View style={estilos.lojaDados}>
@@ -560,6 +559,7 @@ const estilos = StyleSheet.create({
   pontoAtivo: { width: 18, backgroundColor: cores.marca },
   faixa: { paddingHorizontal: espaco.l, gap: espaco.s },
   categoria: { width: 76, alignItems: 'center', gap: espaco.s },
+  categoriaImagem: { width: 50, height: 50 },
   categoriaIcone: {
     width: 64,
     height: 64,

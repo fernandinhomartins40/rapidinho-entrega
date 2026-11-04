@@ -1,3 +1,4 @@
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
 import { ArrowLeft } from 'lucide-react-native';
@@ -5,6 +6,7 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T, Toque } from '@/componentes/base';
+import type { Icone3d } from '@/tema/icones';
 import { cores, elevacao, espaco, raio, toqueMinimo } from '@/tema/tokens';
 
 /**
@@ -104,7 +106,7 @@ export function Pilulas<C extends string>({
   valor,
   aoMudar,
 }: {
-  opcoes: { chave: C; rotulo: string; Icone?: LucideIcon; cor?: string }[];
+  opcoes: { chave: C; rotulo: string; imagem?: Icone3d }[];
   valor: C;
   aoMudar: (c: C) => void;
 }) {
@@ -125,7 +127,9 @@ export function Pilulas<C extends string>({
             onPress={() => aoMudar(o.chave)}
             style={[estilos.pilula, ligada && estilos.pilulaLigada]}
           >
-            {o.Icone ? <o.Icone size={20} color={o.cor ?? cores.marca} strokeWidth={2.2} /> : null}
+            {o.imagem ? (
+              <Image source={o.imagem} style={estilos.pilulaImagem} contentFit="contain" />
+            ) : null}
             <T v="corpoForte" cor={ligada ? cores.marcaEscura : cores.texto}>
               {o.rotulo}
             </T>
@@ -189,4 +193,5 @@ const estilos = StyleSheet.create({
     gap: espaco.s,
   },
   pilulaLigada: { borderColor: cores.marca, backgroundColor: cores.marcaClara },
+  pilulaImagem: { width: 30, height: 30 },
 });

@@ -1,16 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import type { LucideIcon } from 'lucide-react-native';
-import {
-  ChevronRight,
-  ClipboardList,
-  LayoutGrid,
-  MapPin,
-  Pill,
-  ShoppingBasket,
-  Store,
-  UtensilsCrossed,
-} from 'lucide-react-native';
+import { ChevronRight, MapPin, ShoppingBag } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,7 +10,8 @@ import { chamar, ErroDaApi } from '@/api/cliente';
 import { useSessao } from '@/api/sessao';
 import { Esqueleto, ErroDaTela, T, Toque } from '@/componentes/base';
 import { ALTURA_DA_BARRA, useFolgaInferior } from '@/componentes/folga';
-import { Pilulas } from '@/componentes/topo';
+import { BotaoNoTopo, Pilulas } from '@/componentes/topo';
+import { useCarrinho } from '@/api/carrinho';
 import {
   CarrosselDeCampanhas,
   CartaoDeAtalho,
@@ -31,21 +22,17 @@ import {
   Secao,
   SecaoDeCampanha,
 } from '@/componentes/vitrine';
-import { cores, coresDaCategoria, elevacao, espaco, raio, toqueMinimo } from '@/tema/tokens';
+import { icones3d, type Icone3d } from '@/tema/icones';
+import { cores, elevacao, espaco, raio, toqueMinimo } from '@/tema/tokens';
 
 type Aba = 'TUDO' | Segmento;
 
-const ABAS: { chave: Aba; rotulo: string; Icone: LucideIcon; cor: string }[] = [
-  { chave: 'TUDO', rotulo: 'tudo', Icone: LayoutGrid, cor: cores.marca },
-  {
-    chave: 'RESTAURANT',
-    rotulo: 'restaurantes',
-    Icone: UtensilsCrossed,
-    cor: coresDaCategoria.comida.cor,
-  },
-  { chave: 'MARKET', rotulo: 'mercados', Icone: ShoppingBasket, cor: coresDaCategoria.mercado.cor },
-  { chave: 'PHARMACY', rotulo: 'farmácias', Icone: Pill, cor: coresDaCategoria.farmacia.cor },
-  { chave: 'OTHER', rotulo: 'outros', Icone: Store, cor: coresDaCategoria.pet.cor },
+const ABAS: { chave: Aba; rotulo: string; imagem: Icone3d }[] = [
+  { chave: 'TUDO', rotulo: 'tudo', imagem: icones3d.tudo },
+  { chave: 'RESTAURANT', rotulo: 'restaurantes', imagem: icones3d.restaurantes },
+  { chave: 'MARKET', rotulo: 'mercados', imagem: icones3d.mercados },
+  { chave: 'PHARMACY', rotulo: 'farmácias', imagem: icones3d.farmacias },
+  { chave: 'OTHER', rotulo: 'outros', imagem: icones3d.outros },
 ];
 
 /** Quantas lojas entram na faixa de logos do alto. */
@@ -60,6 +47,7 @@ export default function Inicio() {
   const folga = useFolgaInferior(usuario ? 110 : 180);
   const primeiroNome = usuario?.nome?.trim().split(' ')[0];
   const [aba, setAba] = useState<Aba>('TUDO');
+  const itensNaSacola = useCarrinho().data?.quantidadeDeItens ?? 0;
 
   const vitrine = useQuery({
     queryKey: ['vitrine', cidade],
@@ -102,24 +90,32 @@ export default function Inicio() {
 
   const cabecalho = (
     <View style={[estilos.topo, elevacao.baixa, { paddingTop: topo + espaco.s }]}>
-      <Toque
-        accessibilityLabel="Trocar cidade"
-        onPress={() => router.push('/cidades')}
-        style={estilos.cidade}
-      >
-        <MapPin size={26} color={cores.marca} />
-        <View style={{ flex: 1 }}>
-          <View style={estilos.cidadeNome}>
-            <T v="titulo3" cor={cores.marca} numberOfLines={1}>
-              {dados ? `${dados.cidade.nome} - ${dados.cidade.uf}` : 'Escolha a cidade'}
+      <View style={estilos.linhaDoTopo}>
+        <Toque
+          accessibilityLabel="Trocar cidade"
+          onPress={() => router.push('/cidades')}
+          style={estilos.cidade}
+        >
+          <MapPin size={26} color={cores.marca} />
+          <View style={{ flex: 1 }}>
+            <View style={estilos.cidadeNome}>
+              <T v="titulo3" cor={cores.marca} numberOfLines={1}>
+                {dados ? `${dados.cidade.nome} - ${dados.cidade.uf}` : 'Escolha a cidade'}
+              </T>
+              <ChevronRight size={20} color={cores.marca} />
+            </View>
+            <T v="legenda" cor={cores.textoMedio}>
+              {primeiroNome ? `Olá, ${primeiroNome}! O que vai ser hoje?` : 'entre ou cadastre-se'}
             </T>
-            <ChevronRight size={20} color={cores.marca} />
           </View>
-          <T v="legenda" cor={cores.textoMedio}>
-            {primeiroNome ? `Olá, ${primeiroNome}! O que vai ser hoje?` : 'entre ou cadastre-se'}
-          </T>
-        </View>
-      </Toque>
+        </Toque>
+        <BotaoNoTopo
+          Icone={ShoppingBag}
+          rotulo={itensNaSacola ? `Sacola: ${itensNaSacola} itens` : 'Sacola'}
+          aoTocar={() => router.push('/sacola')}
+          aviso={itensNaSacola}
+        />
+      </View>
       {abas.length > 1 ? <Pilulas<Aba> opcoes={abas} valor={aba} aoMudar={setAba} /> : null}
     </View>
   );
@@ -199,7 +195,7 @@ export default function Inicio() {
 
             {configuracao.data?.recursos.pedidoPorLista !== false ? (
               <CartaoDeAtalho
-                Icone={ClipboardList}
+                Icone={icones3d.pedirPorLista}
                 titulo="Pedir por lista"
                 texto="Mande a lista. A gente monta o pedido nas lojas abertas."
                 aoTocar={() => router.push('/lista')}
@@ -262,7 +258,9 @@ const estilos = StyleSheet.create({
     borderBottomLeftRadius: raio.folha,
     borderBottomRightRadius: raio.folha,
   },
+  linhaDoTopo: { flexDirection: 'row', alignItems: 'center', gap: espaco.s },
   cidade: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: espaco.m,

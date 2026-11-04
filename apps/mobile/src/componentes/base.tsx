@@ -34,6 +34,7 @@ import {
   type ChaveDaCategoria,
 } from '@/tema/tokens';
 import { urlDaImagem } from '@/api/cliente';
+import type { Icone3d } from '@/tema/icones';
 
 const PressableAnimado = Animated.createAnimatedComponent(Pressable);
 
@@ -148,18 +149,23 @@ export function Botao({
   );
 }
 
-/** Foto ausente nunca vira quadrado cinza: vira a cor da categoria. */
+/**
+ * Foto ausente nunca vira quadrado cinza: vira a cor da categoria, com o
+ * ícone 3D dela quando houver.
+ */
 export function Foto({
   url,
   categoria = 'outros',
   Icone = ShoppingBag,
   tamanhoDoIcone = 32,
+  reserva,
   estilo,
 }: {
   url?: string | null;
   categoria?: ChaveDaCategoria;
   Icone?: LucideIcon;
   tamanhoDoIcone?: number;
+  reserva?: Icone3d;
   estilo?: StyleProp<ViewStyle>;
 }) {
   const fonte = urlDaImagem(url);
@@ -175,6 +181,8 @@ export function Foto({
           transition={180}
           recyclingKey={fonte}
         />
+      ) : reserva ? (
+        <Image source={reserva} style={estilos.reserva} contentFit="contain" />
       ) : (
         <Icone size={tamanhoDoIcone} color={tom.cor} strokeWidth={2} />
       )}
@@ -263,6 +271,7 @@ const estilos = StyleSheet.create({
   botaoSecundario: { backgroundColor: cores.marcaClara },
   botaoPerigo: { backgroundColor: cores.perigoClaro },
   foto: { overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
+  reserva: { width: '70%', height: '70%' },
   selo: {
     alignSelf: 'flex-start',
     paddingHorizontal: espaco.s,

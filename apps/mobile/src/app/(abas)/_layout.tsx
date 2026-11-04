@@ -1,27 +1,45 @@
+import { useQuery } from '@tanstack/react-query';
+import { Image } from 'expo-image';
 import { router, Tabs } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
 import { House, ReceiptText, Search, ShoppingCart, UserRound } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import type { ConfiguracaoDoApp } from '@contrato';
 import { useCarrinho } from '@/api/carrinho';
+import { chamar } from '@/api/cliente';
 import { T, Toque } from '@/componentes/base';
 import { ALTURA_DA_BARRA } from '@/componentes/folga';
+import { icones3d } from '@/tema/icones';
 import { cores, elevacao, fontes, raio } from '@/tema/tokens';
 
-/** O botão do meio não é aba: abre a sacola por cima de onde a pessoa está. */
-function BotaoPedir() {
+/**
+ * O botão do meio não é aba: abre o pedido por lista, a porta de entrada que
+ * diferencia o app. Com o recurso desligado no painel, cai para a sacola.
+ */
+function BotaoDoMeio() {
+  const configuracao = useQuery({
+    queryKey: ['configuracao'],
+    queryFn: () => chamar<ConfiguracaoDoApp>('configuracao'),
+    staleTime: 10 * 60_000,
+  });
   const carrinho = useCarrinho();
   const itens = carrinho.data?.quantidadeDeItens ?? 0;
+  const porLista = configuracao.data?.recursos.pedidoPorLista !== false;
 
   return (
     <View style={estilos.lugar}>
       <Toque
-        accessibilityLabel={itens ? `Sacola: ${itens} itens` : 'Abrir a sacola'}
-        onPress={() => router.push('/sacola')}
-        style={[estilos.circulo, elevacao.alta]}
+        accessibilityLabel={porLista ? 'Pedir por lista' : 'Abrir a sacola'}
+        onPress={() => router.push(porLista ? '/lista' : '/sacola')}
+        style={[estilos.circulo, porLista && estilos.circuloDaLista, elevacao.alta]}
       >
-        <ShoppingCart size={26} color={cores.textoNaCor} strokeWidth={2.4} />
-        {itens ? (
+        {porLista ? (
+          <Image source={icones3d.pedirPorLista} style={estilos.lista} contentFit="contain" />
+        ) : (
+          <ShoppingCart size={26} color={cores.textoNaCor} strokeWidth={2.4} />
+        )}
+        {!porLista && itens ? (
           <View style={estilos.contagem}>
             <T v="mini" cor={cores.textoNaCor}>
               {itens > 9 ? '9+' : itens}
@@ -29,6 +47,9 @@ function BotaoPedir() {
           </View>
         ) : null}
       </Toque>
+      <T v="mini" cor={cores.marca} style={estilos.rotulo}>
+        {porLista ? 'lista' : 'sacola'}
+      </T>
     </View>
   );
 }
@@ -73,7 +94,7 @@ export default function Abas() {
           },
         }}
       />
-      <Tabs.Screen name="pedir" options={{ title: 'sacola', tabBarButton: () => <BotaoPedir /> }} />
+      <Tabs.Screen name="pedir" options={{ title: 'lista', tabBarButton: () => <BotaoDoMeio /> }} />
       <Tabs.Screen name="pedidos" options={{ title: 'pedidos', tabBarIcon: icone(ReceiptText) }} />
       <Tabs.Screen name="conta" options={{ title: 'conta', tabBarIcon: icone(UserRound) }} />
       {/* Favoritos saiu da barra e fica no menu da conta. */}
@@ -100,10 +121,16 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
   },
   pilulaLigada: { backgroundColor: cores.marcaClara },
-  lugar: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  lugar: { flex: 1, alignItems: 'center' },
+  rotulo: { marginTop: 2, fontSize: 12 },
+  circuloDaLista: { backgroundColor: cores.superficie, borderColor: cores.marca, borderWidth: 3 },
+  lista: { width: 40, height: 40 },
   circulo: {
+    marginTop: -22,
     width: 58,
     height: 58,
+    borderWidth: 4,
+    borderColor: cores.superficie,
     borderRadius: raio.total,
     backgroundColor: cores.marca,
     alignItems: 'center',
