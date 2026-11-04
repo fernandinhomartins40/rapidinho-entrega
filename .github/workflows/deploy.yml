@@ -365,8 +365,8 @@ jobs:
           test -n "$GOOGLE_SERVICES_JSON_B64" || { echo "::error::Secret GOOGLE_SERVICES_JSON_B64 ausente." >&2; exit 1; }
           test -n "$APK_KEYSTORE_B64" || { echo "::error::Secret APK_KEYSTORE_B64 ausente." >&2; exit 1; }
           mkdir -p "$RUNNER_TEMP/contas"
-          printf '%s' "$GOOGLE_SERVICES_JSON_B64" | base64 -d > "$RUNNER_TEMP/contas/google-services.json"
-          printf '%s' "$APK_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/contas/apk.keystore"
+          printf '%s' "$GOOGLE_SERVICES_JSON_B64" | base64 -d --ignore-garbage > "$RUNNER_TEMP/contas/google-services.json"
+          printf '%s' "$APK_KEYSTORE_B64" | base64 -d --ignore-garbage > "$RUNNER_TEMP/contas/apk.keystore"
       - name: Gerar o projeto Android
         if: steps.versao.outputs.gerar == 'true'
         working-directory: apps/mobile
@@ -375,9 +375,6 @@ jobs:
           EXPO_PUBLIC_API_URL: ${{ env.CANONICAL_URL }}
         run: |
           pnpm exec expo prebuild --platform android --no-install --clean
-          # A mesma chave do APK que o site já servia: o celular atualiza por
-          # cima, sem desinstalar. A chave da Play é outra e não passa por aqui.
-          cp "$RUNNER_TEMP/contas/apk.keystore" android/app/debug.keystore
       - name: Compilar o APK
         if: steps.versao.outputs.gerar == 'true'
         working-directory: apps/mobile/android
@@ -385,6 +382,27 @@ jobs:
           EXPO_PUBLIC_API_URL: ${{ env.CANONICAL_URL }}
           NODE_ENV: production
         run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a --no-daemon
+      # O Gradle assina com a chave de depuração do Expo, que o Android bloqueia
+      # como "instalação de risco". Reassina com a chave oficial do app, a mesma
+      # registrada na Play, para o APK do site passar na verificação.
+      - name: Assinar com a chave oficial
+        if: steps.versao.outputs.gerar == 'true'
+        working-directory: apps/mobile/android/app/build/outputs/apk/release
+        env:
+          APK_KEYSTORE_SENHA: ${{ secrets.APK_KEYSTORE_SENHA }}
+          APK_KEYSTORE_APELIDO: ${{ secrets.APK_KEYSTORE_APELIDO }}
+        run: |
+          test -n "$APK_KEYSTORE_SENHA" || { echo "::error::Secret APK_KEYSTORE_SENHA ausente." >&2; exit 1; }
+          export RAPI_SENHA="$(printf '%s' "$APK_KEYSTORE_SENHA" | tr -d '\r\n')"
+          apelido="$(printf '%s' "$APK_KEYSTORE_APELIDO" | tr -d '\r\n')"
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -n 1)"
+          "$apksigner" sign --ks "$RUNNER_TEMP/contas/apk.keystore" --ks-key-alias "${apelido:-rapidinho-upload}" \
+            --ks-pass env:RAPI_SENHA --key-pass env:RAPI_SENHA --v2-signing-enabled true --v3-signing-enabled true \
+            --out app-assinado.apk app-release.apk
+          "$apksigner" verify --print-certs app-assinado.apk | grep -i 'SHA-256' | head -n 1
+          "$apksigner" verify --print-certs app-assinado.apk | grep -qi '52287e835880b5a628dea884cffaa9af5f9560ffd61b0da88024e40cd29575a8' \
+            || { echo "::error::O APK não saiu com a chave oficial." >&2; exit 1; }
+          mv app-assinado.apk app-release.apk
       - if: steps.versao.outputs.gerar == 'true'
         uses: actions/upload-artifact@v4
         with:
