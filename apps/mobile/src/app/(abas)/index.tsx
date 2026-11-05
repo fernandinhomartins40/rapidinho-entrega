@@ -4,7 +4,7 @@ import { ChevronRight, MapPin, ShoppingBag } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { ConfiguracaoDoApp, Segmento, Vitrine } from '@contrato';
+import type { ConfiguracaoDoApp, LojaDaVitrine, Segmento, Vitrine } from '@contrato';
 import { useCidade } from '@/api/cidade';
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { useSessao } from '@/api/sessao';
@@ -16,9 +16,9 @@ import {
   CarrosselDeCampanhas,
   CartaoDeAtalho,
   CartaoDeLoja,
+  CartaoDeLojaAberta,
   CartaoDeProduto,
   FaixaDeCategorias,
-  LogoDeLoja,
   Secao,
   SecaoDeCampanha,
 } from '@/componentes/vitrine';
@@ -34,9 +34,6 @@ const ABAS: { chave: Aba; rotulo: string; imagem: Icone3d }[] = [
   { chave: 'PHARMACY', rotulo: 'farmácias', imagem: icones3d.farmacias },
   { chave: 'OTHER', rotulo: 'outros', imagem: icones3d.outros },
 ];
-
-/** Quantas lojas entram na faixa de logos do alto. */
-const LOJAS_EM_ALTA = 10;
 
 export default function Inicio() {
   const { cidade } = useCidade();
@@ -75,16 +72,15 @@ export default function Inicio() {
     const naAba = <T extends { segmento: Segmento | null }>(itens: T[]) =>
       aba === 'TUDO' ? itens : itens.filter((i) => i.segmento === aba || i.segmento === null);
     const lojas = naAba(dados.lojas);
-    const emAlta = [...lojas]
+    const abertas = lojas
       .filter((loja) => loja.aberta)
-      .sort((a, b) => Number(b.patrocinada) - Number(a.patrocinada) || b.avaliacoes - a.avaliacoes)
-      .slice(0, LOJAS_EM_ALTA);
+      .sort((a, b) => Number(b.patrocinada) - Number(a.patrocinada) || b.avaliacoes - a.avaliacoes);
     return {
       categorias: naAba(dados.categorias),
       saindoAgora: naAba(dados.saindoAgora),
       secoes: naAba(dados.secoes ?? []),
-      lojas,
-      emAlta,
+      abertas,
+      fechadas: lojas.filter((loja) => !loja.aberta),
     };
   }, [dados, aba]);
 
@@ -161,17 +157,37 @@ export default function Inicio() {
               <FaixaDeCategorias categorias={filtrado.categorias} cidade={dados.cidade.slug} />
             ) : null}
 
-            {filtrado.emAlta.length >= 3 ? (
-              <Secao titulo="lojas em alta por aqui" subtitulo="as mais pedidas da cidade">
+            {/* Logo no alto: quem abre o app à noite precisa ver de cara onde
+                ainda dá para pedir, antes de escolher uma loja fechada. */}
+            {filtrado.abertas.length > 0 ? (
+              <Secao
+                titulo="abertas agora"
+                subtitulo={
+                  filtrado.abertas.length === 1
+                    ? '1 loja recebendo pedidos'
+                    : `${filtrado.abertas.length} lojas recebendo pedidos`
+                }
+              >
                 <FlatList
-                  data={filtrado.emAlta}
+                  data={filtrado.abertas}
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   keyExtractor={(loja) => loja.id}
-                  contentContainerStyle={estilos.listaHorizontal}
-                  renderItem={({ item }) => <LogoDeLoja loja={item} cidade={dados.cidade.slug} />}
+                  contentContainerStyle={estilos.listaAberta}
+                  renderItem={({ item }) => (
+                    <CartaoDeLojaAberta loja={item} cidade={dados.cidade.slug} />
+                  )}
                 />
               </Secao>
+            ) : filtrado.fechadas.length > 0 ? (
+              <View style={estilos.tudoFechado}>
+                <T v="titulo3" cor={cores.perigo}>
+                  Nenhuma loja aberta agora
+                </T>
+                <T v="legenda" cor={cores.textoMedio}>
+                  Veja abaixo quando cada uma abre.
+                </T>
+              </View>
             ) : null}
 
             {filtrado.secoes.map((secao) => (
@@ -202,15 +218,23 @@ export default function Inicio() {
               />
             ) : null}
 
-            <Secao titulo="todas as lojas" subtitulo={`${filtrado.lojas.length} na cidade`}>
-              <View style={estilos.listaDeLojas}>
-                {filtrado.lojas.map((loja, indice) => (
-                  <View key={loja.id}>
-                    {indice > 0 ? <View style={estilos.divisoria} /> : null}
-                    <CartaoDeLoja loja={loja} cidade={dados.cidade.slug} agrupada />
-                  </View>
-                ))}
-              </View>
+            <Secao
+              titulo="todas as lojas"
+              subtitulo={`${filtrado.abertas.length} abertas de ${
+                filtrado.abertas.length + filtrado.fechadas.length
+              } na cidade`}
+            >
+              {filtrado.abertas.length > 0 ? (
+                <ListaDeLojas lojas={filtrado.abertas} cidade={dados.cidade.slug} />
+              ) : null}
+              {filtrado.fechadas.length > 0 ? (
+                <>
+                  <T v="corpoForte" cor={cores.textoMedio} style={estilos.rotuloFechadas}>
+                    fechadas agora
+                  </T>
+                  <ListaDeLojas lojas={filtrado.fechadas} cidade={dados.cidade.slug} />
+                </>
+              ) : null}
             </Secao>
           </View>
         )}
@@ -228,6 +252,19 @@ export default function Inicio() {
           <ChevronRight size={22} color={cores.textoNaCor} />
         </Toque>
       ) : null}
+    </View>
+  );
+}
+
+function ListaDeLojas({ lojas, cidade }: { lojas: LojaDaVitrine[]; cidade: string }) {
+  return (
+    <View style={estilos.listaDeLojas}>
+      {lojas.map((loja, indice) => (
+        <View key={loja.id}>
+          {indice > 0 ? <View style={estilos.divisoria} /> : null}
+          <CartaoDeLoja loja={loja} cidade={cidade} agrupada />
+        </View>
+      ))}
     </View>
   );
 }
@@ -268,7 +305,16 @@ const estilos = StyleSheet.create({
   },
   cidadeNome: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   corpo: { gap: espaco.xl, paddingTop: espaco.l },
-  listaHorizontal: { paddingHorizontal: espaco.l, gap: espaco.m },
+  // Respiro embaixo para a sombra do cartão não ser cortada.
+  listaAberta: { paddingHorizontal: espaco.l, paddingBottom: espaco.s, gap: espaco.m },
+  tudoFechado: {
+    marginHorizontal: espaco.l,
+    padding: espaco.l,
+    gap: 2,
+    borderRadius: raio.folha,
+    backgroundColor: cores.perigoClaro,
+  },
+  rotuloFechadas: { paddingHorizontal: espaco.l, marginTop: espaco.s },
   listaDeLojas: {
     marginHorizontal: espaco.l,
     borderRadius: raio.folha,

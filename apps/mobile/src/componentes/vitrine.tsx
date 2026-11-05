@@ -324,26 +324,101 @@ export function CartaoDeProduto({
   );
 }
 
+/**
+ * Aberta ou fechada, em cor e em texto: quem só via a loja apagada não
+ * percebia que ela estava fechada até tentar pedir.
+ */
+export function SeloDeHorario({ aberta }: { aberta: boolean }) {
+  const cor = aberta ? cores.sucesso : cores.perigo;
+  return (
+    <View
+      style={[
+        estilos.seloHorario,
+        { backgroundColor: aberta ? cores.sucessoClaro : cores.perigoClaro },
+      ]}
+    >
+      <View style={[estilos.seloPonto, { backgroundColor: cor }]} />
+      <T v="mini" cor={cor}>
+        {aberta ? 'Aberta' : 'Fechada'}
+      </T>
+    </View>
+  );
+}
+
 /** Loja em destaque: só a logo e o nome, em cartão branco. */
 export function LogoDeLoja({ loja, cidade }: { loja: LojaDaVitrine; cidade: string }) {
   const chave = chaveDaCategoria(loja.categoriaSlug, loja.segmento);
   return (
     <Toque
-      accessibilityLabel={loja.nome}
+      accessibilityLabel={`${loja.nome}, ${loja.aberta ? 'aberta' : 'fechada'}`}
       onPress={() =>
         router.push({ pathname: '/loja/[cidade]/[loja]', params: { cidade, loja: loja.slug } })
       }
-      style={[estilos.logoCartao, !loja.aberta && estilos.lojaFechada]}
+      style={estilos.logoCartao}
     >
       <Foto
         url={loja.logoUrl ?? loja.capaUrl}
         categoria={chave}
         reserva={icone3dDaCategoria(loja.categoriaSlug, chave)}
-        estilo={estilos.logoFoto}
+        estilo={[estilos.logoFoto, !loja.aberta && estilos.fotoFechada]}
       />
       <T v="legenda" numberOfLines={2} style={estilos.centro}>
         {loja.nome}
       </T>
+      <SeloDeHorario aberta={loja.aberta} />
+    </Toque>
+  );
+}
+
+/** Loja na faixa "abertas agora": capa, logo, tempo e entrega. */
+export function CartaoDeLojaAberta({ loja, cidade }: { loja: LojaDaVitrine; cidade: string }) {
+  const chave = chaveDaCategoria(loja.categoriaSlug, loja.segmento);
+  const reserva = icone3dDaCategoria(loja.categoriaSlug, chave);
+  return (
+    <Toque
+      accessibilityLabel={`${loja.nome}, aberta agora, ${loja.tempoMin} a ${loja.tempoMax} minutos`}
+      encolhe={0.985}
+      onPress={() =>
+        router.push({ pathname: '/loja/[cidade]/[loja]', params: { cidade, loja: loja.slug } })
+      }
+      style={[estilos.aberta, elevacao.baixa]}
+    >
+      <View>
+        <Foto
+          url={loja.capaUrl ?? loja.logoUrl}
+          categoria={chave}
+          reserva={reserva}
+          estilo={estilos.abertaCapa}
+        />
+        <View style={estilos.abertaSelo}>
+          <SeloDeHorario aberta />
+        </View>
+        {loja.capaUrl ? (
+          <Foto
+            url={loja.logoUrl}
+            categoria={chave}
+            reserva={reserva}
+            estilo={estilos.abertaLogo}
+          />
+        ) : null}
+      </View>
+      <View style={estilos.abertaDados}>
+        <T v="corpoForte" numberOfLines={1}>
+          {loja.nome}
+        </T>
+        <View style={estilos.linha}>
+          <Star size={14} color={cores.amarelo} fill={cores.amarelo} />
+          <T v="legenda" cor={cores.aviso}>
+            {loja.avaliacoes ? loja.nota.toFixed(1) : 'Nova'}
+          </T>
+          <T v="legenda" cor={cores.textoMedio} numberOfLines={1} style={estilos.flex}>
+            {` · ${loja.tempoMin}-${loja.tempoMax} min`}
+          </T>
+        </View>
+        <T v="legenda" cor={loja.taxaGratis ? cores.sucesso : cores.textoMedio}>
+          {loja.taxaGratis ? 'Entrega grátis' : `Entrega ${dinheiro(loja.taxaCents)}`}
+        </T>
+      </View>
     </Toque>
   );
 }
@@ -500,22 +575,21 @@ export function CartaoDeLoja({
       onPress={() =>
         router.push({ pathname: '/loja/[cidade]/[loja]', params: { cidade, loja: loja.slug } })
       }
-      style={[
-        estilos.loja,
-        !agrupada && [estilos.lojaSolta, elevacao.baixa],
-        !loja.aberta && estilos.lojaFechada,
-      ]}
+      style={[estilos.loja, !agrupada && [estilos.lojaSolta, elevacao.baixa]]}
     >
       <Foto
         url={loja.logoUrl ?? loja.capaUrl}
         categoria={chave}
         reserva={icone3dDaCategoria(loja.categoriaSlug, chave)}
-        estilo={estilos.lojaFoto}
+        estilo={[estilos.lojaFoto, !loja.aberta && estilos.fotoFechada]}
       />
       <View style={estilos.lojaDados}>
-        <T v="corpoForte" numberOfLines={1}>
-          {loja.nome}
-        </T>
+        <View style={estilos.linha}>
+          <T v="corpoForte" numberOfLines={1} style={estilos.flexivel}>
+            {loja.nome}
+          </T>
+          <SeloDeHorario aberta={loja.aberta} />
+        </View>
         <View style={estilos.linha}>
           <Star size={14} color={cores.amarelo} fill={cores.amarelo} />
           <T v="legenda" cor={cores.aviso}>
@@ -525,21 +599,27 @@ export function CartaoDeLoja({
             {` · ${loja.categoria} · ${loja.tempoMin}-${loja.tempoMax} min`}
           </T>
         </View>
-        {loja.aberta ? (
-          <T v="legenda" cor={loja.taxaGratis ? cores.sucesso : cores.textoMedio}>
-            {loja.taxaGratis ? 'Entrega grátis' : `Entrega ${dinheiro(loja.taxaCents)}`}
-          </T>
-        ) : (
-          <T v="legenda" cor={cores.perigo} numberOfLines={1}>
-            {loja.rotuloHorario}
-          </T>
-        )}
+        <View style={estilos.linha}>
+          {loja.aberta ? (
+            <T
+              v="legenda"
+              cor={loja.taxaGratis ? cores.sucesso : cores.textoMedio}
+              style={estilos.flex}
+            >
+              {loja.taxaGratis ? 'Entrega grátis' : `Entrega ${dinheiro(loja.taxaCents)}`}
+            </T>
+          ) : (
+            <T v="legenda" cor={cores.perigo} numberOfLines={1} style={estilos.flex}>
+              {loja.rotuloHorario}
+            </T>
+          )}
+          {loja.patrocinada ? (
+            <T v="mini" cor={cores.textoFraco}>
+              Patrocinado
+            </T>
+          ) : null}
+        </View>
       </View>
-      {loja.patrocinada ? (
-        <T v="mini" cor={cores.textoFraco} style={estilos.patrocinada}>
-          Patrocinado
-        </T>
-      ) : null}
     </Toque>
   );
 }
@@ -615,7 +695,37 @@ const estilos = StyleSheet.create({
     backgroundColor: cores.superficie,
   },
   lojaSolta: { marginHorizontal: espaco.l, borderRadius: raio.folha },
-  lojaFechada: { opacity: 0.6 },
+  // Só a foto apaga: o selo e o horário de abertura seguem legíveis.
+  fotoFechada: { opacity: 0.45 },
+  flexivel: { flexShrink: 1 },
+  seloHorario: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: raio.total,
+  },
+  seloPonto: { width: 6, height: 6, borderRadius: 3 },
+  aberta: {
+    width: 240,
+    borderRadius: raio.folha,
+    overflow: 'hidden',
+    backgroundColor: cores.superficie,
+  },
+  abertaCapa: { width: 240, height: 112, borderRadius: 0 },
+  abertaSelo: { position: 'absolute', top: espaco.s, left: espaco.s },
+  abertaLogo: {
+    position: 'absolute',
+    right: espaco.m,
+    bottom: -20,
+    width: 48,
+    height: 48,
+    borderRadius: raio.grande,
+    borderWidth: 2,
+    borderColor: cores.superficie,
+  },
+  abertaDados: { padding: espaco.m, paddingRight: 72, gap: 2 },
   lojaFoto: {
     width: 60,
     height: 60,
@@ -624,5 +734,4 @@ const estilos = StyleSheet.create({
     borderColor: cores.linha,
   },
   lojaDados: { flex: 1, gap: 2 },
-  patrocinada: { position: 'absolute', top: espaco.s, right: espaco.l },
 });
