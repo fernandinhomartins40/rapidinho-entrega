@@ -1,7 +1,12 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { PAPEIS_COM_SENHA, revokeAllSessions } from '@rapidinho/auth';
 import { prisma } from '@rapidinho/database';
-import { getEmail, logger } from '@rapidinho/services';
+import {
+  emailDeRecuperacaoDeSenha,
+  emailDeSenhaAlterada,
+  getEmail,
+  logger,
+} from '@rapidinho/services';
 import { gerarHashDeSenha } from '@rapidinho/shared/senha';
 
 /**
@@ -51,29 +56,10 @@ export async function enviarLinkDeRecuperacao(email: string, painel: string): Pr
 
   // No fragmento (#), o token não chega ao servidor nem aos logs de acesso.
   const link = `${painel.replace(/\/$/, '')}/entrar/nova-senha#${token}`;
-  const nome = usuario.name?.trim().split(' ')[0] ?? '';
 
   const enviado = await getEmail().send({
     to: usuario.email,
-    subject: 'Redefinir sua senha do painel Rapidinho',
-    text: [
-      `Olá${nome ? `, ${nome}` : ''}!`,
-      '',
-      'Recebemos um pedido para redefinir a senha do seu acesso ao painel do Rapidinho Entrega.',
-      'Para criar uma senha nova, abra o link abaixo. Ele vale por 30 minutos e só funciona uma vez.',
-      '',
-      link,
-      '',
-      'Se não foi você, ignore este e-mail: sua senha continua a mesma.',
-    ].join('\n'),
-    html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;color:#1C1A2E">
-  <h1 style="color:#FF5A1F;font-size:22px">Redefinir sua senha</h1>
-  <p>Olá${nome ? `, ${escapar(nome)}` : ''}!</p>
-  <p>Recebemos um pedido para redefinir a senha do seu acesso ao painel do Rapidinho Entrega.</p>
-  <p style="margin:28px 0"><a href="${link}" style="background:#FF5A1F;color:#fff;padding:14px 22px;border-radius:10px;text-decoration:none;font-weight:bold">Criar senha nova</a></p>
-  <p style="font-size:14px;color:#555">O link vale por 30 minutos e só funciona uma vez. Se o botão não abrir, copie este endereço:<br><span style="word-break:break-all">${link}</span></p>
-  <p style="font-size:14px;color:#555">Se não foi você, ignore este e-mail: sua senha continua a mesma.</p>
-</div>`,
+    ...emailDeRecuperacaoDeSenha({ nome: usuario.name, link }),
   });
 
   // Sem o endereço nem o token no log: só o fato.
@@ -114,9 +100,28 @@ export async function redefinirSenhaComToken(token: string, nova: string): Promi
   });
   // Senha esquecida pode ser senha vazada: todas as sessões abertas caem.
   await revokeAllSessions(userId);
+  await avisarSenhaAlterada(userId);
   return null;
 }
 
-function escapar(texto: string) {
-  return texto.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+/**
+ * Aviso de segurança para o dono da conta. Falhar aqui não desfaz a troca:
+ * a senha já mudou, e o e-mail é só o alerta.
+ */
+export async function avisarSenhaAlterada(userId: string): Promise<void> {
+  try {
+    const usuario = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true },
+    });
+    if (!usuario?.email) return;
+    const painel = process.env.NEXT_PUBLIC_ADMIN_URL ?? 'https://painel.rapidinhoentrega.com.br';
+    const enviado = await getEmail().send({
+      to: usuario.email,
+      ...emailDeSenhaAlterada({ nome: usuario.name, painel }),
+    });
+    if (!enviado) logger.error({ userId }, '[senha] aviso de senha alterada não saiu');
+  } catch (erro) {
+    logger.error({ err: erro, userId }, '[senha] falha no aviso de senha alterada');
+  }
 }

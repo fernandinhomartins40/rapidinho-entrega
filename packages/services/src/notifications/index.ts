@@ -1,5 +1,6 @@
 import { prisma } from '@rapidinho/database';
 import type { PushPayload } from '@rapidinho/shared';
+import { emailDeNotificacao } from '../messaging/modelos-de-email';
 import { getEmail, getExpoPush, getPush, getWhatsApp } from '../providers';
 import { logger } from '../logger';
 
@@ -165,12 +166,12 @@ async function enviarWhatsApp(entrada: NotificacaoInput, phone: string): Promise
 }
 
 async function enviarEmail(entrada: NotificacaoInput, email: string): Promise<void> {
-  const resultado = await getEmail().send({
-    to: email,
-    subject: entrada.title,
-    html: `<p>${entrada.body}</p>`,
-    text: entrada.body,
+  const modelo = emailDeNotificacao({
+    titulo: entrada.title,
+    corpo: entrada.body,
+    link: entrada.url,
   });
+  const resultado = await getEmail().send({ to: email, ...modelo });
 
   await registrar(entrada, 'EMAIL', resultado ? 'SENT' : 'FAILED');
 }

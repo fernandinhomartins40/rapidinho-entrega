@@ -22,6 +22,7 @@ export * from './messaging/whatsapp';
 export * from './messaging/otp';
 export * from './payments/fake';
 export * from './messaging/email';
+export * from './messaging/modelos-de-email';
 export * from './messaging/push';
 export * from './messaging/expo-push';
 export * from './notifications';

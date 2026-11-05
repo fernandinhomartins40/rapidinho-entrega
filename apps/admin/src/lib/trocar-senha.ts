@@ -4,6 +4,7 @@ import { consumeRateLimit, resetRateLimit } from '@rapidinho/services';
 import { RATE_LIMITS } from '@rapidinho/shared';
 import { gerarHashDeSenha, senhaConfere } from '@rapidinho/shared/senha';
 import type { ActionResult } from './action-state';
+import { avisarSenhaAlterada } from './recuperar-senha';
 
 /** Curta demais é adivinhável; a provisória do seed tem 9. */
 const MINIMO = 8;
@@ -68,6 +69,7 @@ export async function trocarSenhaDoUsuario(
   // Quem troca a senha por desconfiar de vazamento não pode continuar com o
   // invasor logado em outro aparelho.
   await revokeOtherSessions(userId);
+  await avisarSenhaAlterada(userId);
 
   return { ok: true, message: usuario.passwordHash ? 'Senha trocada.' : 'Senha criada.' };
 }
