@@ -38,7 +38,7 @@ export interface EmailMessage {
 }
 
 export interface EmailProvider {
-  readonly name: 'resend' | 'fake';
+  readonly name: 'velomail' | 'resend' | 'fake';
   send(message: EmailMessage): Promise<{ id: string } | null>;
 }
 

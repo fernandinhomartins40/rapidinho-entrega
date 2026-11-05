@@ -43,6 +43,53 @@ export function createResendEmailProvider(apiKey: string, from: string): EmailPr
   };
 }
 
+/** E-mail transacional pelo Velomail, com o domínio autenticado no painel deles. */
+export function createVelomailEmailProvider(
+  apiKey: string,
+  from: string,
+  apiUrl: string,
+): EmailProvider {
+  return {
+    name: 'velomail',
+
+    async send(message: EmailMessage) {
+      try {
+        const resposta = await fetch(`${apiUrl.replace(/\/$/, '')}/emails/send`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', 'x-api-key': apiKey },
+          body: JSON.stringify({
+            from,
+            to: message.to,
+            subject: message.subject,
+            html: message.html,
+            ...(message.text ? { text: message.text } : {}),
+            ...(message.replyTo ? { reply_to: message.replyTo } : {}),
+            // Link de senha não pode passar por redirecionador de clique.
+            tracking_enabled: false,
+          }),
+          signal: AbortSignal.timeout(15_000),
+        });
+        const corpo = (await resposta.json().catch(() => null)) as {
+          success?: boolean;
+          id?: string | number;
+          data?: { id?: string | number };
+        } | null;
+
+        if (!resposta.ok || corpo?.success !== true) {
+          logger.error({ status: resposta.status }, '[email] Velomail recusou');
+          return null;
+        }
+
+        const id = corpo.id ?? corpo.data?.id;
+        return { id: id != null ? String(id) : `velomail_${Date.now()}` };
+      } catch (error) {
+        logger.error({ err: error }, '[email] falha ao enviar');
+        return null;
+      }
+    },
+  };
+}
+
 export function createFakeEmailProvider(): EmailProvider {
   return {
     name: 'fake',

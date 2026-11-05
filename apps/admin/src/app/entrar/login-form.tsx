@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { startTransition, useActionState, useCallback, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Alert, Button, Card, CardContent, ConfirmacaoPorSms, Input, Label } from '@rapidinho/ui';
@@ -99,9 +100,14 @@ export function LoginForm({
 
             {/* Lojista antigo só tinha telefone, e quem esquece a senha não tinha
                 para onde ir: a tela só dizia "E-mail ou senha incorretos". */}
+            <p className="text-center text-sm">
+              <Link href="/entrar/esqueci" className="font-medium underline">
+                Esqueci minha senha
+              </Link>
+            </p>
             <p className="text-muted-foreground text-center text-sm leading-relaxed">
-              O painel agora usa e-mail e senha. Esqueceu a senha ou ainda não tem? Peça à equipe
-              Rapidinho uma senha provisória.
+              Ainda não tem senha ou não tem e-mail cadastrado? Peça à equipe Rapidinho uma senha
+              provisória.
             </p>
 
             {noApp ? (

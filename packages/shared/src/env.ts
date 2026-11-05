@@ -57,6 +57,12 @@ const serverEnvSchema = z.object({
   OTP_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
 
   RESEND_API_KEY: z.string().optional(),
+  /** E-mail transacional pelo Velomail; com a chave, tem prioridade sobre o Resend. */
+  VELOMAIL_API_KEY: z.preprocess(vazioComoAusente, z.string().optional()),
+  VELOMAIL_API_URL: z.preprocess(
+    vazioComoAusente,
+    z.string().url().default('https://www.velomail.com.br/api'),
+  ),
   EMAIL_FROM: z.string().optional(),
 
   VAPID_PUBLIC_KEY: z.string().optional(),

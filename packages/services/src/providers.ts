@@ -16,7 +16,11 @@ import {
   createWhatsAppOtpSender,
 } from './messaging/otp';
 import { createFakePaymentGateway } from './payments/fake';
-import { createFakeEmailProvider, createResendEmailProvider } from './messaging/email';
+import {
+  createFakeEmailProvider,
+  createResendEmailProvider,
+  createVelomailEmailProvider,
+} from './messaging/email';
 import { createNoopPushProvider, createWebPushProvider } from './messaging/push';
 import { createMercadoPagoGateway } from './payments/mercadopago';
 import {
@@ -140,9 +144,11 @@ export function getEmail(): EmailProvider {
   const env = parseServerEnv();
 
   emailInstance =
-    env.RESEND_API_KEY && env.EMAIL_FROM
-      ? createResendEmailProvider(env.RESEND_API_KEY, env.EMAIL_FROM)
-      : createFakeEmailProvider();
+    env.VELOMAIL_API_KEY && env.EMAIL_FROM
+      ? createVelomailEmailProvider(env.VELOMAIL_API_KEY, env.EMAIL_FROM, env.VELOMAIL_API_URL)
+      : env.RESEND_API_KEY && env.EMAIL_FROM
+        ? createResendEmailProvider(env.RESEND_API_KEY, env.EMAIL_FROM)
+        : createFakeEmailProvider();
 
   return emailInstance;
 }
