@@ -91,7 +91,9 @@ export default function Entrar() {
       if (sessao.usuario.termosPendentes) {
         await chamar('eu/aceite-de-termos', { metodo: 'POST' }).catch(() => undefined);
       }
-      if (router.canGoBack()) router.back();
+      // Conta criada pelo SMS só tem o telefone; a loja precisa do nome no pedido.
+      if (!sessao.usuario.nome?.trim()) router.replace('/meus-dados');
+      else if (router.canGoBack()) router.back();
       else router.replace('/');
     } catch (e) {
       setErro(e instanceof ErroDaApi ? e.message : mensagemDoFirebase(e));

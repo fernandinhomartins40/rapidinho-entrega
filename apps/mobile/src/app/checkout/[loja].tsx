@@ -13,9 +13,11 @@ import type {
   RespostaCriarPedido,
   ResumoDoCheckout,
   TipoDePedido,
+  Usuario,
 } from '@contrato';
 import { avisarErro } from '@/api/carrinho';
 import { chamar, enviarImagem, ErroDaApi } from '@/api/cliente';
+import { useSessao } from '@/api/sessao';
 import { Botao, dinheiro, ErroDaTela, Esqueleto, T, Toque } from '@/componentes/base';
 import { Campo, Cartao, Linha, Opcao } from '@/componentes/formulario';
 import { cores, espaco, raio } from '@/tema/tokens';
@@ -36,6 +38,10 @@ export default function Checkout() {
   const { loja } = useLocalSearchParams<{ loja: string }>();
   const baixo = useSafeAreaInsets().bottom;
   const consultas = useQueryClient();
+  const { usuario, atualizar } = useSessao();
+  // Conta sem nome (criada pelo SMS) pede aqui mesmo e guarda no perfil.
+  const [semNome] = useState(() => !usuario?.nome?.trim());
+  const [nome, setNome] = useState('');
 
   // A mesma chave em todas as tentativas: rede ruim não cria dois pedidos.
   const [chave] = useState(() => Crypto.randomUUID());
@@ -66,8 +72,12 @@ export default function Checkout() {
   const enderecoEscolhido = enderecoId ?? r?.enderecoEscolhidoId ?? undefined;
 
   const pedir = useMutation({
-    mutationFn: (entrada: EntradaCriarPedido) =>
-      chamar<RespostaCriarPedido>('pedidos', { metodo: 'POST', corpo: entrada }),
+    mutationFn: async (entrada: EntradaCriarPedido) => {
+      if (entrada.nome) {
+        atualizar(await chamar<Usuario>('eu', { metodo: 'PATCH', corpo: { nome: entrada.nome } }));
+      }
+      return chamar<RespostaCriarPedido>('pedidos', { metodo: 'POST', corpo: entrada });
+    },
     onSuccess: (pedido) => {
       void consultas.invalidateQueries({ queryKey: ['carrinho'] });
       void consultas.invalidateQueries({ queryKey: ['pedidos'] });
@@ -116,15 +126,17 @@ export default function Checkout() {
   const trocoCents = Math.round(Number(troco.replace(',', '.')) * 100) || null;
   const faltando =
     r.bloqueio ??
-    (tipo === 'DELIVERY' && !enderecoEscolhido
-      ? 'Escolha o endereço'
-      : !formaEscolhida
-        ? 'Escolha como pagar'
-        : r.exigencias.maioridade && !maioridade
-          ? 'Confirme que tem 18 anos'
-          : r.exigencias.receita && !receita
-            ? 'Envie a foto da receita'
-            : null);
+    (semNome && nome.trim().length < 2
+      ? 'Informe seu nome'
+      : tipo === 'DELIVERY' && !enderecoEscolhido
+        ? 'Escolha o endereço'
+        : !formaEscolhida
+          ? 'Escolha como pagar'
+          : r.exigencias.maioridade && !maioridade
+            ? 'Confirme que tem 18 anos'
+            : r.exigencias.receita && !receita
+              ? 'Envie a foto da receita'
+              : null);
 
   const finalizar = () => {
     if (faltando || !formaEscolhida) return;
@@ -137,6 +149,7 @@ export default function Checkout() {
       trocoParaCents: formaEscolhida === 'CASH_ON_DELIVERY' ? trocoCents : undefined,
       cupom,
       observacao: observacao.trim() || undefined,
+      nome: semNome ? nome.trim() : undefined,
       confirmaMaioridade: r.exigencias.maioridade ? maioridade : undefined,
       receitaImagemId: receita?.id,
       politicaDeSubstituicao: r.loja.ehMercado ? substituicao : undefined,
@@ -153,6 +166,23 @@ export default function Checkout() {
         contentContainerStyle={[estilos.corpo, { paddingBottom: baixo + 120 }]}
         keyboardShouldPersistTaps="handled"
       >
+        {semNome ? (
+          <Cartao>
+            <T v="titulo3">Seu nome</T>
+            <Campo
+              rotulo="Como a loja deve te chamar?"
+              dica="Fica salvo na sua conta para os próximos pedidos"
+              placeholder="Ex.: Maria da Silva"
+              autoCapitalize="words"
+              autoComplete="name"
+              textContentType="name"
+              maxLength={120}
+              value={nome}
+              onChangeText={setNome}
+            />
+          </Cartao>
+        ) : null}
+
         {r.loja.aceitaRetirada ? (
           <View style={estilos.alternador}>
             {(['DELIVERY', 'PICKUP'] as const).map((t) => (

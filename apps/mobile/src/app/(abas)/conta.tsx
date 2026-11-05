@@ -116,6 +116,7 @@ export default function Conta() {
 
       <View style={estilos.corpo}>
         <Grupo>
+          <Item Icone={UserRound} titulo="Meus dados" aoTocar={() => router.push('/meus-dados')} />
           <Item
             Icone={ClipboardList}
             titulo="Meus pedidos"
