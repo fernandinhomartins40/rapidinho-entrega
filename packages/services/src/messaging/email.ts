@@ -49,6 +49,11 @@ export function createVelomailEmailProvider(
   from: string,
   apiUrl: string,
 ): EmailProvider {
+  // O Velomail recusa "Nome <email>" no `from`: o nome vai em `from_name`.
+  const partes = /^\s*(.*?)\s*<([^>]+)>\s*$/.exec(from);
+  const remetente = partes ? partes[2]!.trim() : from.trim();
+  const nome = partes?.[1]?.replace(/^"|"$/g, '').trim();
+
   return {
     name: 'velomail',
 
@@ -58,7 +63,8 @@ export function createVelomailEmailProvider(
           method: 'POST',
           headers: { 'content-type': 'application/json', 'x-api-key': apiKey },
           body: JSON.stringify({
-            from,
+            from: remetente,
+            ...(nome ? { from_name: nome } : {}),
             to: message.to,
             subject: message.subject,
             html: message.html,
@@ -71,16 +77,23 @@ export function createVelomailEmailProvider(
         });
         const corpo = (await resposta.json().catch(() => null)) as {
           success?: boolean;
+          message?: string;
+          details?: unknown;
+          message_id?: string;
           id?: string | number;
           data?: { id?: string | number };
         } | null;
 
         if (!resposta.ok || corpo?.success !== true) {
-          logger.error({ status: resposta.status }, '[email] Velomail recusou');
+          // O motivo vem em `details` (campo e mensagem), sem dado do destinatário.
+          logger.error(
+            { status: resposta.status, detalhes: corpo?.details ?? corpo?.message },
+            '[email] Velomail recusou',
+          );
           return null;
         }
 
-        const id = corpo.id ?? corpo.data?.id;
+        const id = corpo.message_id ?? corpo.id ?? corpo.data?.id;
         return { id: id != null ? String(id) : `velomail_${Date.now()}` };
       } catch (error) {
         logger.error({ err: error }, '[email] falha ao enviar');
