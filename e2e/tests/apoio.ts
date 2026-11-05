@@ -44,8 +44,9 @@ export const ESTADOS_DE_SESSAO = {
 /** Login do painel por e-mail e senha: lojista e equipe da plataforma. */
 export async function entrarComSenha(page: Page, email: string): Promise<void> {
   await page.getByLabel(/e-mail/i).fill(email);
-  // Exato: o botão do olho ("Mostrar senha") também casaria com /senha/i.
-  await page.getByLabel('Senha', { exact: true }).fill(SENHA_DO_E2E);
+  // Começando por "Senha": o botão do olho ("Mostrar senha") também casaria com
+  // /senha/i, e o asterisco de obrigatório impede o nome exato.
+  await page.getByLabel(/^senha/i).fill(SENHA_DO_E2E);
   await page.getByRole('button', { name: 'Entrar', exact: true }).click();
   await page.waitForURL((url) => !url.pathname.startsWith('/entrar'), { timeout: 20_000 });
 }
