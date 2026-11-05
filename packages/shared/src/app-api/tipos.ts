@@ -453,6 +453,8 @@ export interface ProdutoDaBusca {
   nome: string;
   precoCents: number;
   porPeso: boolean;
+  /** Servidor antigo não manda: o app desenha o ícone da categoria. */
+  imagemUrl?: string | null;
   lojaNome: string;
   lojaSlug: string;
 }

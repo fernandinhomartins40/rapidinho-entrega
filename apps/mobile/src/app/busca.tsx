@@ -2,15 +2,17 @@ import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { Search, SearchX, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import type { ResultadoDaBusca } from '@contrato';
 import { useCidade } from '@/api/cidade';
 import { chamar, ErroDaApi } from '@/api/cliente';
-import { dinheiro, EstadoDaTela, ErroDaTela, Esqueleto, T, Toque } from '@/componentes/base';
+import { dinheiro, EstadoDaTela, ErroDaTela, Esqueleto, Foto, T, Toque } from '@/componentes/base';
 import { useFolgaInferior } from '@/componentes/folga';
 import { TopoDaTela } from '@/componentes/topo';
 import { CartaoDeLoja } from '@/componentes/vitrine';
 import { cores, elevacao, espaco, fontes, raio, toqueMinimo } from '@/tema/tokens';
+
+const COLUNA_GAP = espaco.m;
 
 const SUGESTOES = ['Pizza', 'Hambúrguer', 'Açaí', 'Arroz', 'Fralda', 'Refrigerante'];
 
@@ -19,6 +21,8 @@ export default function Busca() {
   const { cidade } = useCidade();
   const [texto, setTexto] = useState('');
   const [termo, setTermo] = useState('');
+  // Duas colunas de cartão com foto: produto se vende pela imagem.
+  const largura = (useWindowDimensions().width - espaco.l * 2 - COLUNA_GAP) / 2;
 
   // Espera a pessoa parar de digitar: cada letra não vira uma busca.
   useEffect(() => {
@@ -109,33 +113,36 @@ export default function Busca() {
                 <T v="titulo3" style={estilos.margem}>
                   Produtos
                 </T>
-                {dados.produtos.map((p) => (
-                  <Toque
-                    key={p.id}
-                    encolhe={0.99}
-                    accessibilityLabel={`${p.nome}, ${dinheiro(p.precoCents)}, em ${p.lojaNome}`}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/produto/[cidade]/[id]',
-                        params: { cidade: cidade!, id: p.id },
-                      })
-                    }
-                    style={estilos.produto}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <T v="corpoForte" numberOfLines={2}>
-                        {p.nome}
-                      </T>
-                      <T v="legenda" cor={cores.textoMedio}>
-                        {p.lojaNome}
-                      </T>
-                    </View>
-                    <T v="corpoForte" cor={cores.marcaEscura}>
-                      {dinheiro(p.precoCents)}
-                      {p.porPeso ? '/kg' : ''}
-                    </T>
-                  </Toque>
-                ))}
+                <View style={estilos.grade}>
+                  {dados.produtos.map((p) => (
+                    <Toque
+                      key={p.id}
+                      encolhe={0.98}
+                      accessibilityLabel={`${p.nome}, ${dinheiro(p.precoCents)}, em ${p.lojaNome}`}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/produto/[cidade]/[id]',
+                          params: { cidade: cidade!, id: p.id },
+                        })
+                      }
+                      style={[estilos.produto, elevacao.baixa, { width: largura }]}
+                    >
+                      <Foto url={p.imagemUrl} estilo={{ width: largura, height: largura }} />
+                      <View style={estilos.produtoDados}>
+                        <T v="titulo3" cor={cores.sucesso}>
+                          {dinheiro(p.precoCents)}
+                          {p.porPeso ? '/kg' : ''}
+                        </T>
+                        <T v="corpo" numberOfLines={2}>
+                          {p.nome}
+                        </T>
+                        <T v="legenda" cor={cores.textoMedio} numberOfLines={1}>
+                          {p.lojaNome}
+                        </T>
+                      </View>
+                    </Toque>
+                  ))}
+                </View>
               </View>
             ) : null}
             {dados.lojas.length > 0 ? (
@@ -186,14 +193,7 @@ const estilos = StyleSheet.create({
   esqueleto: { paddingHorizontal: espaco.l, gap: espaco.m },
   secao: { gap: espaco.s },
   margem: { paddingHorizontal: espaco.l },
-  produto: {
-    marginHorizontal: espaco.l,
-    minHeight: 64,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: espaco.m,
-    padding: espaco.m,
-    borderRadius: raio.medio,
-    backgroundColor: cores.superficie,
-  },
+  grade: { flexDirection: 'row', flexWrap: 'wrap', gap: COLUNA_GAP, paddingHorizontal: espaco.l },
+  produto: { borderRadius: raio.grande, overflow: 'hidden', backgroundColor: cores.superficie },
+  produtoDados: { padding: espaco.m, gap: 2 },
 });
