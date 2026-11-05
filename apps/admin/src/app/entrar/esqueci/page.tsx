@@ -2,6 +2,9 @@ import Link from 'next/link';
 import { Logotipo } from '@/components/marca/logo';
 import { FormularioDoEmail } from './formulario';
 
+// Sem isso a página sai estática, sem o nonce da CSP, e os scripts não rodam.
+export const dynamic = 'force-dynamic';
+
 export const metadata = { title: 'Esqueci minha senha' };
 
 export default function EsqueciPage() {

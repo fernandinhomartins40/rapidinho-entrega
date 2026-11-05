@@ -1,6 +1,10 @@
 import { Logotipo } from '@/components/marca/logo';
 import { FormularioDaSenhaNova } from './formulario';
 
+// Estática, a página sai sem o nonce da CSP, o navegador bloqueia os scripts e o
+// formulário nunca lê o token: o botão ficava desabilitado para sempre.
+export const dynamic = 'force-dynamic';
+
 export const metadata = { title: 'Criar senha nova' };
 
 /** Aberta pelo link do e-mail; o token vem no fragmento e é lido no navegador. */

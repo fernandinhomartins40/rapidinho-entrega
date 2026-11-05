@@ -1,8 +1,9 @@
 'use client';
 
-import { useActionState, useEffect, useRef } from 'react';
-import { Alert, Button, Input, Label } from '@rapidinho/ui';
+import { useActionState, useEffect, useRef, useState } from 'react';
+import { Alert, Button, Label } from '@rapidinho/ui';
 import { ACTION_IDLE, type ActionResult } from '@/lib/action-state';
+import { CampoDeSenha, CamposDeSenhaNova } from './campos-de-senha';
 
 /** Usado em /admin/senha e /loja/senha; cada um passa a própria action. */
 export function FormularioDeSenha({
@@ -16,9 +17,14 @@ export function FormularioDeSenha({
 }) {
   const [state, enviar, enviando] = useActionState(acao, ACTION_IDLE);
   const form = useRef<HTMLFormElement>(null);
+  // Os campos novos guardam o texto no estado: o reset do form não os limpa,
+  // então eles são recriados.
+  const [limpezas, setLimpezas] = useState(0);
 
   useEffect(() => {
-    if (state.ok) form.current?.reset();
+    if (!state.ok) return;
+    form.current?.reset();
+    setLimpezas((atual) => atual + 1);
   }, [state]);
 
   const erro = (campo: string) =>
@@ -36,34 +42,18 @@ export function FormularioDeSenha({
           <Label htmlFor="atual" required>
             Senha atual
           </Label>
-          <Input id="atual" name="atual" type="password" autoComplete="current-password" required />
+          <CampoDeSenha id="atual" name="atual" autoComplete="current-password" required />
           {erro('atual')}
         </div>
       ) : null}
 
-      <div>
-        <Label htmlFor="nova" required>
-          Nova senha
-        </Label>
-        <Input id="nova" name="nova" type="password" autoComplete="new-password" required />
-        {erro('nova') ?? (
-          <p className="text-muted-foreground mt-1.5 text-sm">Pelo menos 8 caracteres.</p>
-        )}
-      </div>
-
-      <div>
-        <Label htmlFor="confirmacao" required>
-          Repita a nova senha
-        </Label>
-        <Input
-          id="confirmacao"
-          name="confirmacao"
-          type="password"
-          autoComplete="new-password"
-          required
-        />
-        {erro('confirmacao')}
-      </div>
+      <CamposDeSenhaNova
+        key={limpezas}
+        rotulo="Nova senha"
+        rotuloDaRepeticao="Repita a nova senha"
+        erroDaNova={state.fieldErrors?.nova}
+        erroDaRepeticao={state.fieldErrors?.confirmacao}
+      />
 
       {state.message ? (
         <Alert variant={state.ok ? 'success' : 'destructive'}>{state.message}</Alert>

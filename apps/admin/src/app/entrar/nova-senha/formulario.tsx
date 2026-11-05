@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useActionState, useEffect, useState } from 'react';
-import { Alert, Button, Card, CardContent, Input, Label } from '@rapidinho/ui';
+import { Alert, Button, Card, CardContent } from '@rapidinho/ui';
+import { CamposDeSenhaNova } from '@/components/campos-de-senha';
 import { ACTION_IDLE } from '@/lib/action-state';
 import { salvarSenhaNova } from '../esqueci/actions';
 
@@ -15,11 +16,6 @@ export function FormularioDaSenhaNova() {
     setToken(window.location.hash.slice(1));
     window.history.replaceState(null, '', window.location.pathname);
   }, []);
-
-  const erro = (campo: string) =>
-    state.fieldErrors?.[campo] ? (
-      <p className="text-destructive mt-1.5 text-sm">{state.fieldErrors[campo]}</p>
-    ) : null;
 
   if (state.ok) {
     return (
@@ -53,36 +49,11 @@ export function FormularioDaSenhaNova() {
         <form action={enviar} className="space-y-4">
           <input type="hidden" name="token" value={token ?? ''} />
 
-          <div>
-            <Label htmlFor="nova" required>
-              Senha nova
-            </Label>
-            <Input
-              id="nova"
-              name="nova"
-              type="password"
-              autoComplete="new-password"
-              autoFocus
-              required
-            />
-            {erro('nova') ?? (
-              <p className="text-muted-foreground mt-1.5 text-sm">Pelo menos 8 caracteres.</p>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="confirmacao" required>
-              Repita a senha nova
-            </Label>
-            <Input
-              id="confirmacao"
-              name="confirmacao"
-              type="password"
-              autoComplete="new-password"
-              required
-            />
-            {erro('confirmacao')}
-          </div>
+          <CamposDeSenhaNova
+            autoFocus
+            erroDaNova={state.fieldErrors?.nova}
+            erroDaRepeticao={state.fieldErrors?.confirmacao}
+          />
 
           {state.message ? (
             <Alert variant="destructive">

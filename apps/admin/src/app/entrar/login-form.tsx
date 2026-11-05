@@ -5,6 +5,7 @@ import { startTransition, useActionState, useCallback, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Alert, Button, Card, CardContent, ConfirmacaoPorSms, Input, Label } from '@rapidinho/ui';
 import { formatPhoneBR, maskPhoneBR } from '@rapidinho/shared';
+import { CampoDeSenha } from '@/components/campos-de-senha';
 import { autenticar, conferirSms } from './actions';
 import { LOGIN_INITIAL_STATE, LOGIN_POR_SENHA } from './login-state';
 
@@ -76,10 +77,9 @@ export function LoginForm({
               <Label htmlFor="senha" required>
                 Senha
               </Label>
-              <Input
+              <CampoDeSenha
                 id="senha"
                 name="senha"
-                type="password"
                 autoComplete="current-password"
                 autoFocus={Boolean(state.email)}
                 required
