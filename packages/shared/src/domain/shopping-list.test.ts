@@ -74,6 +74,25 @@ describe('notaDoProduto', () => {
     expect(certo).toBeGreaterThan(integral);
   });
 
+  it('não confunde o produto com o ingrediente de outro', () => {
+    const [oleo] = interpretarLista('oleo');
+    const [leite] = interpretarLista('leite');
+
+    expect(notaDoProduto(oleo!, 'Óleo de Soja Liza 900 ml')).toBe(1);
+    expect(notaDoProduto(oleo!, 'Sardinha em Óleo Gomes da Costa')).toBeLessThan(0.5);
+    expect(notaDoProduto(leite!, 'Doce de Leite Itambé')).toBeLessThan(0.5);
+    expect(notaDoProduto(leite!, 'Leite Integral Piracanjuba 1 L')).toBe(1);
+  });
+
+  it('casa palavra inteira, não pedaço de outra', () => {
+    const [sal] = interpretarLista('sal');
+    const [refri] = interpretarLista('refri');
+
+    expect(notaDoProduto(sal!, 'Salsicha Perdigão 500 g')).toBe(0);
+    expect(notaDoProduto(sal!, 'Sal Refinado Cisne 1 kg')).toBe(1);
+    expect(notaDoProduto(refri!, 'Refrigerante Guaraná 2 L')).toBe(1);
+  });
+
   it('ignora acento no nome do produto', () => {
     const [acucar] = interpretarLista('acucar');
     expect(notaDoProduto(acucar!, 'Açúcar Cristal União 1 kg')).toBe(1);

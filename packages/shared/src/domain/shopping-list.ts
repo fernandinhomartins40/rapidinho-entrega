@@ -87,6 +87,9 @@ const PALAVRAS_DE_LIGACAO = new Set([
   'meia',
 ]);
 
+/** Ligações que, no nome do produto, fazem da palavra seguinte um ingrediente. */
+const QUALIFICADORES = new Set(['em', 'de', 'da', 'do', 'com', 'ao', 'a', 'sabor', 'molho']);
+
 /** Minúsculas e sem acento: "Açúcar" e "acucar" são a mesma busca. */
 export function normalizarTexto(texto: string): string {
   return texto
@@ -234,11 +237,29 @@ export function interpretarLista(texto: string): ItemDaLista[] {
 export function notaDoProduto(item: ItemDaLista, nomeDoProduto: string): number {
   const nome = normalizarTexto(nomeDoProduto);
   const [nucleo, ...resto] = item.palavras;
+  const tokens = nome
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .map(singular);
 
-  if (!nucleo || !nome.includes(nucleo)) return 0;
+  // Palavra inteira, não pedaço de outra: "sal" não é "salsicha". Abreviação
+  // de quatro letras ou mais vale como começo ("refri" → "refrigerante").
+  const posicaoDe = (palavra: string) =>
+    tokens.findIndex(
+      (token) => token === palavra || (palavra.length >= 4 && token.startsWith(palavra)),
+    );
 
-  const acertos = resto.filter((palavra) => nome.includes(palavra)).length;
+  const posicao = nucleo ? posicaoDe(nucleo) : -1;
+  if (!nucleo || posicao < 0) return 0;
+
+  const acertos = resto.filter((palavra) => posicaoDe(palavra) >= 0).length;
   let nota = (1 + acertos) / item.palavras.length;
+
+  // Depois de "em", "de", "com", "ao" a palavra só descreve outro produto:
+  // quem pede óleo não quer "Sardinha em Óleo", nem doce de leite quem pede leite.
+  if (posicao > 0 && QUALIFICADORES.has(tokens[posicao - 1]!)) nota *= 0.3;
+  // Fora do começo do nome (marca na frente), vale um pouco menos.
+  else if (posicao > 0) nota *= 0.8;
 
   // Embalagem pedida ("2l", "5kg") presente no nome: é o produto certo entre
   // vários parecidos.
