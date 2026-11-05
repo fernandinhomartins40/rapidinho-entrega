@@ -178,6 +178,14 @@ function posicaoVisivel(
   };
 }
 
+function pontoNoMapa(
+  lugar: { latitude?: number | null; longitude?: number | null } | null | undefined,
+) {
+  return lugar?.latitude != null && lugar.longitude != null
+    ? { latitude: lugar.latitude, longitude: lugar.longitude }
+    : null;
+}
+
 export async function detalharPedidoDoApp(
   userId: string,
   id: string,
@@ -208,9 +216,12 @@ export async function detalharPedidoDoApp(
           phone: true,
           whatsapp: true,
           pixKey: true,
+          latitude: true,
+          longitude: true,
           city: { select: { slug: true } },
         },
       },
+      address: { select: { latitude: true, longitude: true } },
       payment: {
         select: {
           method: true,
@@ -352,6 +363,10 @@ export async function detalharPedidoDoApp(
           posicao: posicaoVisivel(status, delivery),
         }
       : null,
+    mapa: {
+      loja: pontoNoMapa(pedido.store),
+      destino: pedido.type === 'DELIVERY' ? pontoNoMapa(pedido.address) : null,
+    },
     avaliacaoDaLoja: daLoja
       ? { nota: daLoja.rating, comentario: daLoja.comment, resposta: daLoja.replyText }
       : null,

@@ -65,4 +65,5 @@ export const AUDIT_ACTIONS = {
   reviewShown: 'review.shown',
   dataExported: 'lgpd.data_exported',
   dataDeleted: 'lgpd.data_deleted',
+  settingUpdated: 'setting.updated',
 } as const;

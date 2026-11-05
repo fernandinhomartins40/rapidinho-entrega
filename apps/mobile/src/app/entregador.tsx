@@ -19,7 +19,7 @@ import { useFolgaInferior } from '@/componentes/folga';
 import { Cartao } from '@/componentes/formulario';
 import { cores, espaco, raio } from '@/tema/tokens';
 
-const INTERVALO_DA_POSICAO = 20_000;
+const INTERVALO_DA_POSICAO = 10_000;
 
 const textoDoEndereco = (e: EnderecoDoPedido | null) =>
   e ? [`${e.rua}${e.numero ? `, ${e.numero}` : ''}`, e.bairro].join(' · ') : 'Retirada no balcão';

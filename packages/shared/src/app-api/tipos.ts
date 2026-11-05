@@ -751,6 +751,11 @@ export interface PosicaoDoEntregador {
   atualizadaEm: string;
 }
 
+export interface PontoNoMapa {
+  latitude: number;
+  longitude: number;
+}
+
 export interface EntregadorDoPedido {
   nome: string;
   telefone: string | null;
@@ -793,6 +798,11 @@ export interface PedidoDetalhado {
     em: string;
   }[];
   entregador: EntregadorDoPedido | null;
+  /**
+   * Pontos fixos do mapa de acompanhamento: a loja e o endereço de entrega.
+   * Null quando não foram marcados no mapa (endereço digitado sem GPS).
+   */
+  mapa: { loja: PontoNoMapa | null; destino: PontoNoMapa | null };
   avaliacaoDaLoja: { nota: number; comentario: string | null; resposta: string | null } | null;
   jaAvaliado: boolean;
   podeCancelar: boolean;
@@ -1121,6 +1131,11 @@ export interface ConfiguracaoDoApp {
     aviso: string | null;
     suporteWhatsapp: string | null;
   };
+  /**
+   * Chave de navegador do Google Maps, cadastrada no painel do super admin.
+   * Null: sem mapa na tela do pedido, só o botão que abre o Google Maps.
+   */
+  googleMapsApiKey: string | null;
 }
 
 export interface EntradaDispositivo {

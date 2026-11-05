@@ -17,13 +17,14 @@ import {
 } from 'lucide-react-native';
 import { useState } from 'react';
 import { Alert, Linking, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import type { PedidoDetalhado, StatusDoPedido } from '@contrato';
+import type { ConfiguracaoDoApp, PedidoDetalhado, StatusDoPedido } from '@contrato';
 import { avisarErro } from '@/api/carrinho';
 import { chamar, enviarImagem, ErroDaApi } from '@/api/cliente';
 import { Botao, dinheiro, ErroDaTela, Esqueleto, T, Toque } from '@/componentes/base';
 import { useFolgaInferior } from '@/componentes/folga';
 import { Campo, Cartao, Linha } from '@/componentes/formulario';
 import { ehAjusteDoPrato, linhaDoComplemento } from '@/componentes/linhas';
+import { MapaDaEntrega } from '@/componentes/mapa-da-entrega';
 import { cores, degradeDaMarca, espaco, raio, toqueMinimo } from '@/tema/tokens';
 
 /** As etapas que o cliente reconhece, na ordem em que acontecem. */
@@ -43,9 +44,20 @@ export default function Pedido() {
   const pedido = useQuery({
     queryKey: ['pedido', id],
     queryFn: () => chamar<PedidoDetalhado>(`pedidos/${id}`),
-    // Enquanto anda, a tela acompanha sozinha.
-    refetchInterval: (consulta) => (consulta.state.data?.ativo ? 10_000 : false),
+    // Enquanto anda, a tela acompanha sozinha; a caminho, mais depressa, pela moto no mapa.
+    refetchInterval: (consulta) => {
+      const atual = consulta.state.data;
+      if (!atual?.ativo) return false;
+      return atual.status === 'OUT_FOR_DELIVERY' ? 5_000 : 10_000;
+    },
   });
+
+  const configuracao = useQuery({
+    queryKey: ['configuracao'],
+    queryFn: () => chamar<ConfiguracaoDoApp>('configuracao'),
+    staleTime: 10 * 60_000,
+  });
+  const [mapaFalhou, setMapaFalhou] = useState(false);
 
   const atualizar = (novo: PedidoDetalhado) => consultas.setQueryData(['pedido', id], novo);
 
@@ -80,6 +92,16 @@ export default function Pedido() {
   const etapaAtual = ETAPAS.findIndex((e) => e.status.includes(p.status));
   const etapas = p.tipo === 'PICKUP' ? ETAPAS.filter((e) => e.rotulo !== 'A caminho') : ETAPAS;
   const atual = p.tipo === 'PICKUP' && etapaAtual > 3 ? etapaAtual - 1 : etapaAtual;
+
+  const chaveDoMapa = configuracao.data?.googleMapsApiKey;
+  const posicao = p.entregador?.posicao ?? null;
+  // O mapa só aparece com algo para mostrar além da loja: a casa ou a moto.
+  const comMapa =
+    !!chaveDoMapa &&
+    !mapaFalhou &&
+    p.ativo &&
+    p.tipo === 'DELIVERY' &&
+    !!(p.mapa?.destino || posicao);
 
   return (
     <View style={estilos.tela}>
@@ -123,7 +145,19 @@ export default function Pedido() {
           ) : null}
         </LinearGradient>
 
-        {p.entregador ? <CartaoDoEntregador pedido={p} /> : null}
+        {comMapa && chaveDoMapa ? (
+          <MapaDaEntrega
+            chave={chaveDoMapa}
+            pontos={{
+              loja: p.mapa?.loja ?? null,
+              destino: p.mapa?.destino ?? null,
+              entregador: posicao,
+            }}
+            aoFalhar={() => setMapaFalhou(true)}
+          />
+        ) : null}
+
+        {p.entregador ? <CartaoDoEntregador pedido={p} comMapa={comMapa} /> : null}
 
         {p.pagamento?.pix && p.pagamento.status !== 'PAID' && !cancelado ? (
           <CartaoDoPix pedido={p} aoAtualizar={() => void pedido.refetch()} />
@@ -229,7 +263,7 @@ export default function Pedido() {
   );
 }
 
-function CartaoDoEntregador({ pedido }: { pedido: PedidoDetalhado }) {
+function CartaoDoEntregador({ pedido, comMapa }: { pedido: PedidoDetalhado; comMapa: boolean }) {
   const e = pedido.entregador!;
   const posicao = e.posicao;
   return (
@@ -254,7 +288,7 @@ function CartaoDoEntregador({ pedido }: { pedido: PedidoDetalhado }) {
           </Toque>
         ) : null}
       </View>
-      {posicao ? (
+      {posicao && !comMapa ? (
         <Botao
           titulo="Ver no mapa"
           variante="secundario"
