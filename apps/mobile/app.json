@@ -21,12 +21,10 @@
         "android.permission.POST_NOTIFICATIONS",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ],
-      "blockedPermissions": [
-        "android.permission.RECORD_AUDIO",
-        "android.permission.SYSTEM_ALERT_WINDOW"
-      ]
+      "blockedPermissions": ["android.permission.SYSTEM_ALERT_WINDOW"]
     },
     "plugins": [
       "expo-router",
@@ -52,6 +50,14 @@
           "cameraPermission": "O Rapidinho usa a câmera para fotografar a receita ou o comprovante do Pix.",
           "photosPermission": "O Rapidinho usa suas fotos para anexar a receita ou o comprovante do Pix.",
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "O Rapidinho usa o microfone só quando você toca no botão de falar, para ditar a lista de compras.",
+          "speechRecognitionPermission": "O Rapidinho transforma sua fala em texto para montar a lista de compras.",
+          "androidSpeechServicePackages": ["com.google.android.googlequicksearchbox"]
         }
       ],
       "@react-native-firebase/app",

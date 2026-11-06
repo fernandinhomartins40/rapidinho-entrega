@@ -34,6 +34,7 @@ import { useCidade } from '@/api/cidade';
 import { chamar } from '@/api/cliente';
 import { Botao, dinheiro, T, Toque } from '@/componentes/base';
 import { useFolgaInferior } from '@/componentes/folga';
+import { BotaoDeFalar, TAMANHO_DO_MICROFONE } from '@/componentes/ditado';
 import { Cartao } from '@/componentes/formulario';
 import { TopoDaTela } from '@/componentes/topo';
 import { cores, elevacao, espaco, fontes, raio } from '@/tema/tokens';
@@ -95,6 +96,7 @@ export default function PedidoPorLista() {
   const consultas = useQueryClient();
   const exigirLogin = useExigirLogin();
   const [texto, setTexto] = useState('');
+  const [parcial, setParcial] = useState('');
 
   const montar = useMutation({
     mutationFn: () =>
@@ -136,8 +138,8 @@ export default function PedidoPorLista() {
                 A gente acha e monta.
               </T>
               <T v="legenda" cor={cores.textoMedio}>
-                Escreva sua lista, um item por linha. Mostramos cada loja aberta que tem seus itens,
-                da mais barata para a mais cara.
+                Escreva ou fale sua lista. Mostramos cada loja aberta que tem seus itens, da mais
+                barata para a mais cara.
               </T>
             </View>
             <Image source={ENTREGADOR} style={estilos.entregador} contentFit="contain" />
@@ -156,6 +158,25 @@ export default function PedidoPorLista() {
               style={estilos.entrada}
               textAlignVertical="top"
             />
+            {parcial ? (
+              <T v="legenda" cor={cores.marca} numberOfLines={2}>
+                {`ouvindo: ${parcial}…`}
+              </T>
+            ) : null}
+            {/* O microfone fica no meio, cortando a borda de cima do botão. */}
+            <View style={estilos.microfone}>
+              <BotaoDeFalar
+                aoParcial={setParcial}
+                aoFalar={(trecho) =>
+                  setTexto((atual) =>
+                    atual.trim()
+                      ? `${atual.trimEnd()}
+${trecho}`
+                      : trecho,
+                  )
+                }
+              />
+            </View>
             <Botao
               titulo="Montar pedido"
               desativado={texto.trim().length < 3}
@@ -430,6 +451,11 @@ const estilos = StyleSheet.create({
     fontSize: 17,
     lineHeight: 24,
     color: cores.texto,
+  },
+  microfone: {
+    alignItems: 'center',
+    zIndex: 1,
+    marginBottom: -TAMANHO_DO_MICROFONE / 2 - espaco.m,
   },
   ideias: { flexDirection: 'row', gap: espaco.s },
   ideia: {
