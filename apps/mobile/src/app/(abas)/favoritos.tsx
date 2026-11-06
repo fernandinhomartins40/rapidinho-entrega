@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { Heart } from 'lucide-react-native';
+import { useCallback } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
 import type { RespostaAlternarFavorito, RespostaFavoritos } from '@contrato';
 import { useFolgaInferior } from '@/componentes/folga';
@@ -36,6 +37,13 @@ export default function Favoritos() {
     onError: avisarErro,
   });
 
+  // A aba fica montada por trás das outras: ao voltar, confere o que foi favoritado na loja.
+  useFocusEffect(
+    useCallback(() => {
+      if (usuario) void consultas.invalidateQueries({ queryKey: ['favoritos'] });
+    }, [usuario, consultas]),
+  );
+
   const lojas = favoritos.data?.lojas ?? [];
 
   return (
@@ -54,7 +62,7 @@ export default function Favoritos() {
           }
           aoTentar={() => void favoritos.refetch()}
         />
-      ) : !favoritos.data ? (
+      ) : !favoritos.data || (lojas.length === 0 && favoritos.isFetching) ? (
         <View style={estilos.lista}>
           {[0, 1, 2].map((i) => (
             <Esqueleto key={i} estilo={{ height: 136, borderRadius: raio.folha }} />
