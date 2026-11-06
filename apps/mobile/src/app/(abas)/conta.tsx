@@ -122,11 +122,7 @@ export default function Conta() {
             titulo="Meus pedidos"
             aoTocar={() => router.navigate('/pedidos')}
           />
-          <Item
-            Icone={Heart}
-            titulo="Lojas favoritas"
-            aoTocar={() => router.push('/favoritos')}
-          />
+          <Item Icone={Heart} titulo="Lojas favoritas" aoTocar={() => router.push('/favoritos')} />
           <Item Icone={MapPin} titulo="Meus endereços" aoTocar={() => router.push('/enderecos')} />
           <Item
             Icone={ShieldCheck}
