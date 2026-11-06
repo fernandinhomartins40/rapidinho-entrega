@@ -1,12 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Bike, Clock, Pizza, ShoppingBag, Star } from 'lucide-react-native';
-import { SectionList, StyleSheet, View } from 'react-native';
+import { ArrowLeft, Bike, Clock, Heart, Pizza, ShoppingBag, Star } from 'lucide-react-native';
+import { FlatList, SectionList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { LojaDetalhada, ProdutoDoCardapio } from '@contrato';
-import { useCarrinho } from '@/api/carrinho';
+import type {
+  ComentarioDaLoja,
+  LojaDetalhada,
+  ProdutoDoCardapio,
+  RespostaAlternarFavorito,
+} from '@contrato';
+import { avisarErro, useCarrinho, useExigirLogin } from '@/api/carrinho';
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { dinheiro, ErroDaTela, Esqueleto, Foto, Selo, T, Toque } from '@/componentes/base';
 import { chaveDaCategoria, iconeDaCategoria } from '@/tema/categorias';
@@ -24,6 +29,21 @@ export default function Loja() {
   });
 
   const dados = loja.data;
+  const consultas = useQueryClient();
+  const exigirLogin = useExigirLogin();
+  const favoritar = useMutation({
+    mutationFn: (lojaId: string) =>
+      chamar<RespostaAlternarFavorito>('favoritos/alternar', { metodo: 'POST', corpo: { lojaId } }),
+    onSuccess: (resposta) => {
+      consultas.setQueryData<LojaDetalhada>(['loja', cidade, slug], (atual) =>
+        atual ? { ...atual, favorita: resposta.favorita } : atual,
+      );
+      void consultas.invalidateQueries({ queryKey: ['favoritos'] });
+    },
+    onError: avisarErro,
+  });
+  // Muda na hora; se o servidor recusar, volta ao que era.
+  const favorita = favoritar.isPending ? !dados?.favorita : !!dados?.favorita;
   const chave = chaveDaCategoria(dados?.categoriaSlug, dados?.segmento);
   const tom = coresDaCategoria[chave];
   const noCarrinho = carrinho.data?.carrinhos.find((c) => c.lojaId === dados?.id);
@@ -76,6 +96,19 @@ export default function Loja() {
                   style={[estilos.voltar, { top: topo + espaco.s }]}
                 >
                   <ArrowLeft size={22} color={cores.texto} />
+                </Toque>
+                <Toque
+                  accessibilityLabel={favorita ? 'Tirar dos favoritos' : 'Favoritar loja'}
+                  accessibilityState={{ selected: favorita }}
+                  disabled={favoritar.isPending}
+                  onPress={() => exigirLogin(() => favoritar.mutate(dados.id))}
+                  style={[estilos.voltar, estilos.favorito, { top: topo + espaco.s }]}
+                >
+                  <Heart
+                    size={22}
+                    color={favorita ? cores.perigo : cores.texto}
+                    fill={favorita ? cores.perigo : 'transparent'}
+                  />
                 </Toque>
               </View>
               <View style={estilos.cabecalho}>
@@ -163,6 +196,21 @@ export default function Loja() {
                   </Toque>
                 ) : null}
               </View>
+              {dados.comentarios.length ? (
+                <View style={{ gap: espaco.s, paddingTop: espaco.xl }}>
+                  <T v="titulo2" style={{ paddingHorizontal: espaco.l }}>
+                    {`Avaliações · ${dados.nota.toFixed(1)} (${dados.avaliacoes})`}
+                  </T>
+                  <FlatList
+                    data={dados.comentarios}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyExtractor={(c) => c.id}
+                    contentContainerStyle={{ paddingHorizontal: espaco.l, gap: espaco.m }}
+                    renderItem={({ item }) => <CartaoDoComentario comentario={item} />}
+                  />
+                </View>
+              ) : null}
             </View>
           }
           renderSectionHeader={({ section }) => (
@@ -201,6 +249,34 @@ export default function Loja() {
             </LinearGradient>
           </Toque>
         </View>
+      ) : null}
+    </View>
+  );
+}
+
+function CartaoDoComentario({ comentario }: { comentario: ComentarioDaLoja }) {
+  return (
+    <View style={estilos.comentario}>
+      <View style={{ flexDirection: 'row', gap: 2 }}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <Star
+            key={n}
+            size={14}
+            color={cores.amarelo}
+            fill={n <= comentario.nota ? cores.amarelo : 'transparent'}
+          />
+        ))}
+      </View>
+      <T v="corpo" numberOfLines={4}>
+        {comentario.comentario}
+      </T>
+      <T v="legenda" cor={cores.textoMedio}>
+        {comentario.autor}
+      </T>
+      {comentario.resposta ? (
+        <T v="legenda" cor={cores.textoMedio} numberOfLines={3} style={estilos.resposta}>
+          {`Resposta da loja: ${comentario.resposta}`}
+        </T>
       ) : null}
     </View>
   );
@@ -282,6 +358,20 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     ...elevacao.baixa,
+  },
+  favorito: { left: undefined, right: espaco.l },
+  comentario: {
+    width: 260,
+    padding: espaco.m,
+    gap: espaco.xs,
+    borderRadius: raio.grande,
+    backgroundColor: cores.superficie,
+  },
+  resposta: {
+    marginTop: espaco.xs,
+    paddingLeft: espaco.s,
+    borderLeftWidth: 2,
+    borderLeftColor: cores.linha,
   },
   cabecalho: {
     marginTop: -espaco.xl,

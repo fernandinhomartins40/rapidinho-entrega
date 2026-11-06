@@ -242,7 +242,9 @@ export default function Pedido() {
           />
         ) : null}
 
-        {p.podeAvaliar && !p.jaAvaliado ? <Avaliacao id={p.id} aoAvaliar={atualizar} /> : null}
+        {p.podeAvaliar && !p.jaAvaliado ? (
+          <Avaliacao id={p.id} entregador={p.entregador?.nome ?? null} aoAvaliar={atualizar} />
+        ) : null}
 
         {p.podeCancelar ? (
           <Botao
@@ -374,14 +376,60 @@ function CartaoDoPix({
   );
 }
 
-function Avaliacao({ id, aoAvaliar }: { id: string; aoAvaliar: (p: PedidoDetalhado) => void }) {
-  const [nota, setNota] = useState(0);
+function Estrelas({
+  rotulo,
+  nota,
+  aoMudar,
+}: {
+  rotulo: string;
+  nota: number;
+  aoMudar: (nota: number) => void;
+}) {
+  return (
+    <View style={{ gap: espaco.xs }}>
+      <T v="corpoForte">{rotulo}</T>
+      <View style={estilos.estrelas}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <Toque
+            key={n}
+            accessibilityLabel={`${rotulo}: ${n} ${n === 1 ? 'estrela' : 'estrelas'}`}
+            onPress={() => aoMudar(n)}
+            style={estilos.estrela}
+          >
+            <Star
+              size={32}
+              color={cores.amarelo}
+              fill={n <= nota ? cores.amarelo : 'transparent'}
+            />
+          </Toque>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/** Nota da loja e, quando houve entregador, nota da entrega. */
+function Avaliacao({
+  id,
+  entregador,
+  aoAvaliar,
+}: {
+  id: string;
+  entregador: string | null;
+  aoAvaliar: (p: PedidoDetalhado) => void;
+}) {
+  const [notaDaLoja, setNotaDaLoja] = useState(0);
+  const [notaDoEntregador, setNotaDoEntregador] = useState(0);
   const [comentario, setComentario] = useState('');
   const avaliar = useMutation({
     mutationFn: () =>
       chamar<PedidoDetalhado>(`pedidos/${id}/avaliar`, {
         metodo: 'POST',
-        corpo: { notaDaLoja: nota, comentarioDaLoja: comentario.trim() || undefined },
+        corpo: {
+          notaDaLoja: notaDaLoja || undefined,
+          comentarioDaLoja: comentario.trim() || undefined,
+          notaDoEntregador: notaDoEntregador || undefined,
+        },
       }),
     onSuccess: (p) => (p?.id ? aoAvaliar(p) : undefined),
     onError: avisarErro,
@@ -398,23 +446,15 @@ function Avaliacao({ id, aoAvaliar }: { id: string; aoAvaliar: (p: PedidoDetalha
   return (
     <Cartao>
       <T v="titulo3">Como foi o pedido?</T>
-      <View style={estilos.estrelas}>
-        {[1, 2, 3, 4, 5].map((n) => (
-          <Toque
-            key={n}
-            accessibilityLabel={`${n} estrelas`}
-            onPress={() => setNota(n)}
-            style={estilos.estrela}
-          >
-            <Star
-              size={32}
-              color={cores.amarelo}
-              fill={n <= nota ? cores.amarelo : 'transparent'}
-            />
-          </Toque>
-        ))}
-      </View>
-      {nota ? (
+      <Estrelas rotulo="Loja e produtos" nota={notaDaLoja} aoMudar={setNotaDaLoja} />
+      {entregador ? (
+        <Estrelas
+          rotulo={`Entrega (${entregador.split(' ')[0]})`}
+          nota={notaDoEntregador}
+          aoMudar={setNotaDoEntregador}
+        />
+      ) : null}
+      {notaDaLoja || notaDoEntregador ? (
         <>
           <Campo
             rotulo="Quer contar mais? (opcional)"
