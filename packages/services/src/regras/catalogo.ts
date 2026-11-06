@@ -299,7 +299,8 @@ function paraLojaDoApp(loja: LojaDoApp, patrocinada = false): LojaDaVitrine {
     id: base.id,
     slug: base.slug,
     nome: base.nome,
-    logoUrl: base.imagem.url,
+    // Sem capa, a logo ocupa o cartão inteiro: a miniatura de 150 px ficaria borrada.
+    logoUrl: imagemExibivel(loja.logo, 'medium').url,
     capaUrl: imagemExibivel(loja.cover, 'large').url,
     categoria: base.categoria ?? STORE_SEGMENT_LABEL[segmento],
     categoriaSlug: base.categoriaSlug,
@@ -515,7 +516,8 @@ export async function lojaDoApp(
     porPeso: produto.sellingUnit === 'WEIGHT_KG',
     disponivel:
       produto.isAvailable && (produto.pausedUntil == null || produto.pausedUntil <= agora),
-    imagemUrl: imagemExibivel(produto.image).url,
+    // O cartão ocupa meia tela do celular: a miniatura de 150 px ficaria borrada.
+    imagemUrl: imagemExibivel(produto.image, 'medium').url,
     destaque: produto.isFeatured,
     temOpcoes: produto.productType !== 'SIMPLE' || produto._count.complementGroups > 0,
   });
@@ -880,7 +882,7 @@ export async function buscaDoApp(
       nome: produto.name,
       precoCents: produto.priceCents,
       porPeso: produto.sellingUnit === 'WEIGHT_KG',
-      imagemUrl: imagemExibivel(produto.image).url,
+      imagemUrl: imagemExibivel(produto.image, 'medium').url,
       lojaNome: produto.store.name,
       lojaSlug: produto.store.slug,
     })),

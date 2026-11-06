@@ -9,11 +9,12 @@ import {
   DMSans_700Bold,
   useFonts as useFonteDeCorpo,
 } from '@expo-google-fonts/dm-sans';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { AppState } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ProvedorDeCidade } from '@/api/cidade';
@@ -23,6 +24,13 @@ import { AvisoDeTermos } from '@/componentes/aviso-de-termos';
 import { cores, fontes } from '@/tema/tokens';
 
 void SplashScreen.preventAutoHideAsync();
+
+// O Android deixa o app vivo por dias: ao voltar a ele, foto e preço que o
+// lojista trocou no painel precisam aparecer sem o cliente puxar a tela.
+focusManager.setEventListener((aoMudar) => {
+  const assinatura = AppState.addEventListener('change', (estado) => aoMudar(estado === 'active'));
+  return () => assinatura.remove();
+});
 
 const consultas = new QueryClient({
   defaultOptions: {

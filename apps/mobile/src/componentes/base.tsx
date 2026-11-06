@@ -159,6 +159,7 @@ export function Foto({
   Icone = ShoppingBag,
   tamanhoDoIcone = 32,
   reserva,
+  ajuste = 'cover',
   estilo,
 }: {
   url?: string | null;
@@ -166,6 +167,8 @@ export function Foto({
   Icone?: LucideIcon;
   tamanhoDoIcone?: number;
   reserva?: Icone3d;
+  /** `contain` mostra a imagem inteira: logo não pode perder as pontas. */
+  ajuste?: 'cover' | 'contain';
   estilo?: StyleProp<ViewStyle>;
 }) {
   const fonte = urlDaImagem(url);
@@ -177,7 +180,7 @@ export function Foto({
         <Image
           source={fonte}
           style={StyleSheet.absoluteFill}
-          contentFit="cover"
+          contentFit={ajuste}
           transition={180}
           recyclingKey={fonte}
         />

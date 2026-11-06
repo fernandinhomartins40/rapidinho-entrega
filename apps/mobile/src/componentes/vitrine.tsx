@@ -388,6 +388,7 @@ export function CartaoDeLojaAberta({ loja, cidade }: { loja: LojaDaVitrine; cida
           url={loja.capaUrl ?? loja.logoUrl}
           categoria={chave}
           reserva={reserva}
+          ajuste={loja.capaUrl ? 'cover' : 'contain'}
           estilo={estilos.abertaCapa}
         />
         <View style={estilos.abertaSelo}>
