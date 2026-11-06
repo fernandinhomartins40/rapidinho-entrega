@@ -34,6 +34,7 @@ import { avisarErro, useAdicionarAoCarrinho, useCarrinho, useExigirLogin } from 
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { dinheiro, ErroDaTela, Esqueleto, Foto, Selo, T, Toque } from '@/componentes/base';
 import { BannersDaLoja, CartaoDoProduto, type BannerDaLoja } from '@/componentes/loja-virtual';
+import { useItensParaPerguntar } from '@/componentes/pergunta-do-que-odeio';
 import { Secao, SeloDeHorario } from '@/componentes/vitrine';
 import { chaveDaCategoria, iconeDaCategoria } from '@/tema/categorias';
 import { icone3dDaCategoria } from '@/tema/icones';
@@ -121,6 +122,7 @@ export default function Loja() {
   const [vista, setVista] = useState<Vista>({ tipo: 'inicio' });
   const [busca, setBusca] = useState('');
   const adicionar = useAdicionarAoCarrinho();
+  const itensParaPerguntar = useItensParaPerguntar(dados?.segmento);
   const larguraNaGrade = (width - espaco.l * 2 - espaco.m) / 2;
 
   // A página troca de "vitrine" para "grade" sem sair da tela; a barra sobe para o topo.
@@ -271,7 +273,8 @@ export default function Loja() {
           .filter((item) => item.produtoId === produto.id)
           .reduce((soma, item) => soma + item.quantidade, 0) ?? 0
       }
-      podeAdicionar={!!dados?.aberta}
+      // Com itens que a pessoa odeia, o "+" sai: a pergunta é feita na página do produto.
+      podeAdicionar={!!dados?.aberta && itensParaPerguntar.length === 0}
       aoAdicionar={() =>
         exigirLogin(() =>
           adicionar.mutate({

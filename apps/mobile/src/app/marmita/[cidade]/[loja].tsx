@@ -1,14 +1,16 @@
 import { useQuery } from '@tanstack/react-query';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { CalendarDays } from 'lucide-react-native';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { ItemDeMarmita, LojaDetalhada } from '@contrato';
+import type { DiaDoCardapioDeMarmita, ItemDeMarmita, LojaDetalhada } from '@contrato';
 import { useAdicionarAoCarrinho, useExigirLogin } from '@/api/carrinho';
 import { chamar } from '@/api/cliente';
 import { Botao, dinheiro, Esqueleto, T, Toque } from '@/componentes/base';
 import { Opcao } from '@/componentes/formulario';
-import { cores, elevacao, espaco, raio } from '@/tema/tokens';
+import { observacaoComRetirada, usePerguntaDoQueOdeio } from '@/componentes/pergunta-do-que-odeio';
+import { cores, elevacao, espaco, raio, toqueMinimo } from '@/tema/tokens';
 
 type Ajuste = 'SEM' | 'POUCO' | 'NORMAL' | 'MAIS';
 
@@ -29,6 +31,74 @@ function porGrupo(itens: ItemDeMarmita[]): [string, ItemDeMarmita[]][] {
   return [...grupos.entries()];
 }
 
+function semAcento(texto: string) {
+  return texto.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+}
+
+const PAPEIS_DA_SEMANA: { tipo: ItemDeMarmita['tipo']; titulo: string }[] = [
+  { tipo: 'MISTURA', titulo: 'Misturas' },
+  { tipo: 'NO_PRATO', titulo: 'No prato' },
+  { tipo: 'EXTRA', titulo: 'Extras' },
+];
+
+/** Só consulta: para montar, vale o cardápio de hoje. */
+function CardapioDaSemana({ semana }: { semana: DiaDoCardapioDeMarmita[] }) {
+  const [aberto, setAberto] = useState(false);
+  const [diaEscolhido, setDiaEscolhido] = useState(semana[0]?.dia);
+  const dia = semana.find((d) => d.dia === diaEscolhido);
+
+  return (
+    <View style={estilos.semana}>
+      <Toque
+        accessibilityRole="button"
+        accessibilityState={{ expanded: aberto }}
+        accessibilityLabel="Cardápio da semana"
+        onPress={() => setAberto((atual) => !atual)}
+        style={estilos.semanaTopo}
+      >
+        <CalendarDays size={20} color={cores.marcaEscura} />
+        <T v="corpoForte" cor={cores.marcaEscura}>
+          {aberto ? 'Fechar o cardápio da semana' : 'Ver o cardápio da semana'}
+        </T>
+      </Toque>
+      {aberto ? (
+        <>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={estilos.dias}>
+              {semana.map((d) => {
+                const ligado = d.dia === diaEscolhido;
+                return (
+                  <Toque
+                    key={d.dia}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: ligado }}
+                    accessibilityLabel={d.hoje ? `Hoje, ${d.nome}` : d.nome}
+                    onPress={() => setDiaEscolhido(d.dia)}
+                    style={[estilos.dia, ligado && estilos.diaLigado]}
+                  >
+                    <T v="corpoForte" cor={ligado ? cores.marcaEscura : cores.textoMedio}>
+                      {d.hoje ? 'Hoje' : d.nome}
+                    </T>
+                  </Toque>
+                );
+              })}
+            </View>
+          </ScrollView>
+          {PAPEIS_DA_SEMANA.map(({ tipo, titulo }) => {
+            const itens = dia?.itens.filter((item) => item.tipo === tipo) ?? [];
+            return itens.length ? (
+              <View key={tipo}>
+                <T v="corpoForte">{titulo}</T>
+                <T cor={cores.textoMedio}>{itens.map((item) => item.nome).join(', ')}</T>
+              </View>
+            ) : null;
+          })}
+        </>
+      ) : null}
+    </View>
+  );
+}
+
 export default function MontarMarmita() {
   const { cidade, loja: slug } = useLocalSearchParams<{ cidade: string; loja: string }>();
   const baixo = useSafeAreaInsets().bottom;
@@ -38,6 +108,7 @@ export default function MontarMarmita() {
   });
   const adicionar = useAdicionarAoCarrinho();
   const exigirLogin = useExigirLogin();
+  const { perguntar, pergunta } = usePerguntaDoQueOdeio(loja.data?.segmento);
 
   const [tamanhoId, setTamanhoId] = useState<string | null>(null);
   const [misturas, setMisturas] = useState<string[]>([]);
@@ -79,26 +150,39 @@ export default function MontarMarmita() {
 
   const enviar = () =>
     exigirLogin(() =>
-      adicionar.mutate(
-        {
-          lojaId: loja.data.id,
-          item: {
-            marmitaTamanhoId: tamanhoId!,
-            marmita: [
-              ...misturas.map((itemId) => ({ itemId, ajuste: 'ESCOLHIDO' as const })),
-              ...extras.map((itemId) => ({ itemId, ajuste: 'ESCOLHIDO' as const })),
-              ...Object.entries(ajustes).map(([itemId, ajuste]) => ({ itemId, ajuste })),
-            ],
+      perguntar((retirar) => {
+        // O que está no cardápio vira "SEM" na comanda; a observação cobre o que
+        // vem dentro de outro item, como a cebola do vinagrete.
+        const tirados = noPrato.filter((item) =>
+          retirar.some((nome) => semAcento(item.nome).includes(semAcento(nome))),
+        );
+        const finais = {
+          ...ajustes,
+          ...Object.fromEntries(tirados.map((item) => [item.id, 'SEM' as const])),
+        };
+        adicionar.mutate(
+          {
+            lojaId: loja.data.id,
+            item: {
+              marmitaTamanhoId: tamanhoId!,
+              observacao: observacaoComRetirada(retirar),
+              marmita: [
+                ...misturas.map((itemId) => ({ itemId, ajuste: 'ESCOLHIDO' as const })),
+                ...extras.map((itemId) => ({ itemId, ajuste: 'ESCOLHIDO' as const })),
+                ...Object.entries(finais).map(([itemId, ajuste]) => ({ itemId, ajuste })),
+              ],
+            },
           },
-        },
-        { onSuccess: () => router.back() },
-      ),
+          { onSuccess: () => router.back() },
+        );
+      }),
     );
 
   return (
     <View style={estilos.tela}>
       <Stack.Screen options={{ title: 'Monte sua marmita' }} />
       <ScrollView contentContainerStyle={[estilos.corpo, { paddingBottom: baixo + 120 }]}>
+        {marmita.semana ? <CardapioDaSemana semana={marmita.semana} /> : null}
         <T v="titulo3">1. Tamanho</T>
         {marmita.tamanhos.map((t) => (
           <Opcao
@@ -243,6 +327,7 @@ export default function MontarMarmita() {
           aoTocar={enviar}
         />
       </View>
+      {pergunta}
     </View>
   );
 }
@@ -251,6 +336,24 @@ const estilos = StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   corpo: { padding: espaco.l, gap: espaco.m, paddingBottom: 120 },
   bloco: { gap: espaco.m, marginTop: espaco.s },
+  semana: {
+    gap: espaco.m,
+    padding: espaco.m,
+    borderRadius: raio.grande,
+    backgroundColor: cores.superficie,
+  },
+  semanaTopo: { flexDirection: 'row', alignItems: 'center', gap: espaco.s, minHeight: toqueMinimo },
+  dias: { flexDirection: 'row', gap: espaco.s },
+  dia: {
+    minWidth: 56,
+    minHeight: toqueMinimo,
+    paddingHorizontal: espaco.m,
+    borderRadius: raio.total,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: cores.superficieAlta,
+  },
+  diaLigado: { backgroundColor: cores.marcaClara },
   grupo: {
     gap: espaco.s,
     padding: espaco.m,

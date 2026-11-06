@@ -8,6 +8,7 @@ import { useAdicionarAoCarrinho, useExigirLogin } from '@/api/carrinho';
 import { chamar } from '@/api/cliente';
 import { Botao, dinheiro, Esqueleto, T } from '@/componentes/base';
 import { Opcao } from '@/componentes/formulario';
+import { observacaoComRetirada, usePerguntaDoQueOdeio } from '@/componentes/pergunta-do-que-odeio';
 import { cores, elevacao, espaco, raio } from '@/tema/tokens';
 
 export default function MontarPizza() {
@@ -19,6 +20,7 @@ export default function MontarPizza() {
   });
   const adicionar = useAdicionarAoCarrinho();
   const exigirLogin = useExigirLogin();
+  const { perguntar, pergunta } = usePerguntaDoQueOdeio(loja.data?.segmento);
 
   const [tamanhoId, setTamanhoId] = useState<string | null>(null);
   const [sabores, setSabores] = useState<string[]>([]);
@@ -139,17 +141,25 @@ export default function MontarPizza() {
           carregando={adicionar.isPending}
           aoTocar={() =>
             exigirLogin(() =>
-              adicionar.mutate(
-                {
-                  lojaId: loja.data.id,
-                  item: { pizzaTamanhoId: tamanhoId!, saborIds: sabores, pizzaExtraIds: extras },
-                },
-                { onSuccess: () => router.back() },
+              perguntar((retirar) =>
+                adicionar.mutate(
+                  {
+                    lojaId: loja.data.id,
+                    item: {
+                      pizzaTamanhoId: tamanhoId!,
+                      saborIds: sabores,
+                      pizzaExtraIds: extras,
+                      observacao: observacaoComRetirada(retirar),
+                    },
+                  },
+                  { onSuccess: () => router.back() },
+                ),
               ),
             )
           }
         />
       </View>
+      {pergunta}
     </View>
   );
 }

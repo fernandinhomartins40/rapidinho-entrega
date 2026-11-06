@@ -43,6 +43,19 @@ export function marmitaForaDoCardapio(
   return item.weekdays.length > 0 && !item.weekdays.includes(diaDaSemanaLocal(agora));
 }
 
+/** A semana a partir de hoje, com o que sai em cada dia. Sem dia marcado, sai em todos. */
+export function cardapioDaSemana<T extends { weekdays: number[] }>(itens: T[], hoje: number) {
+  return NOMES_DOS_DIAS.map((_, deslocamento) => {
+    const dia = (hoje + deslocamento) % NOMES_DOS_DIAS.length;
+    return {
+      dia,
+      nome: NOMES_DOS_DIAS[dia]!,
+      hoje: deslocamento === 0,
+      itens: itens.filter((item) => item.weekdays.length === 0 || item.weekdays.includes(dia)),
+    };
+  });
+}
+
 export interface EscolhaDaMarmita {
   nome: string;
   papel: PapelNaMarmita;

@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import type { LucideIcon } from 'lucide-react-native';
 import {
+  Ban,
   Bike,
   ChevronRight,
   ClipboardList,
@@ -123,6 +124,11 @@ export default function Conta() {
             aoTocar={() => router.navigate('/pedidos')}
           />
           <Item Icone={Heart} titulo="Lojas favoritas" aoTocar={() => router.push('/favoritos')} />
+          <Item
+            Icone={Ban}
+            titulo="Itens que odeio"
+            aoTocar={() => router.push('/itens-que-odeio')}
+          />
           <Item Icone={MapPin} titulo="Meus endereços" aoTocar={() => router.push('/enderecos')} />
           <Item
             Icone={ShieldCheck}

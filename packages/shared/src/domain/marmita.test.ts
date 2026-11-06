@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { inicioDoDia } from '../utils/calendario';
 import {
+  cardapioDaSemana,
   diaDaSemanaLocal,
   linhasDaMarmita,
   marmitaForaDoCardapio,
@@ -10,6 +11,20 @@ import {
 
 // Quarta-feira, 12h em Brasília (15h UTC).
 const quarta = new Date('2026-11-04T15:00:00Z');
+
+describe('cardapioDaSemana', () => {
+  it('começa hoje e põe cada item nos dias dele; sem dia marcado, sai em todos', () => {
+    const arroz = { nome: 'Arroz', weekdays: [] };
+    const feijoada = { nome: 'Feijoada', weekdays: [3, 6] };
+
+    const semana = cardapioDaSemana([arroz, feijoada], 3);
+
+    expect(semana.map((dia) => dia.dia)).toEqual([3, 4, 5, 6, 0, 1, 2]);
+    expect(semana[0]).toMatchObject({ nome: 'qua', hoje: true, itens: [arroz, feijoada] });
+    expect(semana[1]).toMatchObject({ nome: 'qui', hoje: false, itens: [arroz] });
+    expect(semana[3]!.itens).toEqual([arroz, feijoada]);
+  });
+});
 
 const escolhas: EscolhaDaMarmita[] = [
   { nome: 'Feijão', papel: 'NO_PRATO', ajuste: 'SEM', precoCents: 0 },

@@ -41,6 +41,7 @@ export async function usuarioDoApp(userId: string): Promise<Usuario | null> {
         phone: true,
         email: true,
         role: true,
+        dislikedItems: true,
         courier: { select: { id: true, status: true } },
       },
     }),
@@ -57,6 +58,7 @@ export async function usuarioDoApp(userId: string): Promise<Usuario | null> {
     papel: usuario.role,
     entregador: usuario.courier,
     termosPendentes: pendentes,
+    itensQueOdeio: usuario.dislikedItems,
   };
 }
 

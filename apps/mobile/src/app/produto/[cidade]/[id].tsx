@@ -9,6 +9,7 @@ import { useAdicionarAoCarrinho, useExigirLogin } from '@/api/carrinho';
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { Botao, dinheiro, ErroDaTela, Esqueleto, Foto, Selo, T, Toque } from '@/componentes/base';
 import { Campo, Contador, Opcao } from '@/componentes/formulario';
+import { observacaoComRetirada, usePerguntaDoQueOdeio } from '@/componentes/pergunta-do-que-odeio';
 import { cores, elevacao, espaco, raio, toqueMinimo } from '@/tema/tokens';
 
 /** Opção escolhida → quantidade. */
@@ -30,6 +31,7 @@ export default function Produto() {
   const [observacao, setObservacao] = useState('');
   const adicionar = useAdicionarAoCarrinho();
   const exigirLogin = useExigirLogin();
+  const { perguntar, pergunta } = usePerguntaDoQueOdeio(produto.data?.loja.segmento);
 
   const p = produto.data;
 
@@ -85,20 +87,22 @@ export default function Produto() {
 
   const colocarNaSacola = () =>
     exigirLogin(() =>
-      adicionar.mutate(
-        {
-          lojaId: p.loja.id,
-          item: {
-            produtoId: p.id,
-            quantidade: p.porPeso ? 1 : quantidade,
-            gramas: p.porPeso ? peso : undefined,
-            observacao: observacao.trim() || undefined,
-            complementos: Object.values(escolhas).flatMap((g) =>
-              Object.entries(g).map(([opcaoId, q]) => ({ opcaoId, quantidade: q })),
-            ),
+      perguntar((retirar) =>
+        adicionar.mutate(
+          {
+            lojaId: p.loja.id,
+            item: {
+              produtoId: p.id,
+              quantidade: p.porPeso ? 1 : quantidade,
+              gramas: p.porPeso ? peso : undefined,
+              observacao: observacaoComRetirada(retirar, observacao),
+              complementos: Object.values(escolhas).flatMap((g) =>
+                Object.entries(g).map(([opcaoId, q]) => ({ opcaoId, quantidade: q })),
+              ),
+            },
           },
-        },
-        { onSuccess: () => router.back() },
+          { onSuccess: () => router.back() },
+        ),
       ),
     );
 
@@ -233,6 +237,7 @@ export default function Produto() {
           aoTocar={colocarNaSacola}
         />
       </View>
+      {pergunta}
     </View>
   );
 }

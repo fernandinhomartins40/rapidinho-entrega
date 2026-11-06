@@ -87,6 +87,7 @@ export async function excluirConta(userId: string): Promise<Resultado> {
         // O telefone é único no banco: precisa de um valor, não de null.
         phone: marcador,
         email: null,
+        dislikedItems: [],
         status: 'DELETED',
         deletedAt: new Date(),
       },
@@ -132,6 +133,7 @@ export async function reunirDadosDoTitular(userId: string): Promise<string | nul
       createdAt: true,
       acceptedTermsAt: true,
       acceptedPrivacyAt: true,
+      dislikedItems: true,
       addresses: {
         select: {
           street: true,
@@ -173,4 +175,16 @@ export async function reunirDadosDoTitular(userId: string): Promise<string | nul
 
 export async function atualizarNome(userId: string, nome: string): Promise<void> {
   await prisma.user.update({ where: { id: userId }, data: { name: nome } });
+}
+
+export async function atualizarItensQueOdeio(userId: string, itens: string[]): Promise<void> {
+  // "Cebola" e "cebola" são o mesmo item: fica a primeira grafia.
+  const vistos = new Set<string>();
+  const unicos = itens.filter((item) => {
+    const chave = item.toLowerCase();
+    if (vistos.has(chave)) return false;
+    vistos.add(chave);
+    return true;
+  });
+  await prisma.user.update({ where: { id: userId }, data: { dislikedItems: unicos } });
 }

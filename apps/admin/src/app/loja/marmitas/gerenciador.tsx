@@ -13,7 +13,7 @@ import {
   Input,
   Label,
 } from '@rapidinho/ui';
-import { centsToInput, formatCents, NOMES_DOS_DIAS } from '@rapidinho/shared';
+import { cardapioDaSemana, centsToInput, formatCents, NOMES_DOS_DIAS } from '@rapidinho/shared';
 import { pausarItem, removerItem, removerTamanho, salvarItem, salvarTamanho } from './actions';
 import { ACTION_IDLE } from '@/lib/action-state';
 
@@ -74,6 +74,7 @@ export function GerenciadorDeMarmitas({
           A marmita não aparece para o cliente até você cadastrar ou liberar uma mistura para hoje.
         </Alert>
       ) : null}
+      <CardapioDaSemana hoje={hoje} itens={itens} />
       {PAPEIS.map((papel) => (
         <Itens
           key={papel.valor}
@@ -83,6 +84,42 @@ export function GerenciadorDeMarmitas({
         />
       ))}
     </div>
+  );
+}
+
+/** Confere a semana inteira de uma vez; os dias de cada item se mudam em "Editar". */
+function CardapioDaSemana({ hoje, itens }: { hoje: number; itens: Item[] }) {
+  if (itens.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Cardápio da semana</CardTitle>
+        <p className="text-muted-foreground text-sm">
+          O cliente vê esta semana no app. Item sem dia marcado sai todo dia.
+        </p>
+      </CardHeader>
+      <CardContent>
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {cardapioDaSemana(itens, hoje).map((dia) => (
+            <li key={dia.dia} className="rounded-lg border p-3">
+              <p className="mb-2 font-bold capitalize">
+                {dia.hoje ? `Hoje (${dia.nome})` : dia.nome}
+              </p>
+              {PAPEIS.map((papel) => {
+                const doPapel = dia.itens.filter((item) => item.kind === papel.valor);
+                return doPapel.length ? (
+                  <p key={papel.valor} className="text-sm">
+                    <span className="font-semibold">{papel.titulo}: </span>
+                    {doPapel.map((item) => item.name).join(', ')}
+                  </p>
+                ) : null;
+              })}
+            </li>
+          ))}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
 

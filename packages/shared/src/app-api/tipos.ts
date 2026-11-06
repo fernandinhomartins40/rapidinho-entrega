@@ -105,6 +105,8 @@ export interface Usuario {
   entregador: { id: string; status: StatusDoEntregador } | null;
   /** Há versão nova dos termos: pedir a ciência e chamar `eu/aceite-de-termos`. */
   termosPendentes: boolean;
+  /** "Cebola": ao adicionar item de restaurante, o app pergunta se tira. */
+  itensQueOdeio: string[];
 }
 
 export interface EntradaPedirCodigo {
@@ -170,7 +172,8 @@ export type RespostaConferirSms = { status: 'aguardando' } | ({ status: 'ok' } &
 export type RespostaEu = Usuario;
 
 export interface EntradaAtualizarEu {
-  nome: string;
+  nome?: string;
+  itensQueOdeio?: string[];
 }
 
 /** `POST eu/aceite-de-termos` não tem corpo: registra a versão vigente. */
@@ -381,10 +384,19 @@ export interface ItemDeMarmita {
   precoCents: number;
 }
 
-/** Só o cardápio de hoje: o do dia da semana, sem o que acabou. */
+export interface DiaDoCardapioDeMarmita {
+  dia: number;
+  nome: string;
+  hoje: boolean;
+  itens: Pick<ItemDeMarmita, 'nome' | 'tipo' | 'grupo'>[];
+}
+
+/** `itens` é só o cardápio de hoje: o do dia da semana, sem o que acabou. */
 export interface CardapioDeMarmita {
   tamanhos: TamanhoDeMarmita[];
   itens: ItemDeMarmita[];
+  /** Os sete dias, a partir de hoje, só para consulta. */
+  semana?: DiaDoCardapioDeMarmita[];
 }
 
 export interface ComentarioDaLoja {
@@ -458,6 +470,7 @@ export interface ProdutoDetalhado {
     id: string;
     nome: string;
     slug: string;
+    segmento?: Segmento;
     aberta: boolean;
     motivoFechada: string | null;
   };

@@ -3,6 +3,8 @@ import {
   faixaDeTempo,
   imagemExibivel,
   isStoreOpen,
+  cardapioDaSemana,
+  diaDaSemanaLocal,
   marmitaNoCardapioHoje,
   rotuloDoHorario,
   saborDisponivelAgora,
@@ -504,6 +506,15 @@ export async function lojaDoApp(
 
   if (!loja) return null;
 
+  const itensDaSemana =
+    loja.marmitaSizes.length > 0
+      ? await prisma.marmitaItem.findMany({
+          where: { storeId: loja.id, isAvailable: true },
+          orderBy: [{ kind: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
+          select: { name: true, kind: true, groupName: true, weekdays: true },
+        })
+      : [];
+
   const mapear = (produto: (typeof loja.products)[number]): ProdutoDoCardapio => ({
     id: produto.id,
     nome: produto.name,
@@ -661,6 +672,14 @@ export async function lojaDoApp(
               grupo: item.groupName,
               precoCents: item.priceCents,
             })),
+            semana: cardapioDaSemana(itensDaSemana, diaDaSemanaLocal(agora)).map((dia) => ({
+              ...dia,
+              itens: dia.itens.map((item) => ({
+                nome: item.name,
+                tipo: item.kind,
+                grupo: item.groupName,
+              })),
+            })),
           },
     comentarios: comentarios.map((avaliacao) => ({
       id: avaliacao.id,
@@ -702,6 +721,7 @@ export async function produtoDoApp(citySlug: string, id: string): Promise<Produt
           id: true,
           name: true,
           slug: true,
+          segment: true,
           isPausedUntil: true,
           pauseReason: true,
           hours: { select: { weekday: true, opensAt: true, closesAt: true, isActive: true } },
@@ -762,6 +782,7 @@ export async function produtoDoApp(citySlug: string, id: string): Promise<Produt
       id: produto.store.id,
       nome: produto.store.name,
       slug: produto.store.slug,
+      segmento: produto.store.segment as Segmento,
       aberta: abertura.isOpen,
       motivoFechada: abertura.reason ?? null,
     },
