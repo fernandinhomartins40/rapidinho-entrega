@@ -34,7 +34,7 @@ import { useCidade } from '@/api/cidade';
 import { chamar } from '@/api/cliente';
 import { Botao, dinheiro, T, Toque } from '@/componentes/base';
 import { useFolgaInferior } from '@/componentes/folga';
-import { BotaoDeFalar, TAMANHO_DO_MICROFONE } from '@/componentes/ditado';
+import { BotaoDeFalar } from '@/componentes/ditado';
 import { Cartao } from '@/componentes/formulario';
 import { TopoDaTela } from '@/componentes/topo';
 import { cores, elevacao, espaco, fontes, raio } from '@/tema/tokens';
@@ -163,8 +163,15 @@ export default function PedidoPorLista() {
                 {`ouvindo: ${parcial}…`}
               </T>
             ) : null}
-            {/* O microfone fica no meio, cortando a borda de cima do botão. */}
-            <View style={estilos.microfone}>
+            <View style={estilos.acoes}>
+              <View style={estilos.flex}>
+                <Botao
+                  titulo="Montar pedido"
+                  desativado={texto.trim().length < 3}
+                  carregando={montar.isPending}
+                  aoTocar={() => montar.mutate()}
+                />
+              </View>
               <BotaoDeFalar
                 aoParcial={setParcial}
                 aoFalar={(trecho) =>
@@ -177,12 +184,6 @@ ${trecho}`
                 }
               />
             </View>
-            <Botao
-              titulo="Montar pedido"
-              desativado={texto.trim().length < 3}
-              carregando={montar.isPending}
-              aoTocar={() => montar.mutate()}
-            />
           </View>
 
           {!pedido ? (
@@ -452,11 +453,8 @@ const estilos = StyleSheet.create({
     lineHeight: 24,
     color: cores.texto,
   },
-  microfone: {
-    alignItems: 'center',
-    zIndex: 1,
-    marginBottom: -TAMANHO_DO_MICROFONE / 2 - espaco.m,
-  },
+  flex: { flex: 1 },
+  acoes: { flexDirection: 'row', alignItems: 'center', gap: espaco.m },
   ideias: { flexDirection: 'row', gap: espaco.s },
   ideia: {
     flex: 1,

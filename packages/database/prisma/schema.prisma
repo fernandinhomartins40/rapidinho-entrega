@@ -528,6 +528,7 @@ model MediaAsset {
   pizzaFlavors       PizzaFlavor[]
   menuCategories     MenuCategory[]
   banners            Banner[]
+  storePromotions    StorePromotion[]
   storeCategories    StoreCategory[]
   courierDocuments   CourierDocument[]
   storeDocuments     StoreDocument[]
@@ -669,6 +670,7 @@ model Store {
   payouts          Payout[]
   documents        StoreDocument[]
   banners          Banner[]
+  promotions       StorePromotion[]
   favoritedBy      FavoriteStore[]
   errands          Errand[]
 
@@ -851,6 +853,7 @@ model Product {
 
   complementGroups ProductComplementGroup[]
   orderItems       OrderItem[]
+  promotions       StorePromotionProduct[]
   cartItems        CartItem[]
   /// Farmácia: se o produto exige receita. Controlado (Portaria 344/98) não
   /// pode ser vendido à distância — aparece, mas só se compra no balcão.
@@ -1732,6 +1735,43 @@ model Banner {
   @@index([isActive, placement, sortOrder])
   @@index([cityId])
   @@map("banners")
+}
+
+/// Promoção que o próprio lojista publica na página da loja: banner e produtos
+/// escolhidos. Não confundir com `Banner`, que é vitrine da cidade, da plataforma.
+model StorePromotion {
+  id      String @id @default(cuid())
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  title    String
+  subtitle String?
+  /// Sem imagem, o app desenha o banner com a cor da marca.
+  imageId  String?
+  image    MediaAsset? @relation(fields: [imageId], references: [id], onDelete: SetNull)
+
+  isActive Boolean   @default(true)
+  endsAt   DateTime?
+
+  products StorePromotionProduct[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([storeId, isActive])
+  @@map("store_promotions")
+}
+
+model StorePromotionProduct {
+  promotionId String
+  promotion   StorePromotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sortOrder   Int            @default(0)
+
+  @@id([promotionId, productId])
+  @@index([productId])
+  @@map("store_promotion_products")
 }
 
 // =============================================================================

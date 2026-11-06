@@ -54,6 +54,7 @@ export const AUDIT_ACTIONS = {
   cityUpdated: 'city.updated',
   couponCreated: 'coupon.created',
   couponUpdated: 'coupon.updated',
+  promotionSaved: 'promotion.saved',
   boostCreated: 'boost.created',
   campaignSent: 'campaign.sent',
   impersonationStarted: 'impersonation.started',

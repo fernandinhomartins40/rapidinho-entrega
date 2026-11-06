@@ -310,6 +310,19 @@ export interface ProdutoDoCardapio {
   porPeso: boolean;
   disponivel: boolean;
   imagemUrl: string | null;
+  /** Marcado pelo lojista como destaque. */
+  destaque?: boolean;
+  /** Pizza, marmita ou complemento: precisa abrir o produto para escolher. */
+  temOpcoes?: boolean;
+}
+
+/** Promoção que o lojista publica na própria página. */
+export interface PromocaoDaLoja {
+  id: string;
+  titulo: string;
+  subtitulo: string | null;
+  imagemUrl: string | null;
+  produtoIds: string[];
 }
 
 export interface SecaoDoCardapio {
@@ -402,6 +415,9 @@ export interface LojaDetalhada extends LojaDaVitrine {
   /** Null quando a loja não vende marmita montada ou não tem mistura hoje. */
   marmita?: CardapioDeMarmita | null;
   comentarios: ComentarioDaLoja[];
+  promocoes?: PromocaoDaLoja[];
+  /** Do mais vendido para o menos, pelos pedidos entregues recentes. */
+  maisPedidosIds?: string[];
 }
 
 export interface OpcaoDeComplemento {

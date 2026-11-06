@@ -410,8 +410,14 @@ const SELECT_DO_PRODUTO_NO_CARDAPIO = {
   sellingUnit: true,
   isAvailable: true,
   pausedUntil: true,
+  isFeatured: true,
+  productType: true,
   image: { select: SELECT_IMAGEM },
+  _count: { select: { complementGroups: true } },
 } as const;
+
+const DIAS_DOS_MAIS_PEDIDOS = 90;
+const MAIS_PEDIDOS_NA_LOJA = 12;
 
 export async function lojaDoApp(
   citySlug: string,
@@ -510,12 +516,14 @@ export async function lojaDoApp(
     disponivel:
       produto.isAvailable && (produto.pausedUntil == null || produto.pausedUntil <= agora),
     imagemUrl: imagemExibivel(produto.image).url,
+    destaque: produto.isFeatured,
+    temOpcoes: produto.productType !== 'SIMPLE' || produto._count.complementGroups > 0,
   });
 
   // Últimos comentários, bons e ruins: escolher só os elogios seria vitrine, não
   // avaliação. Ocultado pela plataforma fica de fora; do cliente, só o primeiro
   // nome.
-  const [comentarios, favorita] = await Promise.all([
+  const [comentarios, favorita, promocoes, maisPedidos] = await Promise.all([
     prisma.review.findMany({
       where: { storeId: loja.id, hiddenAt: null, comment: { not: null } },
       orderBy: { createdAt: 'desc' },
@@ -532,6 +540,35 @@ export async function lojaDoApp(
     userId
       ? prisma.favoriteStore.count({ where: { userId, storeId: loja.id } })
       : Promise.resolve(0),
+    prisma.storePromotion.findMany({
+      where: {
+        storeId: loja.id,
+        isActive: true,
+        OR: [{ endsAt: null }, { endsAt: { gt: agora } }],
+      },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        title: true,
+        subtitle: true,
+        image: { select: SELECT_IMAGEM },
+        products: { orderBy: { sortOrder: 'asc' }, select: { productId: true } },
+      },
+    }),
+    prisma.orderItem.groupBy({
+      by: ['productId'],
+      where: {
+        productId: { not: null },
+        order: {
+          storeId: loja.id,
+          status: 'DELIVERED',
+          createdAt: { gt: new Date(agora.getTime() - DIAS_DOS_MAIS_PEDIDOS * 86_400_000) },
+        },
+      },
+      _sum: { quantity: true },
+      orderBy: { _sum: { quantity: 'desc' } },
+      take: MAIS_PEDIDOS_NA_LOJA,
+    }),
   ]);
 
   return {
@@ -546,6 +583,14 @@ export async function lojaDoApp(
     aceitaCartaoNaEntrega: loja.acceptsCardOnDelivery,
     entregaGratisAcimaCents: loja.freeDeliveryAboveCents,
     favorita: favorita > 0,
+    promocoes: promocoes.map((promocao) => ({
+      id: promocao.id,
+      titulo: promocao.title,
+      subtitulo: promocao.subtitle,
+      imagemUrl: imagemExibivel(promocao.image, 'large').url,
+      produtoIds: promocao.products.map((item) => item.productId),
+    })),
+    maisPedidosIds: maisPedidos.flatMap((linha) => (linha.productId ? [linha.productId] : [])),
     secoes: [
       ...loja.menuCategories
         .filter((categoria) => categoria.products.length > 0)
