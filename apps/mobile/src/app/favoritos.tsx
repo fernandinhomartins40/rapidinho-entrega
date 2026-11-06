@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
-import { router, useFocusEffect } from 'expo-router';
+import { router, Stack, useFocusEffect, type ErrorBoundaryProps } from 'expo-router';
 import { Heart } from 'lucide-react-native';
 import { useCallback } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { RespostaAlternarFavorito, RespostaFavoritos } from '@contrato';
-import { useFolgaInferior } from '@/componentes/folga';
 import { avisarErro } from '@/api/carrinho';
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { useSessao } from '@/api/sessao';
@@ -17,7 +17,7 @@ import { cores, elevacao, espaco, raio, toqueMinimo } from '@/tema/tokens';
 const MASCOTE = require('@/assets/marca/mascote.png');
 
 export default function Favoritos() {
-  const folga = useFolgaInferior(110);
+  const folga = useSafeAreaInsets().bottom + espaco.xl;
   const { usuario } = useSessao();
   const consultas = useQueryClient();
 
@@ -48,7 +48,13 @@ export default function Favoritos() {
 
   return (
     <View style={estilos.tela}>
-      <TopoDaTela titulo="Favoritos" Icone={Heart} subtitulo="Suas lojas preferidas, a um toque." />
+      <Stack.Screen options={{ headerShown: false }} />
+      <TopoDaTela
+        voltar
+        titulo="Lojas favoritas"
+        Icone={Heart}
+        subtitulo="Suas lojas preferidas, a um toque."
+      />
       {!usuario ? (
         <Vazio
           texto="Entre com seu celular para guardar suas lojas preferidas."
@@ -109,6 +115,20 @@ export default function Favoritos() {
   );
 }
 
+/** Se a tela quebrar, mostra o motivo em vez de fechar o app e voltar ao início. */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return (
+    <View style={estilos.tela}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <TopoDaTela voltar titulo="Lojas favoritas" Icone={Heart} />
+      <ErroDaTela
+        mensagem={`Não deu para mostrar seus favoritos. ${error.message}`}
+        aoTentar={() => void retry()}
+      />
+    </View>
+  );
+}
+
 function Vazio({ texto, botao, aoTocar }: { texto: string; botao: string; aoTocar: () => void }) {
   return (
     <View style={estilos.vazio}>
@@ -126,7 +146,7 @@ function Vazio({ texto, botao, aoTocar }: { texto: string; botao: string; aoToca
 
 const estilos = StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
-  lista: { paddingVertical: espaco.l, paddingBottom: 110, gap: espaco.m },
+  lista: { paddingVertical: espaco.l, gap: espaco.m },
   coracao: {
     position: 'absolute',
     top: espaco.s,

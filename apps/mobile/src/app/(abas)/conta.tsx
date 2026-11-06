@@ -125,7 +125,7 @@ export default function Conta() {
           <Item
             Icone={Heart}
             titulo="Lojas favoritas"
-            aoTocar={() => router.navigate('/favoritos')}
+            aoTocar={() => router.push('/favoritos')}
           />
           <Item Icone={MapPin} titulo="Meus endereços" aoTocar={() => router.push('/enderecos')} />
           <Item

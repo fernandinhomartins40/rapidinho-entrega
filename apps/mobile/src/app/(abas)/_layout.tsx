@@ -97,8 +97,6 @@ export default function Abas() {
       <Tabs.Screen name="pedir" options={{ title: 'lista', tabBarButton: () => <BotaoDoMeio /> }} />
       <Tabs.Screen name="pedidos" options={{ title: 'pedidos', tabBarIcon: icone(ReceiptText) }} />
       <Tabs.Screen name="conta" options={{ title: 'conta', tabBarIcon: icone(UserRound) }} />
-      {/* Favoritos saiu da barra e fica no menu da conta. */}
-      <Tabs.Screen name="favoritos" options={{ href: null }} />
     </Tabs>
   );
 }
