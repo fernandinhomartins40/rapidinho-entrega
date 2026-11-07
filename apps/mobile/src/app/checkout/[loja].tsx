@@ -89,9 +89,12 @@ export default function Checkout() {
 
   const fotografarReceita = async () => {
     const permissao = await ImagePicker.requestCameraPermissionsAsync();
+    const abrirGaleria = () =>
+      ImagePicker.launchImageLibraryAsync({ quality: 0.7, mediaTypes: ['images'] });
+    // Aparelho sem câmera recusa a abertura: a receita vem da galeria.
     const escolha = permissao.granted
-      ? await ImagePicker.launchCameraAsync({ quality: 0.7 })
-      : await ImagePicker.launchImageLibraryAsync({ quality: 0.7, mediaTypes: ['images'] });
+      ? await ImagePicker.launchCameraAsync({ quality: 0.7 }).catch(abrirGaleria)
+      : await abrirGaleria();
     if (escolha.canceled) return;
     setEnviandoReceita(true);
     try {
