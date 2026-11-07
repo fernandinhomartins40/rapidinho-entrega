@@ -10,7 +10,7 @@
     "backgroundColor": "#FFF8F2",
     "android": {
       "package": "br.com.rapidinhoentrega.app",
-      "versionCode": 10,
+      "versionCode": 11,
       "adaptiveIcon": {
         "backgroundColor": "#FF5A1F",
         "foregroundImage": "./assets/marca/icone-adaptativo.png"
@@ -49,7 +49,7 @@
         {
           "cameraPermission": "O Rapidinho usa a câmera para fotografar a receita ou o comprovante do Pix.",
           "photosPermission": "O Rapidinho usa suas fotos para anexar a receita ou o comprovante do Pix.",
-          "microphonePermission": false
+          "microphonePermission": "O Rapidinho usa o microfone só quando você toca no botão de falar, para ditar a lista de compras."
         }
       ],
       [
