@@ -258,7 +258,7 @@ export default async function CidadePage({
       {/* Topo preto da marca, como na arte; o resto da tela é claro. */}
       <header className="bg-brand-deep rounded-b-[1.75rem] px-5 pb-6 pt-[max(1rem,env(safe-area-inset-top))] text-white">
         <div className="flex justify-center">
-          <Logotipo className="h-11 w-auto" priority />
+          <Logotipo variante="negativo" className="h-11 w-auto" priority />
         </div>
 
         {/* "Entregar em": com endereço salvo, é ele; sem, é a cidade — e o

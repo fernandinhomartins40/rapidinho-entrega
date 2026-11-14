@@ -36,18 +36,22 @@ export function Categorias({
   const ativos = new Set(slugsDisponiveis);
 
   return (
-    <section aria-labelledby="parceiros" className="bg-white py-12 sm:py-14">
+    <section
+      id="parceiros"
+      aria-labelledby="titulo-parceiros"
+      className="scroll-mt-4 bg-white py-12 sm:py-14"
+    >
       <div className="mx-auto grid w-full max-w-[1200px] items-center gap-8 px-5 sm:px-8 lg:grid-cols-[minmax(0,25rem)_minmax(0,1fr)] lg:gap-10">
         <div>
           <h2
-            id="parceiros"
-            className="fonte-titulo text-[1.75rem] leading-[1.12] text-[#101112] sm:text-[2rem]"
+            id="titulo-parceiros"
+            className="fonte-titulo text-[1.75rem] leading-[1.12] text-[#111214] sm:text-[2rem]"
           >
             Parceiros para todas
             <br />
-            as <span className="text-[#FFB900]">suas necessidades</span>
+            as <span className="text-[#EE5500]">suas necessidades</span>
           </h2>
-          <p className="mt-3 text-sm leading-relaxed text-[#3f4247]">
+          <p className="mt-3 text-sm leading-relaxed text-[#4B4F56]">
             Do seu restaurante favorito ao mercado da sua região. Tudo em um só lugar.
           </p>
         </div>
@@ -66,20 +70,20 @@ export function Categorias({
                     className="max-h-14 w-auto"
                   />
                 </span>
-                <span className="mt-3 block text-sm font-bold text-[#101112]">
+                <span className="mt-3 block text-sm font-bold text-[#111214]">
                   {categoria.nome}
                 </span>
               </>
             );
             const estilo =
-              'flex h-full flex-col items-center justify-end rounded-2xl bg-[#F5F7FA] px-2 pb-4 pt-5 text-center';
+              'flex h-full flex-col items-center justify-end rounded-2xl bg-[#F5F6F8] px-2 pb-4 pt-5 text-center';
 
             return (
               <li key={categoria.nome}>
                 {cidadeSlug ? (
                   <Link
                     href={slug ? `/${cidadeSlug}/${slug}` : `/${cidadeSlug}`}
-                    className={`${estilo} transition-all hover:-translate-y-1 hover:shadow-[0_16px_30px_-18px_rgba(16,17,18,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFB900]`}
+                    className={`${estilo} transition-all hover:-translate-y-1 hover:shadow-[0_16px_30px_-18px_rgba(16,17,18,0.5)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]`}
                   >
                     {conteudo}
                   </Link>

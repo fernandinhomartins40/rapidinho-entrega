@@ -22,15 +22,15 @@ export function Beneficios() {
           return (
             <li
               key={beneficio.titulo}
-              className="flex flex-col items-center rounded-3xl bg-[#F5F7FA] px-3 py-5 text-center shadow-[0_10px_30px_-22px_rgba(16,17,18,0.45)] sm:px-5 sm:py-6"
+              className="flex flex-col items-center rounded-3xl border border-[#111214]/5 bg-white px-3 py-5 text-center shadow-[0_18px_40px_-24px_rgba(17,18,20,0.35)] sm:px-5 sm:py-6"
             >
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#FFCB24] text-[#101112] shadow-[0_10px_20px_-10px_rgba(255,185,0,0.9)] sm:h-16 sm:w-16">
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF8A2B] to-[#F25C00] text-white shadow-[0_12px_22px_-12px_rgba(242,92,0,0.9)] sm:h-16 sm:w-16">
                 <Icone className="h-7 w-7 sm:h-8 sm:w-8" strokeWidth={2.4} aria-hidden />
               </span>
-              <h3 className="mt-3 text-base font-extrabold leading-tight text-[#101112] sm:text-lg">
+              <h3 className="mt-3 text-base font-extrabold leading-tight text-[#111214] sm:text-lg">
                 {beneficio.titulo}
               </h3>
-              <p className="mt-1.5 max-w-[14rem] text-sm leading-snug text-[#3f4247]">
+              <p className="mt-1.5 max-w-[14rem] text-sm leading-snug text-[#4B4F56]">
                 {beneficio.texto}
               </p>
             </li>

@@ -4,10 +4,9 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { cn } from '@rapidinho/ui/lib/utils';
 import { DEPOIMENTOS } from './conteudo';
-import { Pincelada } from './pecas';
 
 /**
- * Faixa amarela do depoimento.
+ * Faixa laranja do depoimento.
  *
  * A foto chega do servidor pronta (`foto`), para o next/image não precisar de
  * nada do cliente. Setas e indicadores só existem com mais de um depoimento —
@@ -24,7 +23,7 @@ export function Depoimentos({ foto }: { foto: React.ReactNode }) {
   const ir = (passo: number) => setAtual((indice) => (indice + passo + total) % total);
 
   const seta =
-    'hidden h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-[#101112] text-[#101112] transition-colors hover:bg-[#101112] hover:text-[#FFCB24] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#101112] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFCB24] sm:flex';
+    'hidden h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 border-[#101112] text-[#101112] transition-colors hover:bg-[#101112] hover:text-[#FF6B00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#101112] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FF6B00] sm:flex';
 
   return (
     <section
@@ -37,7 +36,7 @@ export function Depoimentos({ foto }: { foto: React.ReactNode }) {
         Depoimentos
       </h2>
 
-      <div className="rounded-b-[3rem] bg-gradient-to-b from-[#FFCB24] to-[#FFB900] sm:rounded-b-[5rem]">
+      <div className="rounded-b-[3rem] bg-gradient-to-b from-[#FF7A1A] to-[#F25C00] sm:rounded-b-[5rem]">
         <div className="mx-auto grid w-full max-w-[1200px] items-end gap-4 px-5 pt-10 sm:px-8 md:grid-cols-[15rem_minmax(0,1fr)] md:pt-12 lg:grid-cols-[17rem_minmax(0,1fr)_17rem] lg:gap-8">
           <div className="order-2 mx-auto w-56 md:order-1 md:w-full">{foto}</div>
 
@@ -59,7 +58,7 @@ export function Depoimentos({ foto }: { foto: React.ReactNode }) {
                 className="relative rounded-3xl bg-white px-6 py-6 shadow-[0_24px_40px_-24px_rgba(16,17,18,0.55)] sm:px-8"
               >
                 <span
-                  className="fonte-titulo absolute left-5 top-2 text-5xl leading-none text-[#FFB900]"
+                  className="fonte-titulo absolute left-5 top-2 text-5xl leading-none text-[#FF6B00]"
                   aria-hidden
                 >
                   &ldquo;
@@ -78,7 +77,7 @@ export function Depoimentos({ foto }: { foto: React.ReactNode }) {
                       className={cn(
                         'h-5 w-5',
                         indice < depoimento.nota
-                          ? 'fill-[#FFB900] text-[#FFB900]'
+                          ? 'fill-[#FF6B00] text-[#FF6B00]'
                           : 'fill-transparent text-[#d1d5db]',
                       )}
                       aria-hidden
@@ -129,7 +128,6 @@ export function Depoimentos({ foto }: { foto: React.ReactNode }) {
             Rapidinho
             <br />
             <span className="pl-3">sempre com você!</span>
-            <Pincelada className="ml-auto mt-1 w-40" />
           </p>
         </div>
       </div>

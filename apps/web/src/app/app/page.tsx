@@ -57,7 +57,7 @@ export default async function EntradaDoApp({
       <header className="bg-brand-deep relative overflow-hidden px-5 pb-8 pt-6">
         <div className="bg-radial-glow absolute inset-0" aria-hidden />
         <div className="relative mx-auto max-w-lg">
-          <Logotipo className="h-9 w-auto" priority />
+          <Logotipo variante="negativo" className="h-9 w-auto" priority />
           <h1 className="mt-6 text-2xl font-bold text-white">Onde você está?</h1>
           <p className="mt-1 text-white/75">Mostramos as lojas que entregam na sua cidade.</p>
         </div>

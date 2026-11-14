@@ -20,24 +20,22 @@ export function AppEmDestaque() {
 
           <h2
             id="tudo-em-um-app"
-            className="fonte-titulo mt-4 text-[2.4rem] leading-[1.05] text-[#101112] sm:text-5xl lg:text-[3.4rem]"
+            className="fonte-titulo mt-4 text-[2.4rem] leading-[1.05] text-[#111214] sm:text-5xl lg:text-[3.4rem]"
           >
             Muito mais
             <br />
-            <span className="bg-gradient-to-r from-[#F04B28] via-[#FF6A1A] to-[#FFA000] bg-clip-text pr-2 text-transparent">
-              do que entregas.
-            </span>
+            <span className="pr-2 text-[#EE5500]">do que entregas.</span>
           </h2>
 
-          <p className="mt-5 max-w-lg text-base leading-relaxed text-[#3f4247] sm:text-lg">
+          <p className="mt-5 max-w-lg text-base leading-relaxed text-[#4B4F56] sm:text-lg">
             Com o Rapidinho Entrega, você pede comida, mercado, farmácia, bebidas, pet shop e muito
             mais, de forma rápida, segura e prática.
           </p>
 
           <ul className="mt-6 space-y-4">
             {DESTAQUES.map((destaque) => (
-              <li key={destaque} className="flex items-center gap-4 font-semibold text-[#101112]">
-                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[#FFCB24]">
+              <li key={destaque} className="flex items-center gap-4 font-semibold text-[#111214]">
+                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#FF6B00] text-white">
                   <Check className="h-5 w-5" strokeWidth={3} aria-hidden />
                 </span>
                 {destaque}
@@ -48,7 +46,7 @@ export function AppEmDestaque() {
           <a
             href={LINK_BAIXAR}
             download
-            className="group mt-9 inline-flex h-16 w-full max-w-[20rem] items-center justify-between gap-4 rounded-2xl bg-gradient-to-r from-[#FFCB24] to-[#FFB900] px-7 text-lg font-extrabold text-[#101112] shadow-[0_18px_36px_-16px_rgba(255,160,0,0.9)] transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#101112] focus-visible:ring-offset-2 active:translate-y-0"
+            className="group mt-9 inline-flex h-16 w-full max-w-[20rem] items-center justify-between gap-4 rounded-2xl bg-[#CF4600] px-7 text-lg font-extrabold text-white shadow-[0_18px_36px_-16px_rgba(242,92,0,0.9)] transition-transform hover:-translate-y-0.5 hover:bg-[#B83D00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111214] focus-visible:ring-offset-2 active:translate-y-0"
           >
             <span className="flex items-center gap-3">
               <Download className="h-6 w-6" strokeWidth={2.6} aria-hidden />
@@ -60,16 +58,16 @@ export function AppEmDestaque() {
               aria-hidden
             />
           </a>
-          <p className="mt-3 text-sm text-[#3f4247]">Disponível para Android e iOS.</p>
+          <p className="mt-3 text-sm text-[#4B4F56]">Disponível para Android e iOS.</p>
         </div>
 
-        <div className="relative mx-auto w-full max-w-[36rem] lg:-mr-8 lg:max-w-none">
+        <div className="relative mx-auto w-full max-w-[20rem] sm:max-w-[24rem] lg:max-w-[27rem]">
           <Image
             src="/landing/celular.webp"
             {...MEDIDAS_DA_LANDING['celular.webp']}
-            alt="Tela inicial do app Rapidinho Entrega com as categorias Restaurantes, Mercado, Farmácia, Bebidas, Pet Shop e Outros"
+            alt="Tela inicial do app Rapidinho Entrega com a busca e as categorias Restaurantes, Mercado, Farmácia, Bebidas e Pet Shop"
             loading="lazy"
-            sizes="(min-width: 1024px) 600px, 92vw"
+            sizes="(min-width: 1024px) 27rem, (min-width: 640px) 24rem, 20rem"
             className="h-auto w-full"
           />
         </div>

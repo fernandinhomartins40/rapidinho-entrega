@@ -32,7 +32,7 @@ const LINKS_INSTITUCIONAIS = [
 ] as const;
 
 const estiloLink =
-  'rounded text-sm text-white/80 transition-colors hover:text-[#FFCB24] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCB24]';
+  'rounded text-sm text-white/80 transition-colors hover:text-[#FF8A3D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]';
 
 export function Rodape() {
   const redes = REDES.flatMap((rede) => {
@@ -41,10 +41,10 @@ export function Rodape() {
   });
 
   return (
-    <footer id="contato" className="scroll-mt-4 bg-[#101112] text-white">
+    <footer id="contato" className="scroll-mt-4 bg-[#111214] text-white">
       <div className="mx-auto w-full max-w-[1200px] px-5 sm:px-8">
         <div className="flex flex-col gap-6 border-t border-white/10 py-8 md:flex-row md:items-center md:justify-between">
-          <Logotipo className="h-14 w-auto self-start md:self-auto" />
+          <Logotipo variante="negativo" className="h-12 w-auto self-start md:self-auto" />
 
           <nav aria-label="Rodapé">
             <ul className="flex flex-wrap gap-x-7 gap-y-3">
@@ -73,7 +73,7 @@ export function Rodape() {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={`${APP_NAME} no ${nome}`}
-                    className="min-h-touch min-w-touch flex items-center justify-center rounded-full text-white transition-colors hover:text-[#FFCB24] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCB24]"
+                    className="min-h-touch min-w-touch flex items-center justify-center rounded-full text-white transition-colors hover:text-[#FF8A3D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]"
                   >
                     <Icone className="h-6 w-6" />
                   </a>

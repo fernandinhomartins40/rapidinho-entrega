@@ -4,9 +4,8 @@
  * ARQUIVO GERADO por `pnpm landing:gerar` — não edite à mão.
  */
 export const MEDIDAS_DA_LANDING = {
-  'cidade-noturna.webp': { width: 1920, height: 768 },
-  'motoboy.webp': { width: 1100, height: 977 },
-  'celular.webp': { width: 900, height: 943 },
+  'motoboy.webp': { width: 2000, height: 1500 },
+  'celular.webp': { width: 846, height: 1300 },
   'cliente.webp': { width: 640, height: 768 },
   'categorias/restaurantes.webp': { width: 64, height: 57 },
   'categorias/mercado.webp': { width: 63, height: 60 },

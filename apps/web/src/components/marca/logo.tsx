@@ -5,10 +5,7 @@ import { cn } from '@rapidinho/ui/lib/utils';
 /**
  * Logotipo da marca.
  *
- * A arte tem contorno azul-marinho, então some em fundo escuro se usada
- * sozinha — por isso a variante `simbolo` (usada sobre o hero navy) vem dentro
- * de uma pastilha âmbar, que é como o símbolo aparece na caixa de entrega do
- * mascote.
+ * As letras da arte são pretas: sobre fundo escuro, use `variante="negativo"`.
  *
  * As medidas vêm do módulo gerado junto com as artes. Digitá-las aqui foi o
  * que fez o Next reservar um espaço de altura diferente da imagem — o CSS
@@ -23,11 +20,18 @@ export function Logotipo({
   className,
   priority = false,
 }: {
-  variante?: 'lettering' | 'completa';
+  /** `negativo`: letras brancas, para fundo escuro. */
+  variante?: 'lettering' | 'completa' | 'negativo';
   className?: string;
   priority?: boolean;
 }) {
-  const arte: ArteDaMarca = variante === 'completa' ? 'logo-completa.webp' : 'lettering.webp';
+  const arte = (
+    {
+      lettering: 'lettering.webp',
+      completa: 'logo-completa.webp',
+      negativo: 'lettering-negativo.webp',
+    } as const
+  )[variante];
 
   return (
     <Image

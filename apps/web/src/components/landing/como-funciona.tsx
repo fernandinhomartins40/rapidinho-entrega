@@ -19,7 +19,7 @@ export function ComoFunciona() {
     <section
       id="como-funciona"
       aria-labelledby="titulo-como-funciona"
-      className="relative isolate scroll-mt-4 overflow-hidden bg-[#101112] py-14 text-white sm:py-16"
+      className="relative isolate scroll-mt-4 overflow-hidden bg-[#111214] py-14 text-white sm:py-16"
     >
       {/* O "R" da marca como marca-d'água, como na caixa do motoboy. */}
       <Image
@@ -33,7 +33,7 @@ export function ComoFunciona() {
       <div className="mx-auto w-full max-w-[1200px] px-5 sm:px-8">
         <Etiqueta>Como funciona</Etiqueta>
         <h2 id="titulo-como-funciona" className="fonte-titulo mt-4 text-4xl sm:text-5xl">
-          É rápido e <span className="text-[#FFCB24]">fácil!</span>
+          É rápido e <span className="text-[#FF6B00]">fácil!</span>
         </h2>
         <p className="mt-3 text-base text-white/85 sm:text-lg">
           Em poucos passos, seu pedido chega até você.
@@ -45,7 +45,7 @@ export function ComoFunciona() {
 
             return (
               <li key={passo.titulo} className="relative flex flex-col items-center text-center">
-                <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#FFCB24] text-[#101112] shadow-[0_0_0_6px_rgba(255,203,36,0.12)] sm:h-[4.5rem] sm:w-[4.5rem]">
+                <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#FF8A2B] to-[#F25C00] text-white shadow-[0_0_0_6px_rgba(255,107,0,0.12)] sm:h-[4.5rem] sm:w-[4.5rem]">
                   <Icone className="h-8 w-8" strokeWidth={2.4} aria-hidden />
                 </span>
                 <h3 className="mt-5 max-w-[12rem] text-base font-extrabold leading-tight sm:text-lg">

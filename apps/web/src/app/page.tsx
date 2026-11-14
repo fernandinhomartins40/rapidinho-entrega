@@ -75,7 +75,7 @@ export default async function HomePage() {
   const cidadeUnica = cidadesDisponiveis.length === 1 ? cidadesDisponiveis[0]?.slug : undefined;
 
   return (
-    <div className={`${fonteTitulo.variable} ${fonteManuscrita.variable} bg-[#101112]`}>
+    <div className={`${fonteTitulo.variable} ${fonteManuscrita.variable} bg-white`}>
       {/* Primeira coisa da página: dentro do app instalado, sai antes de desenhar. */}
       <script nonce={nonce} dangerouslySetInnerHTML={{ __html: SCRIPT_GUARDA_DO_APP }} />
       <GuardaDoApp />

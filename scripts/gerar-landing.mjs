@@ -4,6 +4,7 @@
  * Mesmo esquema do `gerar-marca.mjs`: roda sob demanda (`pnpm landing:gerar`)
  * e o resultado é versionado, para o build não depender dos PNGs de 1–2 MB.
  */
+import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,63 +34,110 @@ function recortada(arquivo, largura) {
     .resize({ width: largura, withoutEnlargement: true });
 }
 
+/** Ícones das categorias: um PNG transparente por categoria em `assets/landing/categorias/`. */
+const CATEGORIAS = ['restaurantes', 'mercado', 'farmacia', 'bebidas', 'pet-shop', 'outros'];
+
 /**
- * Tira o fundo branco de um recorte, preenchendo a partir das bordas.
- *
- * Um corte por limiar simples apagaria também os brilhos brancos de dentro do
- * desenho (a cruz da farmácia, o reflexo do hambúrguer); o preenchimento só
- * alcança o branco que encosta na borda.
+ * Cantos da tela no `landing/celular.png` (852 × 1846), medidos na arte:
+ * superior esquerdo, superior direito, inferior direito, inferior esquerdo.
+ * O celular está em perspectiva, então a tela é um quadrilátero, não um retângulo.
  */
-async function semFundoBranco(input) {
-  const { data, info } = await sharp(input)
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  const { width, height } = info;
-  const claro = (i) => {
-    const r = data[i * 4];
-    const g = data[i * 4 + 1];
-    const b = data[i * 4 + 2];
-    return Math.min(r, g, b) > 222 && Math.max(r, g, b) - Math.min(r, g, b) < 24;
+const TELA = [
+  [244, 348],
+  [651, 274],
+  [567, 1512],
+  [155, 1486],
+];
+
+/** Homografia do quadrado unitário para o quadrilátero (Heckbert), já invertida. */
+function inversaDaPerspectiva([[x0, y0], [x1, y1], [x2, y2], [x3, y3]]) {
+  const dx1 = x1 - x2,
+    dx2 = x3 - x2,
+    dx3 = x0 - x1 + x2 - x3;
+  const dy1 = y1 - y2,
+    dy2 = y3 - y2,
+    dy3 = y0 - y1 + y2 - y3;
+  const den = dx1 * dy2 - dx2 * dy1;
+  const g = (dx3 * dy2 - dx2 * dy3) / den;
+  const h = (dx1 * dy3 - dx3 * dy1) / den;
+  const [a, b, c] = [x1 - x0 + g * x1, x3 - x0 + h * x3, x0];
+  const [d, e, f] = [y1 - y0 + g * y1, y3 - y0 + h * y3, y0];
+  // Adjunta da matriz [[a,b,c],[d,e,f],[g,h,1]]: a escala some na divisão final.
+  const m = [
+    e - f * h,
+    c * h - b,
+    b * f - c * e,
+    f * g - d,
+    a - c * g,
+    c * d - a * f,
+    d * h - e * g,
+    b * g - a * h,
+    a * e - b * d,
+  ];
+  return (x, y) => {
+    const w = m[6] * x + m[7] * y + m[8];
+    return [(m[0] * x + m[1] * y + m[2]) / w, (m[3] * x + m[4] * y + m[5]) / w];
   };
-
-  const visitado = new Uint8Array(width * height);
-  const fila = [];
-  for (let x = 0; x < width; x++) fila.push(x, (height - 1) * width + x);
-  for (let y = 0; y < height; y++) fila.push(y * width, y * width + width - 1);
-
-  while (fila.length > 0) {
-    const i = fila.pop();
-    if (visitado[i] || !claro(i)) continue;
-    visitado[i] = 1;
-    data[i * 4 + 3] = 0;
-
-    const x = i % width;
-    const y = (i - x) / width;
-    if (x > 0) fila.push(i - 1);
-    if (x < width - 1) fila.push(i + 1);
-    if (y > 0) fila.push(i - width);
-    if (y < height - 1) fila.push(i + width);
-  }
-
-  return sharp(data, { raw: { width, height, channels: 4 } })
-    .trim({ threshold: 1 })
-    .webp({ quality: 90, alphaQuality: 90 })
-    .toBuffer();
 }
 
 /**
- * Ícones das categorias, recortados da tela do app no mockup do celular.
- * Coordenadas no `Smartphone.png` original (1254 × 1254).
+ * O celular com a tela inicial do app dentro.
+ *
+ * A captura ainda tem a logo antiga no topo: ela é coberta pela logo nova
+ * antes de entrar na tela. O recorte da câmera é redesenhado por cima.
  */
-const CATEGORIAS = {
-  restaurantes: { left: 370, top: 455, width: 85, height: 80 },
-  mercado: { left: 535, top: 455, width: 80, height: 75 },
-  farmacia: { left: 700, top: 455, width: 75, height: 70 },
-  bebidas: { left: 355, top: 598, width: 55, height: 92 },
-  'pet-shop': { left: 520, top: 610, width: 70, height: 68 },
-  outros: { left: 685, top: 612, width: 70, height: 66 },
-};
+async function celularComTela() {
+  const captura = join(origem, 'google-play/capturas/01-inicio.png');
+  const { width: cw, height: ch } = await sharp(captura).metadata();
+  const logo = await sharp(join(origem, 'marca/lettering-negativo.png'))
+    .trim({ threshold: 10 })
+    .resize({ width: 520 })
+    .png()
+    .toBuffer();
+  const { height: lh } = await sharp(logo).metadata();
+  const fundo = '#0f0f10';
+  const mascara = Buffer.from(
+    `<svg width="${cw}" height="${ch}" xmlns="http://www.w3.org/2000/svg">` +
+      `<rect width="${cw}" height="${ch}" rx="90" fill="#fff"/></svg>`,
+  );
+  const cobertura = Buffer.from(
+    `<svg width="${cw}" height="${ch}" xmlns="http://www.w3.org/2000/svg">` +
+      `<rect x="330" y="130" width="420" height="160" fill="${fundo}"/>` +
+      `<rect x="${cw / 2 - 180}" y="18" width="360" height="100" rx="50" fill="#000"/></svg>`,
+  );
+  const tela = await sharp(captura)
+    .composite([
+      { input: cobertura },
+      { input: logo, left: Math.round(cw / 2 - 260), top: Math.round(208 - lh / 2) },
+      { input: mascara, blend: 'dest-in' },
+    ])
+    .ensureAlpha()
+    .raw()
+    .toBuffer();
+
+  const { data, info } = await sharp(join(origem, 'landing/celular.png'))
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const paraUV = inversaDaPerspectiva(TELA);
+  const xs = TELA.map((p) => p[0]),
+    ys = TELA.map((p) => p[1]);
+  for (let y = Math.min(...ys); y <= Math.max(...ys); y++) {
+    for (let x = Math.min(...xs); x <= Math.max(...xs); x++) {
+      const [u, v] = paraUV(x, y);
+      if (u < 0 || u >= 1 || v < 0 || v >= 1) continue;
+      // Vizinho mais próximo basta: a imagem final sai reduzida.
+      const j = (Math.floor(v * ch) * cw + Math.floor(u * cw)) * 4;
+      const alfa = tela[j + 3] / 255;
+      const i = (y * info.width + x) * 4;
+      for (let k = 0; k < 3; k++)
+        data[i + k] = Math.round(tela[j + k] * alfa + data[i + k] * (1 - alfa));
+    }
+  }
+  return sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
+    .png()
+    .toBuffer();
+}
 
 async function gravarMedidas() {
   const entradas = Object.entries(medidas)
@@ -114,22 +162,44 @@ export type ImagemDaLanding = keyof typeof MEDIDAS_DA_LANDING;
 
 async function main() {
   console.log('Landing:');
+  // Foto do hero: opaca, sem recorte. 2000px cobre a metade direita de telas retina.
   await gravar(
-    'cidade-noturna.webp',
-    await sharp(join(origem, 'cidade-noturna.webp'))
-      .resize({ width: 1920, withoutEnlargement: true })
-      .webp({ quality: 72 })
+    'motoboy.webp',
+    await sharp(join(origem, 'landing/hero-motoboy.jpg'))
+      .resize({ width: 2000, withoutEnlargement: true })
+      .webp({ quality: 78 })
       .toBuffer(),
   );
-  await gravar('motoboy.webp', await recortada('mascote_hero.png', 1100).webp({ quality: 86 }).toBuffer());
-  await gravar('celular.webp', await recortada('Smartphone.png', 900).webp({ quality: 86 }).toBuffer());
-  await gravar('cliente.webp', await recortada('cliente-com-celular.png', 640).webp({ quality: 84 }).toBuffer());
+  await gravar(
+    'celular.webp',
+    await sharp(await celularComTela())
+      .trim({ threshold: 10 })
+      .resize({ width: 1200, withoutEnlargement: true })
+      .webp({ quality: 86 })
+      .toBuffer(),
+  );
+  await gravar(
+    'cliente.webp',
+    await recortada('cliente-com-celular.png', 640).webp({ quality: 84 }).toBuffer(),
+  );
 
   console.log('\nCategorias:');
-  const celular = join(origem, 'Smartphone.png');
-  for (const [nome, area] of Object.entries(CATEGORIAS)) {
-    const recorte = await sharp(celular).extract(area).png().toBuffer();
-    await gravar(`categorias/${nome}.webp`, await semFundoBranco(recorte));
+  for (const nome of CATEGORIAS) {
+    // Sem o PNG novo, fica o ícone já publicado (e a medida dele).
+    if (!existsSync(join(origem, `landing/categorias/${nome}.png`))) {
+      const { width, height } = await sharp(join(destino, `categorias/${nome}.webp`)).metadata();
+      medidas[`categorias/${nome}.webp`] = { width, height };
+      console.log(
+        `  categorias/${nome}.webp — mantido (falta assets/landing/categorias/${nome}.png)`,
+      );
+      continue;
+    }
+    await gravar(
+      `categorias/${nome}.webp`,
+      await recortada(`landing/categorias/${nome}.png`, 168)
+        .webp({ quality: 90, alphaQuality: 90 })
+        .toBuffer(),
+    );
   }
 
   await gravarMedidas();

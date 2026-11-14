@@ -24,8 +24,8 @@ export function Etiqueta({
   return (
     <p
       className={cn(
-        'inline-flex items-center rounded-full border-2 border-[#FFCB24] px-3.5 py-1 text-xs font-extrabold uppercase tracking-wide sm:text-sm',
-        tom === 'escuro' ? 'bg-[#FFCB24]/10 text-[#FFCB24]' : 'bg-[#FFCB24]/10 text-[#B45309]',
+        'inline-flex items-center rounded-full border-2 border-[#FF6B00] px-3.5 py-1 text-xs font-extrabold uppercase tracking-wide sm:text-sm',
+        tom === 'escuro' ? 'bg-[#FF6B00]/10 text-[#FF8A3D]' : 'bg-[#FFF1E6] text-[#C2410C]',
         className,
       )}
     >
@@ -85,7 +85,7 @@ export function SelosDasLojas({ className }: { className?: string }) {
           <a
             href={LINK_BAIXAR}
             download
-            className="flex h-[3.25rem] items-center gap-2.5 rounded-xl border border-white/70 bg-black px-4 text-white transition-colors hover:border-[#FFCB24] hover:bg-[#1b1c1e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCB24] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+            className="flex h-[3.25rem] items-center gap-2.5 rounded-xl border border-white/70 bg-black px-4 text-white transition-colors hover:border-[#FF6B00] hover:bg-[#1b1c1e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2"
           >
             <IconeGooglePlay className="h-6 w-6 shrink-0" />
             <span className="leading-none">
@@ -106,7 +106,7 @@ export function SelosDasLojas({ className }: { className?: string }) {
               target="_blank"
               rel="noopener noreferrer"
               aria-label={`${topo} ${nome}`}
-              className="flex h-[3.25rem] items-center gap-2.5 rounded-xl border border-white/70 bg-black px-4 text-white transition-colors hover:border-[#FFCB24] hover:bg-[#1b1c1e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCB24] focus-visible:ring-offset-2 focus-visible:ring-offset-black"
+              className="flex h-[3.25rem] items-center gap-2.5 rounded-xl border border-white/70 bg-black px-4 text-white transition-colors hover:border-[#FF6B00] hover:bg-[#1b1c1e] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] focus-visible:ring-offset-2"
             >
               <Icone className="h-6 w-6 shrink-0" />
               <span className="leading-none">
@@ -118,14 +118,5 @@ export function SelosDasLojas({ className }: { className?: string }) {
         );
       })}
     </ul>
-  );
-}
-
-/** Sublinhado em pincelada, embaixo das frases manuscritas. */
-export function Pincelada({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 200 24" fill="none" className={className} aria-hidden>
-      <path d="M4 18C52 9 118 5 196 6" stroke="#F04B28" strokeWidth="6" strokeLinecap="round" />
-    </svg>
   );
 }

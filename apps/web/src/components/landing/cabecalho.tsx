@@ -6,7 +6,7 @@ import { NAVEGACAO } from './conteudo';
 import { LINK_BAIXAR } from './pecas';
 
 /**
- * Barra do topo, sobre o fundo escuro do hero.
+ * Barra do topo, sobre o fundo claro do hero.
  *
  * No celular a navegação vira um menu que abre por botão, fecha com Esc e ao
  * escolher um destino — âncoras não trocam de página, então sem isso o menu
@@ -34,7 +34,7 @@ export function Cabecalho({ logo }: { logo: React.ReactNode }) {
     <div className="relative z-20 mx-auto flex w-full max-w-[1200px] items-center justify-between gap-6 px-5 py-5 sm:px-8 lg:py-6">
       <a
         href="#inicio"
-        className="shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCB24]"
+        className="shrink-0 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]"
       >
         {logo}
       </a>
@@ -46,7 +46,7 @@ export function Cabecalho({ logo }: { logo: React.ReactNode }) {
               <a
                 href={item.href}
                 {...(indice === 0 ? { 'aria-current': 'page' as const } : {})}
-                className="relative block py-2 text-sm font-semibold text-white transition-colors after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-[#FFCB24] after:opacity-0 after:transition-opacity hover:text-[#FFCB24] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCB24] aria-[current=page]:after:opacity-100"
+                className="relative block py-2 text-sm font-semibold text-[#111214] transition-colors after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-[#FF6B00] after:opacity-0 after:transition-opacity hover:text-[#CF4600] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] aria-[current=page]:after:opacity-100"
               >
                 {item.rotulo}
               </a>
@@ -59,7 +59,7 @@ export function Cabecalho({ logo }: { logo: React.ReactNode }) {
         <a
           href={LINK_BAIXAR}
           download
-          className="hidden h-12 items-center gap-2 rounded-xl bg-[#FFCB24] px-5 text-sm font-bold text-[#101112] shadow-[0_10px_30px_-10px_rgba(255,203,36,0.7)] transition-colors hover:bg-[#FFB900] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#101112] sm:inline-flex"
+          className="hidden h-12 items-center gap-2 rounded-xl bg-[#CF4600] px-5 text-sm font-bold text-white shadow-[0_10px_30px_-10px_rgba(255,107,0,0.8)] transition-colors hover:bg-[#B83D00] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#111214] focus-visible:ring-offset-2 sm:inline-flex"
         >
           <Download className="h-4 w-4" aria-hidden />
           Baixar agora
@@ -71,7 +71,7 @@ export function Cabecalho({ logo }: { logo: React.ReactNode }) {
           aria-expanded={aberto}
           aria-controls={idDoMenu}
           aria-label={aberto ? 'Fechar menu' : 'Abrir menu'}
-          className="min-h-touch min-w-touch inline-flex items-center justify-center rounded-xl border border-white/25 text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCB24] lg:hidden"
+          className="min-h-touch min-w-touch inline-flex items-center justify-center rounded-xl border border-[#111214]/15 text-[#111214] transition-colors hover:bg-[#111214]/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00] lg:hidden"
         >
           {aberto ? (
             <X className="h-6 w-6" aria-hidden />
@@ -85,7 +85,7 @@ export function Cabecalho({ logo }: { logo: React.ReactNode }) {
         id={idDoMenu}
         aria-label="Principal"
         hidden={!aberto}
-        className="absolute inset-x-5 top-full rounded-2xl border border-white/10 bg-[#101112]/95 p-3 shadow-2xl backdrop-blur-md sm:inset-x-8 lg:hidden"
+        className="absolute inset-x-5 top-full rounded-2xl border border-[#111214]/10 bg-white p-3 shadow-2xl sm:inset-x-8 lg:hidden"
       >
         <ul>
           {NAVEGACAO.map((item) => (
@@ -93,7 +93,7 @@ export function Cabecalho({ logo }: { logo: React.ReactNode }) {
               <a
                 href={item.href}
                 onClick={() => setAberto(false)}
-                className="min-h-touch flex items-center rounded-xl px-4 text-base font-semibold text-white hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FFCB24]"
+                className="min-h-touch flex items-center rounded-xl px-4 text-base font-semibold text-[#111214] hover:bg-[#FFF1E6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6B00]"
               >
                 {item.rotulo}
               </a>
@@ -104,7 +104,7 @@ export function Cabecalho({ logo }: { logo: React.ReactNode }) {
               href={LINK_BAIXAR}
               download
               onClick={() => setAberto(false)}
-              className="min-h-touch flex items-center justify-center gap-2 rounded-xl bg-[#FFCB24] px-4 text-base font-bold text-[#101112]"
+              className="min-h-touch flex items-center justify-center gap-2 rounded-xl bg-[#CF4600] px-4 text-base font-bold text-white"
             >
               <Download className="h-5 w-5" aria-hidden />
               Baixar agora

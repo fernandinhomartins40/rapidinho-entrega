@@ -13,8 +13,8 @@ const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const origem = join(raiz, 'assets/marca');
 const destinos = [join(raiz, 'apps/web/public/marca'), join(raiz, 'apps/admin/public/marca')];
 
-/** Azul-marinho da identidade (contorno das letras e do capacete). */
-const NAVY = '#0d1f3c';
+/** Fundo dos ícones de app: o preto da identidade, onde o "R" laranja aparece. */
+const NAVY = '#111214';
 
 /**
  * Medidas finais de cada arte.
@@ -111,8 +111,15 @@ async function main() {
   console.log(`Originais: ${disponiveis.join(', ')}\n`);
 
   console.log('Marca:');
-  await gravar('logo-completa.webp', await arte('logo-completa.png', 640).webp({ quality: 90 }).toBuffer());
+  await gravar(
+    'logo-completa.webp',
+    await arte('logo-completa.png', 640).webp({ quality: 90 }).toBuffer(),
+  );
   await gravar('lettering.webp', await arte('lettering.png', 560).webp({ quality: 90 }).toBuffer());
+  await gravar(
+    'lettering-negativo.webp',
+    await arte('lettering-negativo.png', 560).webp({ quality: 90 }).toBuffer(),
+  );
   await gravar('mascote.webp', await arte('mascote.png', 480).webp({ quality: 90 }).toBuffer());
   await gravar('simbolo.webp', await arte('simbolo.png', 256).webp({ quality: 92 }).toBuffer());
 

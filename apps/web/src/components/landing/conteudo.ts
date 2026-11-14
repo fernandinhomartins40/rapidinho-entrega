@@ -11,6 +11,7 @@ export const NAVEGACAO = [
   { rotulo: 'Início', href: '#inicio' },
   { rotulo: 'Vantagens', href: '#vantagens' },
   { rotulo: 'Como funciona', href: '#como-funciona' },
+  { rotulo: 'Parceiros', href: '#parceiros' },
   // "Depoimentos" volta para cá quando houver depoimento real publicado.
   { rotulo: 'Contato', href: '#contato' },
 ] as const;
