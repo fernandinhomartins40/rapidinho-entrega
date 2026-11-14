@@ -22,6 +22,10 @@ const nextConfig = {
   env: { RAPIDINHO_SESSAO_DIAS: '400' },
   images: {
     formats: ['image/avif', 'image/webp'],
+    // Era 60 s: o navegador revalidava cada foto a todo minuto e o servidor
+    // recomprimia. shortcut: arte trocada com o mesmo nome pode levar até uma
+    // semana para aparecer a quem já visitou; para valer na hora, mude o nome.
+    minimumCacheTTL: 604800,
     remotePatterns: [
       { protocol: 'http', hostname: 'localhost' },
       { protocol: 'http', hostname: 'minio' },
@@ -47,6 +51,13 @@ const nextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(self), geolocation=(self), payment=()',
           },
+        ],
+      },
+      {
+        // Arquivos de public/ saíam com max-age=0: logo e fotos a cada visita.
+        source: '/:pasta(landing|marca)/:arquivo*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
         ],
       },
       {

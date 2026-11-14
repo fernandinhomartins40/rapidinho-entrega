@@ -1,3 +1,4 @@
+import { unstable_cache } from 'next/cache';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -29,10 +30,7 @@ const LOJAS_POR_SECAO = 4;
 
 export async function generateMetadata({ params }: { params: Promise<{ cidade: string }> }) {
   const { cidade } = await params;
-  const encontrada = await prisma.city.findFirst({
-    where: { slug: cidade, isActive: true },
-    select: { name: true, state: true },
-  });
+  const encontrada = (await vitrineDaCidade(cidade))?.cidade;
 
   if (!encontrada) return { title: 'Cidade não encontrada' };
 
@@ -155,8 +153,7 @@ async function carregarVitrine(citySlug: string) {
  * O que a vitrine sabe do cliente logado: o endereço padrão nesta cidade
  * ("Rua Principal, 123 - Centro") e os últimos pedidos para repetir.
  */
-async function contextoDoCliente(cityId: string) {
-  const user = await getCurrentUser();
+async function contextoDoCliente(cityId: string, user: Awaited<ReturnType<typeof getCurrentUser>>) {
   if (!user) return { userId: null, endereco: null, paraRepetir: [] };
 
   const [endereco, ultimos] = await Promise.all([
@@ -198,6 +195,13 @@ async function contextoDoCliente(cityId: string) {
   return { userId: user.id, endereco, paraRepetir };
 }
 
+/**
+ * A vitrine é igual para todo visitante: guardada por um minuto, ela poupa a
+ * dúzia de consultas em sequência a cada acesso. O "aberta/fechada" das lojas
+ * pode atrasar até esse minuto.
+ */
+const vitrineDaCidade = unstable_cache(carregarVitrine, ['vitrine-cidade'], { revalidate: 60 });
+
 async function enderecoDeEntrega(userId: string, cityId: string) {
   const endereco = await prisma.address.findFirst({
     where: { userId, cityId, deletedAt: null },
@@ -218,15 +222,19 @@ export default async function CidadePage({
 }) {
   const { cidade: slug } = await params;
   const { categoria: filtro } = await searchParams;
-  const dados = await carregarVitrine(slug);
+  // Vitrine e sessão não dependem uma da outra: buscadas juntas.
+  const [dados, user] = await Promise.all([vitrineDaCidade(slug), getCurrentUser()]);
 
   if (!dados) notFound();
 
   const grupo = GRUPOS_DE_CATEGORIA.find((candidato) => candidato.chave === filtro);
-  const { userId, endereco, paraRepetir } = await contextoDoCliente(dados.cidade.id);
-  // Com filtro de categoria a pessoa já sabe o que quer: a vitrine de pratos
-  // é para quem ainda não sabe.
-  const pratos = grupo ? [] : await pratosDaCidade(dados.cidade.id, { userId, limite: 12 });
+  const userId = user?.id ?? null;
+  const [{ endereco, paraRepetir }, pratos] = await Promise.all([
+    contextoDoCliente(dados.cidade.id, user),
+    // Com filtro de categoria a pessoa já sabe o que quer: a vitrine de pratos
+    // é para quem ainda não sabe.
+    grupo ? [] : pratosDaCidade(dados.cidade.id, { userId, limite: 12 }),
+  ]);
 
   const lojas = grupo
     ? dados.lojas.filter((loja) => pertenceAoGrupo(grupo.chave, loja.categoriaSlug))

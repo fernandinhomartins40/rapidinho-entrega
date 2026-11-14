@@ -1,6 +1,13 @@
-import Image from 'next/image';
 import Link from 'next/link';
-import { MEDIDAS_DA_LANDING, type ImagemDaLanding } from './medidas';
+import {
+  LayoutGrid,
+  PawPrint,
+  Pill,
+  ShoppingCart,
+  UtensilsCrossed,
+  Wine,
+  type LucideIcon,
+} from 'lucide-react';
 
 /**
  * As seis vitrines da arte. Cada uma aponta para o slug de categoria do banco
@@ -10,17 +17,17 @@ import { MEDIDAS_DA_LANDING, type ImagemDaLanding } from './medidas';
 const CATEGORIAS = [
   {
     nome: 'Restaurantes',
-    imagem: 'categorias/restaurantes.webp',
+    icone: UtensilsCrossed,
     slugs: ['restaurante', 'hamburgueria', 'lanchonete'],
   },
-  { nome: 'Mercado', imagem: 'categorias/mercado.webp', slugs: ['supermercado', 'mercearia'] },
-  { nome: 'Farmácia', imagem: 'categorias/farmacia.webp', slugs: ['farmacia'] },
-  { nome: 'Bebidas', imagem: 'categorias/bebidas.webp', slugs: ['bebidas', 'adega', 'agua-e-gas'] },
-  { nome: 'Pet Shop', imagem: 'categorias/pet-shop.webp', slugs: ['petshop', 'pet-shop'] },
-  { nome: 'Outros', imagem: 'categorias/outros.webp', slugs: [] },
+  { nome: 'Mercado', icone: ShoppingCart, slugs: ['supermercado', 'mercearia'] },
+  { nome: 'Farmácia', icone: Pill, slugs: ['farmacia'] },
+  { nome: 'Bebidas', icone: Wine, slugs: ['bebidas', 'adega', 'agua-e-gas'] },
+  { nome: 'Pet Shop', icone: PawPrint, slugs: ['petshop', 'pet-shop'] },
+  { nome: 'Outros', icone: LayoutGrid, slugs: [] },
 ] as const satisfies ReadonlyArray<{
   nome: string;
-  imagem: ImagemDaLanding;
+  icone: LucideIcon;
   slugs: readonly string[];
 }>;
 
@@ -59,16 +66,11 @@ export function Categorias({
         <ul className="grid grid-cols-3 gap-3 sm:grid-cols-6">
           {CATEGORIAS.map((categoria) => {
             const slug = categoria.slugs.find((candidato) => ativos.has(candidato));
+            const Icone = categoria.icone;
             const conteudo = (
               <>
-                <span className="flex h-16 items-center justify-center">
-                  <Image
-                    src={`/landing/${categoria.imagem}`}
-                    {...MEDIDAS_DA_LANDING[categoria.imagem]}
-                    alt=""
-                    loading="lazy"
-                    className="max-h-14 w-auto"
-                  />
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-[#EE5500] shadow-[0_8px_18px_-12px_rgba(17,18,20,0.45)]">
+                  <Icone className="h-7 w-7" strokeWidth={2} aria-hidden />
                 </span>
                 <span className="mt-3 block text-sm font-bold text-[#111214]">
                   {categoria.nome}

@@ -4,7 +4,8 @@
  * Mesmo esquema do `gerar-marca.mjs`: roda sob demanda (`pnpm landing:gerar`)
  * e o resultado é versionado, para o build não depender dos PNGs de 1–2 MB.
  */
-import { existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -27,15 +28,23 @@ async function gravar(nome, buffer) {
   console.log(`  ${nome} — ${width}x${height}, ${(buffer.length / 1024).toFixed(1)} KB`);
 }
 
+/**
+ * Fotos-mestre ficam em JPEG XL: o `cjxl --lossless_jpeg=1` guarda o JPG
+ * byte a byte em ~20% menos espaço. O sharp não lê JXL, então o `djxl`
+ * (libjxl, `winget install libjxl.libjxl`) devolve o JPG original.
+ */
+function jpgDoJxl(arquivo) {
+  const saida = join(tmpdir(), 'rapidinho-landing.jpg');
+  execFileSync('djxl', [join(origem, arquivo), saida], { stdio: 'ignore' });
+  return saida;
+}
+
 /** Recorta o transparente em volta e reduz para a largura pedida. */
 function recortada(arquivo, largura) {
   return sharp(join(origem, arquivo))
     .trim({ threshold: 10 })
     .resize({ width: largura, withoutEnlargement: true });
 }
-
-/** Ícones das categorias: um PNG transparente por categoria em `assets/landing/categorias/`. */
-const CATEGORIAS = ['restaurantes', 'mercado', 'farmacia', 'bebidas', 'pet-shop', 'outros'];
 
 /**
  * Cantos da tela no `landing/celular.png` (852 × 1846), medidos na arte:
@@ -165,7 +174,7 @@ async function main() {
   // Foto do hero: opaca, sem recorte. 2000px cobre a metade direita de telas retina.
   await gravar(
     'motoboy.webp',
-    await sharp(join(origem, 'landing/hero-motoboy.jpg'))
+    await sharp(jpgDoJxl('landing/hero-motoboy.jxl'))
       .resize({ width: 2000, withoutEnlargement: true })
       .webp({ quality: 78 })
       .toBuffer(),
@@ -182,25 +191,6 @@ async function main() {
     'cliente.webp',
     await recortada('cliente-com-celular.png', 640).webp({ quality: 84 }).toBuffer(),
   );
-
-  console.log('\nCategorias:');
-  for (const nome of CATEGORIAS) {
-    // Sem o PNG novo, fica o ícone já publicado (e a medida dele).
-    if (!existsSync(join(origem, `landing/categorias/${nome}.png`))) {
-      const { width, height } = await sharp(join(destino, `categorias/${nome}.webp`)).metadata();
-      medidas[`categorias/${nome}.webp`] = { width, height };
-      console.log(
-        `  categorias/${nome}.webp — mantido (falta assets/landing/categorias/${nome}.png)`,
-      );
-      continue;
-    }
-    await gravar(
-      `categorias/${nome}.webp`,
-      await recortada(`landing/categorias/${nome}.png`, 168)
-        .webp({ quality: 90, alphaQuality: 90 })
-        .toBuffer(),
-    );
-  }
 
   await gravarMedidas();
 }
