@@ -4,34 +4,30 @@ O app do iPhone é o mesmo código do Android. Só que ele precisa ser compilado
 num Mac, então a compilação roda na nuvem da Expo (EAS), que entrega o
 arquivo direto no App Store Connect. Os passos 1 a 4 são feitos uma vez só.
 
-## 1. Apple: criar o app e a chave de notificação
+## Já feito (2026-11-15)
 
-1. Em <https://developer.apple.com/account/resources/authkeys/list>, clique
-   em **+**, marque **Apple Push Notifications service (APNs)** e baixe a chave
-   (`.p8`). Guarde em `C:\Users\fusea\.rapidinho-contas\` e anote o **Key ID**
-   e o **Team ID** (aparece no canto de cima da página). O `.p8` só baixa uma
-   vez e **nunca** vai para o repositório.
-2. Em <https://appstoreconnect.apple.com>, vá em **Apps > + > Novo app**:
-   - Plataforma: iOS
-   - Nome: Rapidinho Entrega
-   - Idioma: Português (Brasil)
-   - ID do pacote (Bundle ID): `br.com.rapidinhoentrega.app`. Se ele não
-     aparecer na lista, faça antes o passo 4, que cria o ID, e volte aqui.
-   - SKU: `rapidinho`
-3. Abra o app criado, vá em **Informações do app** e copie o **ID Apple**
-   (um número de 10 dígitos). Ele entra no `eas.json`, no lugar de
-   `PREENCHER_COM_O_APPLE_ID_DO_APP`.
+- **Conta Apple:** time `P8XTL43RG6` (Fuse Agencia LTDA). Chave da API do App
+  Store Connect `TP5NTH496M` e chave APNs `LG4UHJ43LY` em
+  `C:\Users\fusea\.rapidinho-contas\` (IDs em `apple.env`), fora do repositório.
+- **Bundle ID** `br.com.rapidinhoentrega.app` registrado pela API, com
+  notificações ligadas.
+- **Firebase:** app iOS registrado no mesmo projeto `rapidinho-entrega` do
+  Android (`1:542492977454:ios:dfada2802dce85c303f2bf`) e
+  `GoogleService-Info.plist` salvo em `.rapidinho-contas`. O login por SMS usa o
+  captcha pelo "Encoded App ID" quando a notificação silenciosa falhar.
 
-## 2. Firebase: registrar o app do iPhone (login por SMS)
+## 1. Apple: criar o app
 
-1. No console do Firebase do projeto do Rapidinho, vá em **Configurações do
-   projeto > Seus apps > Adicionar app > iOS**, com o pacote
-   `br.com.rapidinhoentrega.app`.
-2. Baixe o `GoogleService-Info.plist` e salve em
-   `C:\Users\fusea\.rapidinho-contas\GoogleService-Info.plist`.
-3. Na aba **Cloud Messaging**, em **Configuração do app Apple**, envie a chave
-   APNs (`.p8`) do passo 1, com o Key ID e o Team ID. Sem ela, o login por SMS
-   no iPhone cai num captcha antes de mandar o código.
+A Apple não deixa criar o app pela API. Em <https://appstoreconnect.apple.com>,
+**Apps > + > Novo app**: iOS, nome "Rapidinho Entrega", Português (Brasil),
+pacote `br.com.rapidinhoentrega.app`, SKU `rapidinho`. Depois, em
+**Informações do app**, copie o **ID Apple** (10 dígitos) para o `eas.json`.
+
+## 2. Firebase: enviar a chave APNs
+
+Só pelo console (a API não aceita): **Configurações do projeto > Cloud
+Messaging > Configuração do app Apple > Chave de autenticação de APNs**, envie
+`AuthKey_LG4UHJ43LY.p8` com Key ID `LG4UHJ43LY` e Team ID `P8XTL43RG6`.
 
 ## 3. Expo: conta e ligação do projeto
 
