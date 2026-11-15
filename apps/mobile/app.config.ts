@@ -11,6 +11,11 @@ import { withAndroidManifest } from 'expo/config-plugins';
 const ARQUIVO_DO_FIREBASE =
   process.env.GOOGLE_SERVICES_JSON ?? join(homedir(), '.rapidinho-contas', 'google-services.json');
 
+/** Mesmo esquema para o iOS. Na nuvem da Expo, chega pela variável de arquivo GOOGLE_SERVICE_INFO_PLIST. */
+const ARQUIVO_DO_FIREBASE_IOS =
+  process.env.GOOGLE_SERVICE_INFO_PLIST ??
+  join(homedir(), '.rapidinho-contas', 'GoogleService-Info.plist');
+
 // APK de teste apontado para o computador na rede local fala HTTP; o da loja, nunca.
 const API_LOCAL = (process.env.EXPO_PUBLIC_API_URL ?? '').startsWith('http://');
 
@@ -26,13 +31,20 @@ export default ({ config }: ConfigContext): ExpoConfig =>
   withAndroidManifest(
     {
       ...(config as ExpoConfig),
+      ios: {
+        ...config.ios,
+        googleServicesFile: ARQUIVO_DO_FIREBASE_IOS,
+      },
       android: {
         ...config.android,
         googleServicesFile: ARQUIVO_DO_FIREBASE,
       },
       plugins: (config.plugins ?? []).map((plugin) =>
         Array.isArray(plugin) && plugin[0] === 'expo-build-properties'
-          ? [plugin[0], { android: { ...plugin[1].android, usesCleartextTraffic: API_LOCAL } }]
+          ? [
+              plugin[0],
+              { ...plugin[1], android: { ...plugin[1].android, usesCleartextTraffic: API_LOCAL } },
+            ]
           : plugin,
       ),
     },

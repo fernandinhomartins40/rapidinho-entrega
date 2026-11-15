@@ -8,6 +8,18 @@
     "scheme": "rapidinho",
     "userInterfaceStyle": "light",
     "backgroundColor": "#F5F6F8",
+    "ios": {
+      "bundleIdentifier": "br.com.rapidinhoentrega.app",
+      "buildNumber": "1",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": ["remote-notification"]
+      },
+      "entitlements": {
+        "aps-environment": "production"
+      }
+    },
     "android": {
       "package": "br.com.rapidinhoentrega.app",
       "versionCode": 13,
@@ -65,7 +77,14 @@
       [
         "expo-build-properties",
         {
-          "android": { "compileSdkVersion": 37, "targetSdkVersion": 36, "kotlinVersion": "2.3.20" }
+          "android": {
+            "compileSdkVersion": 37,
+            "targetSdkVersion": 36,
+            "kotlinVersion": "2.3.20"
+          },
+          "ios": {
+            "useFrameworks": "static"
+          }
         }
       ]
     ],
