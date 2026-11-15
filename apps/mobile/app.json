@@ -18,7 +18,8 @@
       },
       "entitlements": {
         "aps-environment": "production"
-      }
+      },
+      "icon": "./assets/marca/icone-ios.png"
     },
     "android": {
       "package": "br.com.rapidinhoentrega.app",
