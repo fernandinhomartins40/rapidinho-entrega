@@ -252,6 +252,18 @@ enum InvoiceStatus {
   CANCELLED
 }
 
+/// Onde o banner aparece no app do cliente.
+enum BannerPlacement {
+  /// Carrossel no topo da home.
+  TOP
+  /// Faixas entre as seções de lojas da home.
+  HOME_STRIP
+  /// Topo da tela de uma categoria.
+  CATEGORY
+  /// Aba de pedidos.
+  ORDERS
+}
+
 enum BoostPlacement {
   HOME_HIGHLIGHT
   TOP_BANNER
@@ -564,7 +576,8 @@ model StoreCategory {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  stores Store[]
+  stores  Store[]
+  banners Banner[]
 
   @@index([isActive, sortOrder])
   @@map("store_categories")
@@ -1723,11 +1736,14 @@ model Banner {
   cityId  String?
   city    City?   @relation(fields: [cityId], references: [id], onDelete: Cascade)
 
-  placement BoostPlacement @default(TOP_BANNER)
-  sortOrder Int            @default(0)
-  isActive  Boolean        @default(true)
-  startsAt  DateTime?
-  endsAt    DateTime?
+  placement  BannerPlacement @default(TOP)
+  /// Só com placement CATEGORY: a categoria onde aparece; null = todas.
+  categoryId String?
+  category   StoreCategory?  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  sortOrder  Int             @default(0)
+  isActive   Boolean         @default(true)
+  startsAt   DateTime?
+  endsAt     DateTime?
 
   impressions Int @default(0)
   clicks      Int @default(0)

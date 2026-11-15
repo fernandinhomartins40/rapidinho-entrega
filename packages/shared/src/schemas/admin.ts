@@ -92,9 +92,9 @@ export const bannerSchema = z.object({
   linkUrl: z.string().url('URL inválida').optional().or(z.literal('')),
   storeId: cuidSchema.nullable().optional(),
   cityId: cuidSchema.nullable().optional(),
-  placement: z
-    .enum(['HOME_HIGHLIGHT', 'TOP_BANNER', 'CATEGORY_HIGHLIGHT', 'SEARCH_PRIORITY'])
-    .default('TOP_BANNER'),
+  placement: z.enum(['TOP', 'HOME_STRIP', 'CATEGORY', 'ORDERS']).default('TOP'),
+  /** Só com placement CATEGORY; vazio = todas as categorias. */
+  categoryId: cuidSchema.nullable().optional(),
   sortOrder: z.number().int().min(0).default(0),
   isActive: z.boolean().default(true),
   startsAt: z.coerce.date().nullable().optional(),

@@ -17,7 +17,12 @@ export async function criarBanner(
       linkUrl: formData.get('linkUrl') || undefined,
       storeId: formData.get('storeId') || undefined,
       cityId: formData.get('cityId') || undefined,
-      placement: formData.get('placement') || 'TOP_BANNER',
+      placement: formData.get('placement') || 'TOP',
+      // Categoria só faz sentido no banner da tela de categoria.
+      categoryId:
+        formData.get('placement') === 'CATEGORY'
+          ? formData.get('categoryId') || undefined
+          : undefined,
       sortOrder: Number(formData.get('sortOrder') ?? 0),
       isActive: boolFromForm(formData.get('isActive')),
       startsAt: formData.get('startsAt') || undefined,

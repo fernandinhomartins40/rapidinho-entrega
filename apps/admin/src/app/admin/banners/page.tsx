@@ -1,5 +1,5 @@
 import { prisma } from '@rapidinho/database';
-import { BOOST_PLACEMENT_LABEL } from '@rapidinho/shared';
+import { BANNER_PLACEMENT_LABEL } from '@rapidinho/shared';
 import { getStorage } from '@rapidinho/services';
 import { Badge, Card, CardContent } from '@rapidinho/ui';
 import { BannerDialog } from './banner-dialog';
@@ -9,13 +9,14 @@ export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Banners' };
 
 export default async function BannersPage() {
-  const [banners, cidades, lojas] = await Promise.all([
+  const [banners, cidades, lojas, categorias] = await Promise.all([
     prisma.banner.findMany({
       orderBy: [{ isActive: 'desc' }, { sortOrder: 'asc' }, { createdAt: 'desc' }],
       include: {
         image: { select: { mediumKey: true, blurDataUrl: true } },
         city: { select: { name: true, state: true } },
         store: { select: { name: true } },
+        category: { select: { name: true } },
       },
     }),
     prisma.city.findMany({
@@ -29,6 +30,11 @@ export default async function BannersPage() {
       orderBy: { name: 'asc' },
       take: 200,
     }),
+    prisma.storeCategory.findMany({
+      where: { isActive: true },
+      select: { id: true, name: true },
+      orderBy: { sortOrder: 'asc' },
+    }),
   ]);
 
   const storage = getStorage();
@@ -39,10 +45,10 @@ export default async function BannersPage() {
         <div>
           <h1 className="text-2xl font-bold">Banners</h1>
           <p className="text-muted-foreground">
-            Campanhas da plataforma na home do app. Formato 21:9.
+            Campanhas da plataforma no app: topo e meio da home, categorias e pedidos. Formato 21:9.
           </p>
         </div>
-        <BannerDialog cidades={cidades} lojas={lojas} />
+        <BannerDialog cidades={cidades} lojas={lojas} categorias={categorias} />
       </header>
 
       {banners.length === 0 ? (
@@ -76,7 +82,8 @@ export default async function BannersPage() {
                     <div className="min-w-0">
                       <p className="truncate font-semibold">{banner.title}</p>
                       <p className="text-muted-foreground text-sm">
-                        {BOOST_PLACEMENT_LABEL[banner.placement]} ·{' '}
+                        {BANNER_PLACEMENT_LABEL[banner.placement]}
+                        {banner.category ? ` (${banner.category.name})` : ''} ·{' '}
                         {banner.city
                           ? `${banner.city.name} — ${banner.city.state}`
                           : 'Todas as cidades'}

@@ -88,7 +88,7 @@ async function carregarVitrine(citySlug: string) {
       },
     }),
     prisma.banner.findMany({
-      where: filtroDeBannerAtivo(cidade.id, agora),
+      where: { ...filtroDeBannerAtivo(cidade.id, agora), placement: 'TOP' },
       orderBy: { sortOrder: 'asc' },
       take: 5,
       select: { id: true, title: true, linkUrl: true, image: { select: SELECT_IMAGEM } },

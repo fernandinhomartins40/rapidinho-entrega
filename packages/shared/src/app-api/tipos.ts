@@ -205,10 +205,16 @@ export interface RespostaCidades {
   cidades: Cidade[];
 }
 
+/** Onde o banner aparece; vem do campo "Posição" do painel. */
+export type PosicaoDoBanner = 'TOP' | 'HOME_STRIP' | 'CATEGORY' | 'ORDERS';
+
 export interface BannerDaVitrine {
   id: string;
   titulo: string;
   imagemUrl: string;
+  posicao: PosicaoDoBanner;
+  /** Só na posição CATEGORY: slug da categoria; null = todas. */
+  categoriaSlug: string | null;
   /** Loja vinculada; null quando ela saiu do ar ou o banner não tem loja. */
   lojaSlug: string | null;
   linkUrl: string | null;

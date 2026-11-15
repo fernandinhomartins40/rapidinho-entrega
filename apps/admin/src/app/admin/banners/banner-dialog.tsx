@@ -17,18 +17,21 @@ import {
   Label,
   Select,
 } from '@rapidinho/ui';
-import { BOOST_PLACEMENT_LABEL } from '@rapidinho/shared';
+import { BANNER_PLACEMENT_LABEL } from '@rapidinho/shared';
 import { criarBanner } from './actions';
 import { ACTION_IDLE } from '@/lib/action-state';
 
 export function BannerDialog({
   cidades,
   lojas,
+  categorias,
 }: {
   cidades: { id: string; name: string; state: string }[];
   lojas: { id: string; name: string }[];
+  categorias: { id: string; name: string }[];
 }) {
   const [aberto, setAberto] = useState(false);
+  const [posicao, setPosicao] = useState('TOP');
   const [imageId, setImageId] = useState<string | null>(null);
   const [state, enviar, enviando] = useActionState(criarBanner, ACTION_IDLE);
 
@@ -113,8 +116,13 @@ export function BannerDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="placement">Posição</Label>
-              <Select id="placement" name="placement" defaultValue="TOP_BANNER">
-                {Object.entries(BOOST_PLACEMENT_LABEL).map(([valor, rotulo]) => (
+              <Select
+                id="placement"
+                name="placement"
+                value={posicao}
+                onChange={(evento) => setPosicao(evento.target.value)}
+              >
+                {Object.entries(BANNER_PLACEMENT_LABEL).map(([valor, rotulo]) => (
                   <option key={valor} value={valor}>
                     {rotulo}
                   </option>
@@ -126,6 +134,20 @@ export function BannerDialog({
               <Input id="sortOrder" name="sortOrder" inputMode="numeric" defaultValue={0} />
             </div>
           </div>
+
+          {posicao === 'CATEGORY' ? (
+            <div>
+              <Label htmlFor="categoryId">Categoria</Label>
+              <Select id="categoryId" name="categoryId" defaultValue="">
+                <option value="">Todas as categorias</option>
+                {categorias.map((categoria) => (
+                  <option key={categoria.id} value={categoria.id}>
+                    {categoria.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          ) : null}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>

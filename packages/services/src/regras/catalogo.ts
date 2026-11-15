@@ -231,12 +231,15 @@ async function bannersDaVitrine(cityId: string, agora: Date): Promise<BannerDaVi
   const banners = await prisma.banner.findMany({
     where: filtroDeBannerAtivo(cityId, agora),
     orderBy: { sortOrder: 'asc' },
-    take: 5,
+    // Todas as posições numa leitura só; o app separa cada uma no seu lugar.
+    take: 40,
     select: {
       id: true,
       title: true,
       linkUrl: true,
       storeId: true,
+      placement: true,
+      category: { select: { slug: true } },
       image: { select: SELECT_IMAGEM },
       store: { select: { slug: true, status: true, deletedAt: true } },
     },
@@ -257,6 +260,8 @@ async function bannersDaVitrine(cityId: string, agora: Date): Promise<BannerDaVi
         id: banner.id,
         titulo: banner.title,
         imagemUrl,
+        posicao: banner.placement,
+        categoriaSlug: banner.category?.slug ?? null,
         // Loja suspensa não pode ser destino de campanha.
         lojaSlug: noAr ? banner.store!.slug : null,
         linkUrl: banner.linkUrl,

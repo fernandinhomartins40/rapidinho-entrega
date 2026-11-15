@@ -156,6 +156,8 @@ describe('vitrineDoApp', () => {
         title: 'Promo',
         linkUrl: 'https://rapidinho.com/x?cupom=festa10',
         storeId: 'l1',
+        placement: 'CATEGORY',
+        category: { slug: 'farmacia' },
         image: imagem,
         store: { slug: 'mercado', status: 'ACTIVE', deletedAt: null },
       },
@@ -166,7 +168,13 @@ describe('vitrineDoApp', () => {
 
     const [banner] = (await vitrineDoApp('cidade'))!.banners;
 
-    expect(banner).toMatchObject({ id: 'b1', lojaSlug: 'mercado', cupom: 'FESTA10' });
+    expect(banner).toMatchObject({
+      id: 'b1',
+      lojaSlug: 'mercado',
+      cupom: 'FESTA10',
+      posicao: 'CATEGORY',
+      categoriaSlug: 'farmacia',
+    });
     expect(banner?.imagemUrl).toContain('x-large');
   });
 

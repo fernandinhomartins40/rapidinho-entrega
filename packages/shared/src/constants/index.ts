@@ -97,6 +97,14 @@ export const VEHICLE_TYPE_LABEL = {
   ON_FOOT: 'A pé',
 } as const;
 
+/** Onde o banner aparece no app do cliente. */
+export const BANNER_PLACEMENT_LABEL = {
+  TOP: 'Carrossel do topo da home',
+  HOME_STRIP: 'Faixa no meio da home',
+  CATEGORY: 'Tela de categoria',
+  ORDERS: 'Aba de pedidos',
+} as const;
+
 export const BOOST_PLACEMENT_LABEL = {
   HOME_HIGHLIGHT: 'Destaque na home',
   TOP_BANNER: 'Banner de topo',
