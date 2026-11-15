@@ -19,9 +19,9 @@ import { conferirCodigo, enviarCodigo, mensagemDoFirebase, type Confirmacao } fr
 import { useSessao } from '@/api/sessao';
 import { Botao, T, Toque } from '@/componentes/base';
 import { Opcao } from '@/componentes/formulario';
-import { cores, degradeDaMarca, espaco, fontes, raio, toqueMinimo } from '@/tema/tokens';
+import { cores, degradeDaNoite, espaco, fontes, raio, toqueMinimo } from '@/tema/tokens';
 
-const MASCOTE = require('@/assets/marca/mascote.png');
+const LETREIRO = require('@/assets/marca/letreiro.png');
 const ESPERA_PARA_REENVIO = 45;
 
 /** "(11) 98888-7777" a partir dos dígitos digitados. */
@@ -111,7 +111,7 @@ export default function Entrar() {
       <Stack.Screen options={{ headerShown: false }} />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
         <LinearGradient
-          colors={degradeDaMarca}
+          colors={degradeDaNoite}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[estilos.topo, { paddingTop: topo + espaco.s }]}
@@ -127,7 +127,12 @@ export default function Entrar() {
           >
             <ArrowLeft size={22} color={cores.textoNaCor} />
           </Toque>
-          <Image source={MASCOTE} style={estilos.mascote} contentFit="contain" />
+          <Image
+            source={LETREIRO}
+            style={estilos.logo}
+            contentFit="contain"
+            accessibilityLabel="Rapidinho Entrega"
+          />
           <T v="gigante" cor={cores.textoNaCor}>
             {noCodigo ? 'Digite o código' : 'Entre com seu celular'}
           </T>
@@ -246,7 +251,7 @@ const estilos = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.2)',
   },
-  mascote: { width: 96, height: 96, alignSelf: 'flex-end', marginTop: -espaco.xl },
+  logo: { width: 180, height: 38, marginVertical: espaco.m },
   corpo: { padding: espaco.l, gap: espaco.l },
   telefone: {
     flexDirection: 'row',

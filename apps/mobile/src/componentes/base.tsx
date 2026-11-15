@@ -2,7 +2,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import type { LucideIcon } from 'lucide-react-native';
-import { RefreshCw, ShoppingBag } from 'lucide-react-native';
+import { RefreshCw } from 'lucide-react-native';
 import { useEffect, type ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -34,7 +34,7 @@ import {
   type ChaveDaCategoria,
 } from '@/tema/tokens';
 import { urlDaImagem } from '@/api/cliente';
-import type { Icone3d } from '@/tema/icones';
+import { iconeDaCategoria } from '@/tema/categorias';
 
 const PressableAnimado = Animated.createAnimatedComponent(Pressable);
 
@@ -151,14 +151,13 @@ export function Botao({
 
 /**
  * Foto ausente nunca vira quadrado cinza: vira a cor da categoria, com o
- * ícone 3D dela quando houver.
+ * ícone de linha dela.
  */
 export function Foto({
   url,
   categoria = 'outros',
-  Icone = ShoppingBag,
+  Icone,
   tamanhoDoIcone = 32,
-  reserva,
   ajuste = 'cover',
   estilo,
 }: {
@@ -166,13 +165,13 @@ export function Foto({
   categoria?: ChaveDaCategoria;
   Icone?: LucideIcon;
   tamanhoDoIcone?: number;
-  reserva?: Icone3d;
   /** `contain` mostra a imagem inteira: logo não pode perder as pontas. */
   ajuste?: 'cover' | 'contain';
   estilo?: StyleProp<ViewStyle>;
 }) {
   const fonte = urlDaImagem(url);
   const tom = coresDaCategoria[categoria];
+  const Reserva = Icone ?? iconeDaCategoria(categoria);
 
   return (
     <View style={[estilos.foto, { backgroundColor: tom.fundo }, estilo]}>
@@ -184,10 +183,8 @@ export function Foto({
           transition={180}
           recyclingKey={fonte}
         />
-      ) : reserva ? (
-        <Image source={reserva} style={estilos.reserva} contentFit="contain" />
       ) : (
-        <Icone size={tamanhoDoIcone} color={tom.cor} strokeWidth={2} />
+        <Reserva size={tamanhoDoIcone} color={tom.cor} strokeWidth={1.8} />
       )}
     </View>
   );
@@ -274,7 +271,6 @@ const estilos = StyleSheet.create({
   botaoSecundario: { backgroundColor: cores.marcaClara },
   botaoPerigo: { backgroundColor: cores.perigoClaro },
   foto: { overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
-  reserva: { width: '70%', height: '70%' },
   selo: {
     alignSelf: 'flex-start',
     paddingHorizontal: espaco.s,

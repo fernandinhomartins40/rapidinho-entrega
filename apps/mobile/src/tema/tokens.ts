@@ -2,27 +2,30 @@ import { Platform, type ViewStyle } from 'react-native';
 
 /** Tokens do app. Ver MOBILE-DESIGN.md: tela nenhuma define cor ou medida solta. */
 export const cores = {
-  marca: '#FF5A1F',
-  marcaEscura: '#D93F0B',
-  marcaClara: '#FFEDE5',
+  // Laranja da marca nova (o mesmo do site). Texto branco sobre ele passa no
+  // contraste de texto grande; texto miúdo laranja usa `marcaEscura`.
+  marca: '#E65100',
+  marcaViva: '#FF6B00',
+  marcaEscura: '#C2410C',
+  marcaClara: '#FFF1E6',
   vermelho: '#E6192B',
   amarelo: '#FFC400',
 
-  // Azul-noite da marca: banners e chamados fortes. O topo das telas é branco.
-  noite: '#1C1A2E',
-  noiteMedia: '#2A2742',
-  noiteClara: '#3B3758',
+  // Preto da marca: topo da home, banners e chamados fortes.
+  noite: '#111214',
+  noiteMedia: '#1C1D20',
+  noiteClara: '#2A2B30',
   textoNaNoite: '#FFFFFF',
   textoNaNoiteFraco: 'rgba(255,255,255,0.72)',
 
-  fundo: '#F5F5F8',
+  fundo: '#F5F6F8',
   superficie: '#FFFFFF',
-  superficieAlta: '#EFEFF4',
-  linha: '#E6E6EC',
+  superficieAlta: '#ECEDF0',
+  linha: '#E4E5E9',
 
-  texto: '#23140C',
-  textoMedio: '#6F5B4F',
-  textoFraco: '#8C7768',
+  texto: '#111214',
+  textoMedio: '#4B4F56',
+  textoFraco: '#6B7078',
   textoNaCor: '#FFFFFF',
 
   sucesso: '#0E8A47',
@@ -33,9 +36,8 @@ export const cores = {
   avisoClaro: '#FFF3CC',
 } as const;
 
-export const degradeDaMarca = ['#FF8A1F', '#FF5A1F', '#F0361F'] as const;
-export const degradeDaNoite = ['#1C1A2E', '#2A2742', '#3A2E4A'] as const;
-export const degradeDoSol = ['#FFD233', '#FFB21A', '#FF8A1F'] as const;
+export const degradeDaMarca = ['#FF8A2B', '#F25C00', '#D94A00'] as const;
+export const degradeDaNoite = ['#111214', '#1C1D20', '#26272B'] as const;
 
 /**
  * Cor por segmento: bater o olho e saber o que é, sem ler. `degrade` pinta o
@@ -58,8 +60,8 @@ export const espaco = { xs: 4, s: 8, m: 12, l: 16, xl: 24, xxl: 32 } as const;
 export const raio = { pequeno: 8, medio: 12, grande: 16, folha: 24, total: 999 } as const;
 
 export const fontes = {
-  tituloForte: 'BricolageGrotesque_800ExtraBold',
-  titulo: 'BricolageGrotesque_700Bold',
+  tituloForte: 'Poppins_800ExtraBold',
+  titulo: 'Poppins_700Bold',
   corpo: 'DMSans_400Regular',
   corpoMedio: 'DMSans_500Medium',
   corpoForte: 'DMSans_700Bold',

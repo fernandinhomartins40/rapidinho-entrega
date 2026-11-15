@@ -117,7 +117,7 @@ export default function Pedido() {
         }
       >
         <LinearGradient
-          colors={cancelado ? ['#8C7768', '#6F5B4F'] : degradeDaMarca}
+          colors={cancelado ? ['#6B7078', '#4B4F56'] : degradeDaMarca}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={estilos.destaque}

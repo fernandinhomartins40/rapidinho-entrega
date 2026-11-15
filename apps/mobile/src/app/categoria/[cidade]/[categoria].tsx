@@ -8,7 +8,7 @@ import { chamar, ErroDaApi } from '@/api/cliente';
 import { Botao, EstadoDaTela, ErroDaTela, Esqueleto } from '@/componentes/base';
 import { BotaoNoTopo, Pilulas, TopoDaTela } from '@/componentes/topo';
 import { useFolgaInferior } from '@/componentes/folga';
-import { CartaoDeLoja } from '@/componentes/vitrine';
+import { CarrosselDeCampanhas, CartaoDeLoja } from '@/componentes/vitrine';
 import { chaveDaCategoria, iconeDaCategoria } from '@/tema/categorias';
 import { cores, espaco, raio } from '@/tema/tokens';
 
@@ -34,6 +34,10 @@ export default function Categoria() {
       filtro === '*' ? irmas.some((c) => c.slug === l.categoriaSlug) : l.categoriaSlug === filtro,
     )
     .sort((a, b) => Number(b.aberta) - Number(a.aberta));
+  // Posição "Tela de categoria": sem categoria marcada, vale para todas.
+  const banners = (vitrine.data?.banners ?? []).filter(
+    (b) => b.posicao === 'CATEGORY' && (b.categoriaSlug === null || b.categoriaSlug === categoria),
+  );
 
   return (
     <View style={estilos.tela}>
@@ -79,6 +83,11 @@ export default function Categoria() {
             { paddingBottom: folga },
             lojas.length === 0 && { flexGrow: 1 },
           ]}
+          ListHeaderComponent={
+            banners.length > 0 ? (
+              <CarrosselDeCampanhas banners={banners} cidade={cidade} />
+            ) : undefined
+          }
           ListEmptyComponent={
             <EstadoDaTela
               Icone={Store}

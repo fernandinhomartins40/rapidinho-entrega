@@ -1,10 +1,31 @@
 import { useQuery } from '@tanstack/react-query';
-import { router } from 'expo-router';
-import { ChevronRight, MapPin, ShoppingBag } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { Image } from 'expo-image';
+import { router, useFocusEffect } from 'expo-router';
+import { setStatusBarStyle } from 'expo-status-bar';
+import type { LucideIcon } from 'lucide-react-native';
+import {
+  ChevronDown,
+  ChevronRight,
+  LayoutGrid,
+  ListChecks,
+  MapPin,
+  Pill,
+  Search,
+  ShoppingBag,
+  ShoppingBasket,
+  Store,
+  UtensilsCrossed,
+} from 'lucide-react-native';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { ConfiguracaoDoApp, LojaDaVitrine, Segmento, Vitrine } from '@contrato';
+import type {
+  BannerDaVitrine,
+  ConfiguracaoDoApp,
+  LojaDaVitrine,
+  Segmento,
+  Vitrine,
+} from '@contrato';
 import { useCidade } from '@/api/cidade';
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { useSessao } from '@/api/sessao';
@@ -18,22 +39,44 @@ import {
   CartaoDeLoja,
   CartaoDeLojaAberta,
   CartaoDeProduto,
+  FaixaDeBanner,
   FaixaDeCategorias,
   Secao,
   SecaoDeCampanha,
 } from '@/componentes/vitrine';
-import { icones3d, type Icone3d } from '@/tema/icones';
 import { cores, elevacao, espaco, raio, toqueMinimo } from '@/tema/tokens';
+
+const LETREIRO = require('@/assets/marca/letreiro.png');
 
 type Aba = 'TUDO' | Segmento;
 
-const ABAS: { chave: Aba; rotulo: string; imagem: Icone3d }[] = [
-  { chave: 'TUDO', rotulo: 'tudo', imagem: icones3d.tudo },
-  { chave: 'RESTAURANT', rotulo: 'restaurantes', imagem: icones3d.restaurantes },
-  { chave: 'MARKET', rotulo: 'mercados', imagem: icones3d.mercados },
-  { chave: 'PHARMACY', rotulo: 'farmácias', imagem: icones3d.farmacias },
-  { chave: 'OTHER', rotulo: 'outros', imagem: icones3d.outros },
+const ABAS: { chave: Aba; rotulo: string; Icone: LucideIcon }[] = [
+  { chave: 'TUDO', rotulo: 'Tudo', Icone: LayoutGrid },
+  { chave: 'RESTAURANT', rotulo: 'Restaurantes', Icone: UtensilsCrossed },
+  { chave: 'MARKET', rotulo: 'Mercados', Icone: ShoppingBasket },
+  { chave: 'PHARMACY', rotulo: 'Farmácias', Icone: Pill },
+  { chave: 'OTHER', rotulo: 'Outros', Icone: Store },
 ];
+
+/**
+ * Banners da posição "Faixa no meio da home", entregues um a um na ordem em
+ * que a tela os pede; o que sobrar sai junto antes de "todas as lojas".
+ */
+function distribuidorDeFaixas(faixas: BannerDaVitrine[], cidade: string) {
+  let proxima = 0;
+  const desenhar = (banner: BannerDaVitrine) => (
+    <FaixaDeBanner key={banner.id} banner={banner} cidade={cidade} />
+  );
+  return {
+    uma: () => {
+      const banner = faixas[proxima];
+      if (!banner) return null;
+      proxima += 1;
+      return desenhar(banner);
+    },
+    resto: () => faixas.slice(proxima).map(desenhar),
+  };
+}
 
 export default function Inicio() {
   const { cidade } = useCidade();
@@ -45,6 +88,14 @@ export default function Inicio() {
   const primeiroNome = usuario?.nome?.trim().split(' ')[0];
   const [aba, setAba] = useState<Aba>('TUDO');
   const itensNaSacola = useCarrinho().data?.quantidadeDeItens ?? 0;
+
+  // Topo preto: hora e bateria em branco só enquanto a home está na frente.
+  useFocusEffect(
+    useCallback(() => {
+      setStatusBarStyle('light');
+      return () => setStatusBarStyle('dark');
+    }, []),
+  );
 
   const vitrine = useQuery({
     queryKey: ['vitrine', cidade],
@@ -84,27 +135,17 @@ export default function Inicio() {
     };
   }, [dados, aba]);
 
+  // Topo preto da marca, como na tela do app mostrada na landing.
   const cabecalho = (
-    <View style={[estilos.topo, elevacao.baixa, { paddingTop: topo + espaco.s }]}>
+    <View style={[estilos.topo, { paddingTop: topo + espaco.s }]}>
       <View style={estilos.linhaDoTopo}>
-        <Toque
-          accessibilityLabel="Trocar cidade"
-          onPress={() => router.push('/cidades')}
-          style={estilos.cidade}
-        >
-          <MapPin size={26} color={cores.marca} />
-          <View style={{ flex: 1 }}>
-            <View style={estilos.cidadeNome}>
-              <T v="titulo3" cor={cores.marca} numberOfLines={1}>
-                {dados ? `${dados.cidade.nome} - ${dados.cidade.uf}` : 'Escolha a cidade'}
-              </T>
-              <ChevronRight size={20} color={cores.marca} />
-            </View>
-            <T v="legenda" cor={cores.textoMedio}>
-              {primeiroNome ? `Olá, ${primeiroNome}! O que vai ser hoje?` : 'entre ou cadastre-se'}
-            </T>
-          </View>
-        </Toque>
+        <Image
+          source={LETREIRO}
+          style={estilos.letreiro}
+          contentFit="contain"
+          accessibilityLabel="Rapidinho Entrega"
+        />
+        <View style={{ flex: 1 }} />
         <BotaoNoTopo
           Icone={ShoppingBag}
           rotulo={itensNaSacola ? `Sacola: ${itensNaSacola} itens` : 'Sacola'}
@@ -112,9 +153,42 @@ export default function Inicio() {
           aviso={itensNaSacola}
         />
       </View>
-      {abas.length > 1 ? <Pilulas<Aba> opcoes={abas} valor={aba} aoMudar={setAba} /> : null}
+      <Toque
+        accessibilityLabel="Trocar cidade"
+        onPress={() => router.push('/cidades')}
+        style={estilos.cidade}
+      >
+        <MapPin size={22} color={cores.marcaViva} />
+        <View style={{ flex: 1 }}>
+          <T v="legenda" cor={cores.textoNaNoiteFraco}>
+            {primeiroNome ? `Olá, ${primeiroNome}! Entregar em` : 'Entregar em'}
+          </T>
+          <View style={estilos.cidadeNome}>
+            <T v="titulo3" cor={cores.textoNaNoite} numberOfLines={1}>
+              {dados ? `${dados.cidade.nome} - ${dados.cidade.uf}` : 'Escolha a cidade'}
+            </T>
+            <ChevronDown size={18} color={cores.marcaViva} />
+          </View>
+        </View>
+      </Toque>
+      <Toque
+        accessibilityLabel="Buscar lojas e produtos"
+        onPress={() => router.push('/busca')}
+        style={estilos.busca}
+      >
+        <Search size={20} color={cores.textoMedio} />
+        <T cor={cores.textoMedio}>O que você precisa hoje?</T>
+      </Toque>
+      {abas.length > 1 ? <Pilulas<Aba> opcoes={abas} valor={aba} aoMudar={setAba} escuro /> : null}
     </View>
   );
+
+  const faixas = dados
+    ? distribuidorDeFaixas(
+        dados.banners.filter((banner) => banner.posicao === 'HOME_STRIP'),
+        dados.cidade.slug,
+      )
+    : null;
 
   return (
     <View style={estilos.tela}>
@@ -148,7 +222,8 @@ export default function Inicio() {
         ) : (
           <View style={estilos.corpo}>
             <CarrosselDeCampanhas
-              banners={dados.banners}
+              // Banner sem posição (API antiga) conta como topo.
+              banners={dados.banners.filter((banner) => (banner.posicao ?? 'TOP') === 'TOP')}
               cidade={dados.cidade.slug}
               nomeDaCidade={dados.cidade.nome}
             />
@@ -157,11 +232,13 @@ export default function Inicio() {
               <FaixaDeCategorias categorias={filtrado.categorias} cidade={dados.cidade.slug} />
             ) : null}
 
+            {faixas?.uma()}
+
             {/* Logo no alto: quem abre o app à noite precisa ver de cara onde
                 ainda dá para pedir, antes de escolher uma loja fechada. */}
             {filtrado.abertas.length > 0 ? (
               <Secao
-                titulo="abertas agora"
+                titulo="Abertas agora"
                 subtitulo={
                   filtrado.abertas.length === 1
                     ? '1 loja recebendo pedidos'
@@ -190,12 +267,17 @@ export default function Inicio() {
               </View>
             ) : null}
 
+            {faixas?.uma()}
+
             {filtrado.secoes.map((secao) => (
-              <SecaoDeCampanha key={secao.id} secao={secao} cidade={dados.cidade.slug} />
+              <View key={secao.id} style={estilos.corpo}>
+                <SecaoDeCampanha secao={secao} cidade={dados.cidade.slug} />
+                {faixas?.uma()}
+              </View>
             ))}
 
             {filtrado.saindoAgora.length > 0 ? (
-              <Secao titulo="saindo agora" subtitulo="o que a cidade está pedindo nesta hora" fundo>
+              <Secao titulo="Saindo agora" subtitulo="O que a cidade está pedindo nesta hora" fundo>
                 <FlatList
                   data={filtrado.saindoAgora}
                   horizontal
@@ -211,15 +293,17 @@ export default function Inicio() {
 
             {configuracao.data?.recursos.pedidoPorLista !== false ? (
               <CartaoDeAtalho
-                Icone={icones3d.pedirPorLista}
+                Icone={ListChecks}
                 titulo="Pedir por lista"
                 texto="Mande a lista. A gente monta o pedido nas lojas abertas."
                 aoTocar={() => router.push('/lista')}
               />
             ) : null}
 
+            {faixas?.resto()}
+
             <Secao
-              titulo="todas as lojas"
+              titulo="Todas as lojas"
               subtitulo={`${filtrado.abertas.length} abertas de ${
                 filtrado.abertas.length + filtrado.fechadas.length
               } na cidade`}
@@ -230,7 +314,7 @@ export default function Inicio() {
               {filtrado.fechadas.length > 0 ? (
                 <>
                   <T v="corpoForte" cor={cores.textoMedio} style={estilos.rotuloFechadas}>
-                    fechadas agora
+                    Fechadas agora
                   </T>
                   <ListaDeLojas lojas={filtrado.fechadas} cidade={dados.cidade.slug} />
                 </>
@@ -247,7 +331,7 @@ export default function Inicio() {
           style={[estilos.chamado, elevacao.alta, { bottom: ALTURA_DA_BARRA + baixo + espaco.m }]}
         >
           <T v="titulo3" cor={cores.textoNaCor}>
-            entre ou cadastre-se
+            Entre ou cadastre-se
           </T>
           <ChevronRight size={22} color={cores.textoNaCor} />
         </Toque>
@@ -288,20 +372,29 @@ const estilos = StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   conteudo: { flexGrow: 1 },
   topo: {
-    backgroundColor: cores.superficie,
+    backgroundColor: cores.noite,
     paddingHorizontal: espaco.l,
-    paddingBottom: espaco.m,
+    paddingBottom: espaco.l,
     gap: espaco.m,
     borderBottomLeftRadius: raio.folha,
     borderBottomRightRadius: raio.folha,
   },
   linhaDoTopo: { flexDirection: 'row', alignItems: 'center', gap: espaco.s },
+  letreiro: { width: 150, height: 32 },
   cidade: {
-    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: espaco.s,
+    minHeight: toqueMinimo,
+  },
+  busca: {
+    minHeight: toqueMinimo + 4,
+    borderRadius: raio.medio,
+    backgroundColor: cores.superficie,
+    paddingHorizontal: espaco.l,
     flexDirection: 'row',
     alignItems: 'center',
     gap: espaco.m,
-    minHeight: toqueMinimo + 8,
   },
   cidadeNome: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   corpo: { gap: espaco.xl, paddingTop: espaco.l },

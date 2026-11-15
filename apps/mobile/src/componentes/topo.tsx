@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
 import { ArrowLeft } from 'lucide-react-native';
@@ -6,7 +5,6 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { T, Toque } from '@/componentes/base';
-import type { Icone3d } from '@/tema/icones';
 import { cores, elevacao, espaco, raio, toqueMinimo } from '@/tema/tokens';
 
 /**
@@ -105,8 +103,11 @@ export function Pilulas<C extends string>({
   opcoes,
   valor,
   aoMudar,
+  escuro,
 }: {
-  opcoes: { chave: C; rotulo: string; imagem?: Icone3d }[];
+  opcoes: { chave: C; rotulo: string; Icone?: LucideIcon }[];
+  /** Sobre o topo preto da home: pílulas em contorno claro. */
+  escuro?: boolean;
   valor: C;
   aoMudar: (c: C) => void;
 }) {
@@ -125,12 +126,23 @@ export function Pilulas<C extends string>({
             accessibilityState={{ selected: ligada }}
             accessibilityLabel={o.rotulo}
             onPress={() => aoMudar(o.chave)}
-            style={[estilos.pilula, ligada && estilos.pilulaLigada]}
+            style={[
+              estilos.pilula,
+              escuro && estilos.pilulaNoEscuro,
+              ligada && (escuro ? estilos.pilulaLigadaNoEscuro : estilos.pilulaLigada),
+            ]}
           >
-            {o.imagem ? (
-              <Image source={o.imagem} style={estilos.pilulaImagem} contentFit="contain" />
+            {o.Icone ? (
+              <o.Icone
+                size={18}
+                strokeWidth={2.2}
+                color={escuro ? cores.textoNaNoite : ligada ? cores.marcaEscura : cores.textoMedio}
+              />
             ) : null}
-            <T v="corpoForte" cor={ligada ? cores.marcaEscura : cores.texto}>
+            <T
+              v="corpoForte"
+              cor={escuro ? cores.textoNaNoite : ligada ? cores.marcaEscura : cores.texto}
+            >
               {o.rotulo}
             </T>
           </Toque>
@@ -193,5 +205,6 @@ const estilos = StyleSheet.create({
     gap: espaco.s,
   },
   pilulaLigada: { borderColor: cores.marca, backgroundColor: cores.marcaClara },
-  pilulaImagem: { width: 30, height: 30 },
+  pilulaNoEscuro: { borderColor: 'rgba(255,255,255,0.18)' },
+  pilulaLigadaNoEscuro: { borderColor: cores.marca, backgroundColor: cores.marca },
 });

@@ -1,19 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { CalendarDays, ChevronRight, ClipboardList } from 'lucide-react-native';
 import { useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, View } from 'react-native';
-import type { PedidoResumido, RespostaPedidos } from '@contrato';
+import type { PedidoResumido, RespostaPedidos, Vitrine } from '@contrato';
 import { useFolgaInferior } from '@/componentes/folga';
 import { chamar, ErroDaApi } from '@/api/cliente';
+import { useCidade } from '@/api/cidade';
 import { useSessao } from '@/api/sessao';
-import { Botao, dinheiro, ErroDaTela, Esqueleto, T, Toque } from '@/componentes/base';
+import { Botao, dinheiro, ErroDaTela, Esqueleto, EstadoDaTela, T, Toque } from '@/componentes/base';
 import { SeloDoStatus, TrilhaDoPedido } from '@/componentes/pedido';
 import { Pilulas, TopoDaTela } from '@/componentes/topo';
+import { CarrosselDeCampanhas } from '@/componentes/vitrine';
 import { cores, elevacao, espaco, raio } from '@/tema/tokens';
-
-const MASCOTE = require('@/assets/marca/mascote.png');
 
 type Filtro = 'todos' | 'andamento' | 'concluidos';
 
@@ -21,6 +20,15 @@ export default function Pedidos() {
   const folga = useFolgaInferior(110);
   const { usuario } = useSessao();
   const [filtro, setFiltro] = useState<Filtro>('todos');
+  const { cidade } = useCidade();
+
+  // Mesma consulta (e cache) da home: os banners da posição "Aba de pedidos".
+  const vitrine = useQuery({
+    queryKey: ['vitrine', cidade],
+    queryFn: () => chamar<Vitrine>(`cidades/${cidade}/vitrine`),
+    enabled: !!cidade,
+  });
+  const banners = (vitrine.data?.banners ?? []).filter((b) => b.posicao === 'ORDERS');
 
   const pedidos = useQuery({
     queryKey: ['pedidos'],
@@ -86,6 +94,13 @@ export default function Pedidos() {
               colors={[cores.marca]}
             />
           }
+          ListHeaderComponent={
+            banners.length > 0 && cidade ? (
+              <View style={estilos.banners}>
+                <CarrosselDeCampanhas banners={banners} cidade={cidade} />
+              </View>
+            ) : undefined
+          }
           ListEmptyComponent={
             todos.length === 0 ? (
               <Vazio
@@ -120,16 +135,12 @@ function Vazio({
   aoTocar?: () => void;
 }) {
   return (
-    <View style={estilos.vazio}>
-      <Image source={MASCOTE} style={estilos.mascote} contentFit="contain" />
-      <T v="titulo2" style={estilos.centro}>
-        {titulo}
-      </T>
-      <T cor={cores.textoMedio} style={estilos.centro}>
-        {texto}
-      </T>
-      {botao && aoTocar ? <Botao titulo={botao} aoTocar={aoTocar} /> : null}
-    </View>
+    <EstadoDaTela
+      Icone={ClipboardList}
+      titulo={titulo}
+      descricao={texto}
+      acao={botao && aoTocar ? <Botao titulo={botao} aoTocar={aoTocar} /> : undefined}
+    />
   );
 }
 
@@ -185,13 +196,6 @@ const estilos = StyleSheet.create({
     gap: espaco.m,
   },
   linha: { flexDirection: 'row', alignItems: 'center', gap: espaco.s },
-  vazio: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: espaco.xl,
-    gap: espaco.m,
-  },
-  mascote: { width: 180, height: 150 },
-  centro: { textAlign: 'center' },
+  // O carrossel já tem a margem da tela; aqui ele sai do respiro da lista.
+  banners: { marginHorizontal: -espaco.l },
 });

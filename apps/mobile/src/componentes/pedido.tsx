@@ -24,7 +24,7 @@ export function etapasDoPedido(tipo: TipoDePedido) {
 export function tomDoStatus(status: StatusDoPedido) {
   if (status === 'DELIVERED') return { cor: cores.textoNaCor, fundo: cores.sucesso };
   if (status === 'CANCELLED' || status === 'REJECTED')
-    return { cor: cores.textoNaCor, fundo: '#8E8AA0' };
+    return { cor: cores.textoNaCor, fundo: cores.textoFraco };
   if (status === 'PENDING_PAYMENT') return { cor: cores.noite, fundo: cores.amarelo };
   return { cor: cores.textoNaCor, fundo: cores.marca };
 }

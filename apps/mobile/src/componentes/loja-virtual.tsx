@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { FlatList, StyleSheet, useWindowDimensions, View } from 'react-native';
 import type { ProdutoDoCardapio } from '@contrato';
-import { type Icone3d } from '@/tema/icones';
+
 import { cores, elevacao, espaco, raio, type ChaveDaCategoria } from '@/tema/tokens';
 import { dinheiro, Foto, Selo, T, Toque } from './base';
 
@@ -75,7 +75,7 @@ export function CartaoDoProduto({
   produto,
   cidade,
   categoria,
-  reserva,
+
   largura,
   naSacola,
   podeAdicionar,
@@ -84,7 +84,7 @@ export function CartaoDoProduto({
   produto: ProdutoDoCardapio;
   cidade: string;
   categoria: ChaveDaCategoria;
-  reserva: Icone3d;
+
   largura: number;
   naSacola: number;
   /** Loja aberta. Produto com escolhas ou por peso sempre abre a própria página. */
@@ -111,7 +111,7 @@ export function CartaoDoProduto({
         <Foto
           url={produto.imagemUrl}
           categoria={categoria}
-          reserva={reserva}
+
           estilo={[estilos.foto, { height: largura }]}
         />
         {desconto > 0 ? (

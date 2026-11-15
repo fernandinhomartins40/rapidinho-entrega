@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Image } from 'expo-image';
 import { router, Stack, useFocusEffect, type ErrorBoundaryProps } from 'expo-router';
 import { Heart } from 'lucide-react-native';
 import { useCallback } from 'react';
@@ -9,12 +8,10 @@ import type { RespostaAlternarFavorito, RespostaFavoritos } from '@contrato';
 import { avisarErro } from '@/api/carrinho';
 import { chamar, ErroDaApi } from '@/api/cliente';
 import { useSessao } from '@/api/sessao';
-import { Botao, ErroDaTela, Esqueleto, T, Toque } from '@/componentes/base';
+import { Botao, ErroDaTela, Esqueleto, EstadoDaTela, T, Toque } from '@/componentes/base';
 import { TopoDaTela } from '@/componentes/topo';
 import { CartaoDeLoja } from '@/componentes/vitrine';
 import { cores, elevacao, espaco, raio, toqueMinimo } from '@/tema/tokens';
-
-const MASCOTE = require('@/assets/marca/mascote.png');
 
 export default function Favoritos() {
   const folga = useSafeAreaInsets().bottom + espaco.xl;
@@ -131,16 +128,12 @@ export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
 
 function Vazio({ texto, botao, aoTocar }: { texto: string; botao: string; aoTocar: () => void }) {
   return (
-    <View style={estilos.vazio}>
-      <Image source={MASCOTE} style={estilos.mascote} contentFit="contain" />
-      <T v="titulo2" style={estilos.centro}>
-        Nenhum favorito ainda
-      </T>
-      <T cor={cores.textoMedio} style={estilos.centro}>
-        {texto}
-      </T>
-      <Botao titulo={botao} aoTocar={aoTocar} />
-    </View>
+    <EstadoDaTela
+      Icone={Heart}
+      titulo="Nenhum favorito ainda"
+      descricao={texto}
+      acao={<Botao titulo={botao} aoTocar={aoTocar} />}
+    />
   );
 }
 
@@ -158,13 +151,4 @@ const estilos = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  vazio: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: espaco.xl,
-    gap: espaco.m,
-  },
-  mascote: { width: 180, height: 150 },
-  centro: { textAlign: 'center' },
 });

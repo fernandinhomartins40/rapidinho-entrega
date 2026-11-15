@@ -1,8 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { Image } from 'expo-image';
 import { router, Tabs } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
-import { House, ReceiptText, Search, ShoppingCart, UserRound } from 'lucide-react-native';
+import {
+  House,
+  ListChecks,
+  ReceiptText,
+  Search,
+  ShoppingCart,
+  UserRound,
+} from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { ConfiguracaoDoApp } from '@contrato';
@@ -10,7 +16,6 @@ import { useCarrinho } from '@/api/carrinho';
 import { chamar } from '@/api/cliente';
 import { T, Toque } from '@/componentes/base';
 import { ALTURA_DA_BARRA } from '@/componentes/folga';
-import { icones3d } from '@/tema/icones';
 import { cores, elevacao, fontes, raio } from '@/tema/tokens';
 
 /**
@@ -32,10 +37,10 @@ function BotaoDoMeio() {
       <Toque
         accessibilityLabel={porLista ? 'Pedir por lista' : 'Abrir a sacola'}
         onPress={() => router.push(porLista ? '/lista' : '/sacola')}
-        style={[estilos.circulo, porLista && estilos.circuloDaLista, elevacao.alta]}
+        style={[estilos.circulo, elevacao.alta]}
       >
         {porLista ? (
-          <Image source={icones3d.pedirPorLista} style={estilos.lista} contentFit="contain" />
+          <ListChecks size={26} color={cores.textoNaCor} strokeWidth={2.4} />
         ) : (
           <ShoppingCart size={26} color={cores.textoNaCor} strokeWidth={2.4} />
         )}
@@ -48,7 +53,7 @@ function BotaoDoMeio() {
         ) : null}
       </Toque>
       <T v="mini" cor={cores.marca} style={estilos.rotulo}>
-        {porLista ? 'lista' : 'sacola'}
+        {porLista ? 'Lista' : 'Sacola'}
       </T>
     </View>
   );
@@ -83,10 +88,10 @@ export default function Abas() {
         tabBarStyle: [estilos.barra, { height: ALTURA_DA_BARRA + baixo, paddingBottom: baixo + 6 }],
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'início', tabBarIcon: icone(House) }} />
+      <Tabs.Screen name="index" options={{ title: 'Início', tabBarIcon: icone(House) }} />
       <Tabs.Screen
         name="buscar"
-        options={{ title: 'busca', tabBarIcon: icone(Search) }}
+        options={{ title: 'Busca', tabBarIcon: icone(Search) }}
         listeners={{
           tabPress: (evento) => {
             evento.preventDefault();
@@ -94,9 +99,9 @@ export default function Abas() {
           },
         }}
       />
-      <Tabs.Screen name="pedir" options={{ title: 'lista', tabBarButton: () => <BotaoDoMeio /> }} />
-      <Tabs.Screen name="pedidos" options={{ title: 'pedidos', tabBarIcon: icone(ReceiptText) }} />
-      <Tabs.Screen name="conta" options={{ title: 'conta', tabBarIcon: icone(UserRound) }} />
+      <Tabs.Screen name="pedir" options={{ title: 'Lista', tabBarButton: () => <BotaoDoMeio /> }} />
+      <Tabs.Screen name="pedidos" options={{ title: 'Pedidos', tabBarIcon: icone(ReceiptText) }} />
+      <Tabs.Screen name="conta" options={{ title: 'Conta', tabBarIcon: icone(UserRound) }} />
     </Tabs>
   );
 }
@@ -121,8 +126,6 @@ const estilos = StyleSheet.create({
   pilulaLigada: { backgroundColor: cores.marcaClara },
   lugar: { flex: 1, alignItems: 'center' },
   rotulo: { marginTop: 2, fontSize: 12 },
-  circuloDaLista: { backgroundColor: cores.superficie, borderColor: cores.marca, borderWidth: 3 },
-  lista: { width: 40, height: 40 },
   circulo: {
     marginTop: -22,
     width: 58,

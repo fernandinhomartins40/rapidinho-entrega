@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import {
@@ -9,6 +8,7 @@ import {
   Heart,
   MapPin,
   Pizza,
+  Salad,
   Search,
   Star,
   Wallet,
@@ -37,7 +37,6 @@ import { BannersDaLoja, CartaoDoProduto, type BannerDaLoja } from '@/componentes
 import { useItensParaPerguntar } from '@/componentes/pergunta-do-que-odeio';
 import { Secao, SeloDeHorario } from '@/componentes/vitrine';
 import { chaveDaCategoria, iconeDaCategoria } from '@/tema/categorias';
-import { icone3dDaCategoria } from '@/tema/icones';
 import { cores, coresDaCategoria, elevacao, espaco, raio, toqueMinimo } from '@/tema/tokens';
 
 const NA_PRATELEIRA = 10;
@@ -266,7 +265,6 @@ export default function Loja() {
       produto={produto}
       cidade={cidade}
       categoria={chave}
-      reserva={icone3dDaCategoria(dados?.categoriaSlug, chave)}
       largura={largura}
       naSacola={
         noCarrinho?.itens
@@ -419,11 +417,7 @@ export default function Loja() {
                     }
                     style={estilos.pizza}
                   >
-                    <Image
-                      source={icone3dDaCategoria('marmitas', 'comida')}
-                      style={estilos.iconeDaMarmita}
-                      contentFit="contain"
-                    />
+                    <Salad size={28} color={coresDaCategoria.comida.cor} />
                     <View style={{ flex: 1 }}>
                       <T v="titulo3">Monte sua marmita</T>
                       <T v="legenda" cor={cores.textoMedio}>
@@ -735,7 +729,6 @@ const estilos = StyleSheet.create({
     borderRadius: raio.total,
     backgroundColor: cores.superficieAlta,
   },
-  iconeDaMarmita: { width: 44, height: 44 },
   pizza: {
     flexDirection: 'row',
     alignItems: 'center',

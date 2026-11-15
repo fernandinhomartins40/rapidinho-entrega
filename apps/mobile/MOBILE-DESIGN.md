@@ -7,27 +7,24 @@ Toda tela segue este documento. Valor novo de cor, tamanho ou raio entra em
 
 - **O que é:** delivery de comida, mercado, farmácia e pet de uma cidade do interior.
 - **Para quem:** cliente e motoboy, leigos, celular Android simples, sol na rua.
-- **Sensação:** vivo, moderno, de marca forte. Direção aprovada pelo dono em
-  2026-11-03, a partir das telas de referência que ele enviou.
-- **Dials:** expressão 8, movimento 5, densidade 4.
+- **Sensação:** sério, moderno, de marca forte. Rebrand aprovado pelo dono em
+  2026-11-14: o visual anterior (mascote, ícones 3D, azul-noite) parecia infantil.
+- **Dials:** expressão 6, movimento 4, densidade 4.
 
-## Direção (referência do dono)
+## Direção (rebrand de 2026-11-14, igual à landing)
 
-- **Topo azul-noite** (`degradeDaNoite`) com faixas de brilho laranja no canto,
-  cantos de baixo bem arredondados. É o `TopoEscuro` de `componentes/topo.tsx`:
-  toda tela principal usa ele, com o letreiro na home e título com ícone laranja
-  nas demais.
-- **Corpo claro** levemente lilás (`cores.fundo`), cartões brancos grandes, raio 24.
-- **Atalhos de categoria** em blocos com degradê da cor do segmento e ícone branco.
-- **Banner da marca** amarelo-laranja (`degradeDoSol`) com o entregador, quando
-  não há campanha no ar.
-- **Barra de baixo** branca flutuante com cinco lugares: Início, Pedidos, botão
-  laranja "Pedir" elevado no meio (abre a sacola), Favoritos, Perfil.
-- **Filtros** em pílula: o escolhido laranja, os outros brancos (`Pilulas`).
-- **Status do pedido** em selo colorido (laranja andando, verde entregue, cinza
-  cancelado, amarelo aguardando Pix) e trilha de etapas com ícones.
-- **Mascote** nos vazios e nas chamadas. Hoje é o entregador de capacete; trocar
-  pelo menino de boné quando o dono enviar o PNG sem fundo.
+- **Topo preto** (`cores.noite`) na home, com o letreiro branco, a cidade, a
+  busca e as pílulas de segmento. As demais telas usam o `TopoDaTela` branco.
+- **Laranja da marca** (`cores.marca`) em botões e destaques; `marcaViva` só em
+  detalhes sobre o preto.
+- **Ícones só de linha** (`lucide-react-native`). Nada de ícone 3D nem mascote:
+  estado vazio é ícone de linha num círculo laranja-claro (`EstadoDaTela`).
+- **Títulos** em Poppins, texto em DM Sans, sempre com inicial maiúscula.
+- **Banners em quatro lugares**, escolhidos no campo "Posição" do painel:
+  carrossel do topo da home, faixas entre as seções da home, topo da tela de
+  categoria (de uma categoria ou de todas) e aba de pedidos. Sem campanha, só o
+  topo da home mostra o banner da marca; os outros lugares somem.
+- **Barra de baixo** branca com o botão laranja do meio (lista ou sacola).
 
 ## Escolhas seguras
 
@@ -48,19 +45,19 @@ Toda tela segue este documento. Valor novo de cor, tamanho ou raio entra em
 
 ## Tokens
 
-- **Marca:** laranja `#FF5A1F`, vermelho `#E6192B`, amarelo `#FFC400`.
-- **Noite:** `#1C1A2E`, `#2A2742`, `#3B3758`.
+- **Marca:** laranja `#E65100` (viva `#FF6B00`, escura `#C2410C`), vermelho `#E6192B`.
+- **Preto:** `#111214`, `#1C1D20`, `#2A2B30`.
 - **Categorias:** comida laranja, mercado verde, farmácia azul, bebidas roxo,
   pet rosa, casa turquesa, outros amarelo.
-- **Texto:** Bricolage Grotesque em títulos, DM Sans no resto.
+- **Texto:** Poppins em títulos, DM Sans no resto.
 - **Forma:** 12 em campos, pílula em botões e filtros, 24 em cartões e folhas.
 - **Sombra:** duas alturas apenas, sempre com `elevation` para valer no Android.
 
 ## Regras de composição
 
 - Selo só com estado real: aberta, fechada, patrocinada, desconto, status.
-- Toda lista tem carregando (esqueleto), vazio com mascote, erro com "Tentar de
-  novo" e puxar para atualizar.
+- Toda lista tem carregando (esqueleto), vazio com ícone de linha, erro com
+  "Tentar de novo" e puxar para atualizar.
 - Foto ausente nunca vira quadrado cinza: usa o fundo da categoria com o ícone.
 - Nada de botão que não faz nada: sino só quando existir central de avisos,
   microfone só quando houver ditado próprio.

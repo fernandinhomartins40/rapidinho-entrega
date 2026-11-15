@@ -78,10 +78,8 @@ function arte(arquivo, largura) {
 }
 
 /**
- * Ícone de app: o símbolo sobre um quadrado navy arredondado.
- *
- * O PNG original é transparente e tem contorno escuro — num favicon de 16px
- * sobre aba clara ele sumiria.
+ * Ícone de app: o símbolo sobre um quadrado preto arredondado. `fundo: 'none'`
+ * deixa transparente (ícone adaptativo e tela de abertura do Android).
  */
 async function icone(lado, { margem = 0.18, raio = 0.22, fundo = NAVY } = {}) {
   const interno = Math.round(lado * (1 - margem * 2));
@@ -132,6 +130,29 @@ async function main() {
   await gravar('favicon-32.png', await icone(32, { margem: 0.12, raio: 0.25 }));
 
   await gravarMedidas();
+  await gravarDoApp();
+}
+
+/**
+ * Artes do app nativo (apps/mobile/assets/marca). Ficam fora das medidas: o
+ * React Native lê o tamanho do próprio arquivo.
+ */
+async function gravarDoApp() {
+  const pasta = join(raiz, 'apps/mobile/assets/marca');
+  const salvar = async (nome, buffer) => {
+    await writeFile(join(pasta, nome), buffer);
+    console.log(`  app/${nome}`);
+  };
+
+  console.log('\nApp:');
+  await salvar('letreiro.png', await arte('lettering-negativo.png', 600).png().toBuffer());
+  await salvar('simbolo.png', await arte('simbolo.png', 512).png().toBuffer());
+  // Ícone antigo do Android (e da Play): quadrado cheio, o sistema arredonda.
+  await salvar('icone.png', await icone(1024, { margem: 0.2, raio: 0 }));
+  // Ícone adaptativo: só o símbolo, sem fundo; a cor vem do app.json. A zona
+  // segura é o círculo central de 66%, daí a margem larga.
+  await salvar('icone-adaptativo.png', await icone(1024, { margem: 0.3, raio: 0, fundo: 'none' }));
+  await salvar('abertura-android.png', await icone(1200, { margem: 0.1, raio: 0, fundo: 'none' }));
 }
 
 await main();

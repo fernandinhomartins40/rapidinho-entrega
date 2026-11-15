@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Image } from 'expo-image';
 import { router, Stack } from 'expo-router';
 import type { LucideIcon } from 'lucide-react-native';
 import {
@@ -38,8 +37,6 @@ import { BotaoDeFalar } from '@/componentes/ditado';
 import { Cartao } from '@/componentes/formulario';
 import { TopoDaTela } from '@/componentes/topo';
 import { cores, elevacao, espaco, fontes, raio } from '@/tema/tokens';
-
-const ENTREGADOR = require('@/assets/marca/entregador.png');
 
 const IDEIAS: { rotulo: string; Icone: LucideIcon; texto: string }[] = [
   {
@@ -142,7 +139,6 @@ export default function PedidoPorLista() {
                 barata para a mais cara.
               </T>
             </View>
-            <Image source={ENTREGADOR} style={estilos.entregador} contentFit="contain" />
           </View>
         </TopoDaTela>
 
@@ -437,7 +433,6 @@ function CartaoDaLoja({
 const estilos = StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   chamada: { flexDirection: 'row', alignItems: 'center', gap: espaco.s },
-  entregador: { width: 120, height: 110 },
   // A caixa encostava no texto do topo; agora tem o respiro normal da tela.
   corpo: { padding: espaco.l, paddingTop: espaco.xl, gap: espaco.l },
   caixa: {

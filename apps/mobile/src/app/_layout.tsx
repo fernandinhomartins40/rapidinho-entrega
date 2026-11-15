@@ -1,8 +1,8 @@
 import {
-  BricolageGrotesque_700Bold,
-  BricolageGrotesque_800ExtraBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
   useFonts as useFonteDeTitulo,
-} from '@expo-google-fonts/bricolage-grotesque';
+} from '@expo-google-fonts/poppins';
 import {
   DMSans_400Regular,
   DMSans_500Medium,
@@ -44,10 +44,7 @@ const consultas = new QueryClient({
 });
 
 export default function Raiz() {
-  const [titulos] = useFonteDeTitulo({
-    BricolageGrotesque_700Bold,
-    BricolageGrotesque_800ExtraBold,
-  });
+  const [titulos] = useFonteDeTitulo({ Poppins_700Bold, Poppins_800ExtraBold });
   const [corpo] = useFonteDeCorpo({ DMSans_400Regular, DMSans_500Medium, DMSans_700Bold });
   const pronto = titulos && corpo;
 

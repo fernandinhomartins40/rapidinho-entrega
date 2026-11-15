@@ -2,17 +2,17 @@
   "expo": {
     "name": "Rapidinho",
     "slug": "rapidinho",
-    "version": "2.0.0",
+    "version": "2.1.0",
     "orientation": "default",
     "icon": "./assets/marca/icone.png",
     "scheme": "rapidinho",
     "userInterfaceStyle": "light",
-    "backgroundColor": "#FFF8F2",
+    "backgroundColor": "#F5F6F8",
     "android": {
       "package": "br.com.rapidinhoentrega.app",
-      "versionCode": 12,
+      "versionCode": 13,
       "adaptiveIcon": {
-        "backgroundColor": "#FF5A1F",
+        "backgroundColor": "#111214",
         "foregroundImage": "./assets/marca/icone-adaptativo.png"
       },
       "predictiveBackGestureEnabled": true,
@@ -33,7 +33,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#FF5A1F",
+          "backgroundColor": "#111214",
           "image": "./assets/marca/abertura-android.png",
           "imageWidth": 288
         }

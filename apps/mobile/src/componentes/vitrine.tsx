@@ -2,6 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import type { LucideIcon } from 'lucide-react-native';
 import { ChevronRight, Star } from 'lucide-react-native';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { FlatList, Linking, StyleSheet, useWindowDimensions, View } from 'react-native';
@@ -13,13 +14,12 @@ import type {
   SecaoDaVitrine,
 } from '@contrato';
 import { chamar } from '@/api/cliente';
-import { chaveDaCategoria } from '@/tema/categorias';
-import { icone3dDaCategoria, type Icone3d } from '@/tema/icones';
-import { cores, coresDaCategoria, degradeDoSol, elevacao, espaco, raio } from '@/tema/tokens';
+import { chaveDaCategoria, iconeDaCategoria } from '@/tema/categorias';
+import { cores, coresDaCategoria, degradeDaNoite, elevacao, espaco, raio } from '@/tema/tokens';
 import { dinheiro, Foto, Selo, T, Toque } from './base';
 
 const INTERVALO_DO_CARROSSEL_MS = 5000;
-const ENTREGADOR = require('@/assets/marca/entregador.png');
+const SIMBOLO = require('@/assets/marca/simbolo.png');
 
 type BannerVisivel = { item: BannerDaVitrine; index?: number | null };
 
@@ -31,31 +31,42 @@ function abrirBanner(banner: BannerDaVitrine, cidade: string) {
   }
 }
 
-/** Chamado da marca: ocupa o carrossel quando não há campanha no ar. */
+/** Chamado da marca: ocupa o carrossel do topo quando não há campanha no ar. */
 function BannerDaMarca({ altura, nomeDaCidade }: { altura: number; nomeDaCidade: string }) {
   return (
     <LinearGradient
-      colors={degradeDoSol}
+      colors={degradeDaNoite}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[estilos.banner, estilos.bannerDaMarca, { height: altura }]}
     >
       <View style={estilos.bannerDaMarcaTexto}>
-        <T v="titulo1" cor={cores.noite} style={estilos.inclinado}>
+        <T v="titulo2" cor={cores.textoNaNoite}>
           Entrega rápida e segura
         </T>
-        <T v="corpoForte" cor={cores.noite} style={estilos.inclinado}>
-          {`em ${nomeDaCidade}!`}
+        <T v="corpoForte" cor={cores.marcaViva}>
+          {`em ${nomeDaCidade}`}
         </T>
       </View>
-      <Image source={ENTREGADOR} style={estilos.entregador} contentFit="contain" />
+      <Image source={SIMBOLO} style={estilos.simbolo} contentFit="contain" />
     </LinearGradient>
   );
 }
 
+function useContagemDoBanner() {
+  const impressao = useMutation({
+    mutationFn: (id: string) => chamar(`banners/${id}/impressao`, { metodo: 'POST' }),
+  });
+  const clique = useMutation({
+    mutationFn: (id: string) => chamar(`banners/${id}/clique`, { metodo: 'POST' }),
+  });
+  return { impressao: impressao.mutate, clique: clique.mutate };
+}
+
 /**
- * Vitrine de campanhas: o espaço que o lojista negocia. Sem campanha ativa, um
- * chamado de marca ocupa o lugar, para a home nunca abrir com um buraco.
+ * Vitrine de campanhas: o espaço que o lojista negocia. Na home, sem campanha
+ * ativa, um chamado de marca ocupa o lugar; nas outras telas (categoria,
+ * pedidos), sem banner o espaço simplesmente não aparece.
  */
 export function CarrosselDeCampanhas({
   banners,
@@ -64,7 +75,8 @@ export function CarrosselDeCampanhas({
 }: {
   banners: BannerDaVitrine[];
   cidade: string;
-  nomeDaCidade: string;
+  /** Só na home: liga o banner da marca quando não há campanha. */
+  nomeDaCidade?: string;
 }) {
   const { width } = useWindowDimensions();
   const largura = width - espaco.l * 2;
@@ -73,12 +85,7 @@ export function CarrosselDeCampanhas({
   const [atual, setAtual] = useState(0);
   const vistos = useRef(new Set<string>());
 
-  const contarImpressao = useMutation({
-    mutationFn: (id: string) => chamar(`banners/${id}/impressao`, { metodo: 'POST' }),
-  });
-  const contarClique = useMutation({
-    mutationFn: (id: string) => chamar(`banners/${id}/clique`, { metodo: 'POST' }),
-  });
+  const contar = useContagemDoBanner();
 
   const aoMudar = useRef(({ viewableItems }: { viewableItems: BannerVisivel[] }) => {
     const item = viewableItems[0];
@@ -87,7 +94,7 @@ export function CarrosselDeCampanhas({
     // Uma impressão por banner a cada abertura, para o lojista receber número honesto.
     if (!vistos.current.has(item.item.id)) {
       vistos.current.add(item.item.id);
-      contarImpressao.mutate(item.item.id);
+      contar.impressao(item.item.id);
     }
   }).current;
 
@@ -104,6 +111,7 @@ export function CarrosselDeCampanhas({
   }, [banners.length]);
 
   if (banners.length === 0) {
+    if (!nomeDaCidade) return null;
     return (
       <View style={{ paddingHorizontal: espaco.l }}>
         <BannerDaMarca altura={altura} nomeDaCidade={nomeDaCidade} />
@@ -129,7 +137,7 @@ export function CarrosselDeCampanhas({
               accessibilityLabel={item.titulo}
               encolhe={0.985}
               onPress={() => {
-                contarClique.mutate(item.id);
+                contar.clique(item.id);
                 abrirBanner(item, cidade);
               }}
               style={[estilos.banner, { height: altura }]}
@@ -137,7 +145,7 @@ export function CarrosselDeCampanhas({
               <Foto url={item.imagemUrl} categoria="outros" estilo={StyleSheet.absoluteFill} />
               {item.cupom ? (
                 <View style={estilos.cupom}>
-                  <Selo texto={`CUPOM ${item.cupom}`} cor={cores.noite} fundo={cores.amarelo} />
+                  <Selo texto={`CUPOM ${item.cupom}`} cor={cores.textoNaCor} fundo={cores.noite} />
                 </View>
               ) : null}
             </Toque>
@@ -155,7 +163,7 @@ export function CarrosselDeCampanhas({
   );
 }
 
-/** Atalhos por categoria: ícone colorido num círculo claro, nome embaixo. */
+/** Atalhos por categoria: ícone de linha num quadrado branco, nome embaixo. */
 export function FaixaDeCategorias({
   categorias,
   cidade,
@@ -173,6 +181,7 @@ export function FaixaDeCategorias({
       renderItem={({ item }) => {
         const chave = chaveDaCategoria(item.slug, item.segmento);
         const tom = coresDaCategoria[chave];
+        const Icone = iconeDaCategoria(chave);
         return (
           <Toque
             accessibilityLabel={item.nome}
@@ -184,12 +193,8 @@ export function FaixaDeCategorias({
             }
             style={estilos.categoria}
           >
-            <View style={[estilos.categoriaIcone, { backgroundColor: tom.fundo }]}>
-              <Image
-                source={icone3dDaCategoria(item.slug, chave)}
-                style={estilos.categoriaImagem}
-                contentFit="contain"
-              />
+            <View style={[estilos.categoriaIcone, elevacao.baixa]}>
+              <Icone size={26} color={tom.cor} strokeWidth={1.9} />
             </View>
             <T v="legenda" numberOfLines={1} style={estilos.centro}>
               {item.nome}
@@ -234,7 +239,7 @@ export function Secao({
             style={estilos.verTudo}
           >
             <T v="corpoForte" cor={cores.marca}>
-              ver tudo
+              Ver tudo
             </T>
             <ChevronRight size={18} color={cores.marca} />
           </Toque>
@@ -252,7 +257,7 @@ export function CartaoDeAtalho({
   texto,
   aoTocar,
 }: {
-  Icone: Icone3d;
+  Icone: LucideIcon;
   titulo: string;
   texto: string;
   aoTocar: () => void;
@@ -264,7 +269,9 @@ export function CartaoDeAtalho({
       onPress={aoTocar}
       style={[estilos.atalho, elevacao.baixa]}
     >
-      <Image source={Icone} style={estilos.atalhoIcone} contentFit="contain" />
+      <View style={estilos.atalhoIcone}>
+        <Icone size={26} color={cores.marca} strokeWidth={2} />
+      </View>
       <View style={estilos.flex}>
         <T v="titulo3">{titulo}</T>
         <T v="legenda" cor={cores.textoMedio}>
@@ -293,12 +300,7 @@ export function CartaoDeProduto({
       }
       style={estilos.produto}
     >
-      <Foto
-        url={produto.imagemUrl}
-        categoria={chave}
-        reserva={icone3dDaCategoria(produto.categoriaSlug, chave)}
-        estilo={estilos.produtoFoto}
-      />
+      <Foto url={produto.imagemUrl} categoria={chave} estilo={estilos.produtoFoto} />
       <T v="titulo3" cor={cores.sucesso} style={estilos.produtoPreco}>
         {dinheiro(produto.precoCents)}
       </T>
@@ -359,7 +361,6 @@ export function LogoDeLoja({ loja, cidade }: { loja: LojaDaVitrine; cidade: stri
       <Foto
         url={loja.logoUrl ?? loja.capaUrl}
         categoria={chave}
-        reserva={icone3dDaCategoria(loja.categoriaSlug, chave)}
         estilo={[estilos.logoFoto, !loja.aberta && estilos.fotoFechada]}
       />
       <T v="legenda" numberOfLines={2} style={estilos.centro}>
@@ -373,7 +374,6 @@ export function LogoDeLoja({ loja, cidade }: { loja: LojaDaVitrine; cidade: stri
 /** Loja na faixa "abertas agora": capa, logo, tempo e entrega. */
 export function CartaoDeLojaAberta({ loja, cidade }: { loja: LojaDaVitrine; cidade: string }) {
   const chave = chaveDaCategoria(loja.categoriaSlug, loja.segmento);
-  const reserva = icone3dDaCategoria(loja.categoriaSlug, chave);
   return (
     <Toque
       accessibilityLabel={`${loja.nome}, aberta agora, ${loja.tempoMin} a ${loja.tempoMax} minutos`}
@@ -387,7 +387,6 @@ export function CartaoDeLojaAberta({ loja, cidade }: { loja: LojaDaVitrine; cida
         <Foto
           url={loja.capaUrl ?? loja.logoUrl}
           categoria={chave}
-          reserva={reserva}
           ajuste={loja.capaUrl ? 'cover' : 'contain'}
           estilo={estilos.abertaCapa}
         />
@@ -395,12 +394,7 @@ export function CartaoDeLojaAberta({ loja, cidade }: { loja: LojaDaVitrine; cida
           <SeloDeHorario aberta />
         </View>
         {loja.capaUrl ? (
-          <Foto
-            url={loja.logoUrl}
-            categoria={chave}
-            reserva={reserva}
-            estilo={estilos.abertaLogo}
-          />
+          <Foto url={loja.logoUrl} categoria={chave} estilo={estilos.abertaLogo} />
         ) : null}
       </View>
       <View style={estilos.abertaDados}>
@@ -451,6 +445,30 @@ function BannerTocavel({
     >
       <Foto url={banner.imagemUrl} categoria="outros" estilo={StyleSheet.absoluteFill} />
     </Toque>
+  );
+}
+
+/**
+ * Banner largo entre as seções da home (posição "Faixa no meio da home").
+ * Conta a impressão uma vez, ao aparecer.
+ */
+export function FaixaDeBanner({ banner, cidade }: { banner: BannerDaVitrine; cidade: string }) {
+  const { width } = useWindowDimensions();
+  const { impressao } = useContagemDoBanner();
+  const id = banner.id;
+  useEffect(() => {
+    impressao(id);
+  }, [id, impressao]);
+
+  return (
+    <View style={{ paddingHorizontal: espaco.l }}>
+      <BannerTocavel
+        banner={banner}
+        cidade={cidade}
+        largura="100%"
+        altura={Math.round(((width - espaco.l * 2) * 9) / 21)}
+      />
+    </View>
   );
 }
 
@@ -581,7 +599,6 @@ export function CartaoDeLoja({
       <Foto
         url={loja.logoUrl ?? loja.capaUrl}
         categoria={chave}
-        reserva={icone3dDaCategoria(loja.categoriaSlug, chave)}
         estilo={[estilos.lojaFoto, !loja.aberta && estilos.fotoFechada]}
       />
       <View style={estilos.lojaDados}>
@@ -629,22 +646,21 @@ const estilos = StyleSheet.create({
   flex: { flex: 1 },
   centro: { textAlign: 'center' },
   linha: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  inclinado: { transform: [{ rotate: '-4deg' }] },
   banner: { borderRadius: raio.folha, overflow: 'hidden', backgroundColor: cores.superficieAlta },
   bannerDaMarca: { flexDirection: 'row', alignItems: 'center' },
-  bannerDaMarcaTexto: { flex: 1, paddingLeft: espaco.l, gap: espaco.xs },
-  entregador: { width: '52%', height: '112%' },
+  bannerDaMarcaTexto: { flex: 1, paddingLeft: espaco.xl, gap: espaco.xs },
+  simbolo: { width: '34%', height: '62%', marginRight: espaco.xl },
   cupom: { position: 'absolute', left: espaco.m, bottom: espaco.m },
   pontos: { flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: espaco.m },
   ponto: { width: 6, height: 6, borderRadius: 3, backgroundColor: cores.linha },
   pontoAtivo: { width: 18, backgroundColor: cores.marca },
   faixa: { paddingHorizontal: espaco.l, gap: espaco.s },
   categoria: { width: 76, alignItems: 'center', gap: espaco.s },
-  categoriaImagem: { width: 50, height: 50 },
   categoriaIcone: {
     width: 64,
     height: 64,
-    borderRadius: raio.total,
+    borderRadius: raio.grande,
+    backgroundColor: cores.superficie,
     alignItems: 'center',
     justifyContent: 'center',
   },
