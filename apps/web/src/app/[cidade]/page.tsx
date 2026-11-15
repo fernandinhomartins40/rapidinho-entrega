@@ -1,4 +1,4 @@
-import { unstable_cache } from 'next/cache';
+import { cache } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -196,11 +196,11 @@ async function contextoDoCliente(cityId: string, user: Awaited<ReturnType<typeof
 }
 
 /**
- * A vitrine é igual para todo visitante: guardada por um minuto, ela poupa a
- * dúzia de consultas em sequência a cada acesso. O "aberta/fechada" das lojas
- * pode atrasar até esse minuto.
+ * Uma leitura por acesso, dividida entre o título da página e o corpo. Sem
+ * cache entre acessos: loja aprovada no painel (outro servidor) tem de
+ * aparecer na hora.
  */
-const vitrineDaCidade = unstable_cache(carregarVitrine, ['vitrine-cidade'], { revalidate: 60 });
+const vitrineDaCidade = cache(carregarVitrine);
 
 async function enderecoDeEntrega(userId: string, cityId: string) {
   const endereco = await prisma.address.findFirst({

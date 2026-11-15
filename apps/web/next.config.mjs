@@ -21,7 +21,9 @@ const nextConfig = {
   // SESSION_MAX_AGE_SECONDS em packages/auth. O painel fica nos 30 dias.
   env: { RAPIDINHO_SESSAO_DIAS: '400' },
   images: {
-    formats: ['image/avif', 'image/webp'],
+    // Só WebP: gerar AVIF na hora travava o servidor (até 60 s por imagem, 504
+    // no hero e na logo) quando várias larguras eram pedidas juntas.
+    formats: ['image/webp'],
     // Era 60 s: o navegador revalidava cada foto a todo minuto e o servidor
     // recomprimia. shortcut: arte trocada com o mesmo nome pode levar até uma
     // semana para aparecer a quem já visitou; para valer na hora, mude o nome.
