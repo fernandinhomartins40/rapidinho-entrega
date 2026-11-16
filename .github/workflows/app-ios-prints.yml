@@ -74,8 +74,10 @@ jobs:
           xcrun simctl privacy "$DISPOSITIVO" grant location "$APP_ID" || true
 
           mkdir -p "$RUNNER_TEMP/prints"
+          echo "API vista do Mac: $(curl -sS -o /dev/null -w '%{http_code} %{time_total}s' "$EXPO_PUBLIC_API_URL/api/app/v1/cidades")"
           # Primeira abertura: deixa a lista de cidades e a vitrine chegarem.
-          xcrun simctl launch "$DISPOSITIVO" "$APP_ID"; sleep 25
+          xcrun simctl launch "$DISPOSITIVO" "$APP_ID"; sleep 45
+          xcrun simctl io "$DISPOSITIVO" screenshot "$RUNNER_TEMP/prints/00-aquecimento.png"
           xcrun simctl terminate "$DISPOSITIVO" "$APP_ID" || true
 
           C=palmital-pr
@@ -101,10 +103,13 @@ jobs:
           busca|/busca
           EOF
           sips -g pixelWidth -g pixelHeight "$RUNNER_TEMP"/prints/*.png
+          # Diagnóstico: o que o app registrou (rede, erros de JS).
+          xcrun simctl spawn "$DISPOSITIVO" log show --last 15m --style compact             --predicate 'process == "Rapidinho"' > "$RUNNER_TEMP/prints/log-do-app.txt" || true
+          grep -iE "error|fail|nsurl|tls|network|ReactNativeJS" "$RUNNER_TEMP/prints/log-do-app.txt" | head -60 || true
 
       - name: Artefato (prints)
         uses: actions/upload-artifact@v4
         with:
           name: prints-ios
-          path: ${{ runner.temp }}/prints/*.png
+          path: ${{ runner.temp }}/prints/*
           if-no-files-found: error
