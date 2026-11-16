@@ -16,7 +16,8 @@ export class ErroDaApi extends Error {
 }
 
 // Guardado no armazenamento cifrado do aparelho: é a chave da conta da pessoa.
-export const lerToken = () => SecureStore.getItemAsync(CHAVE_DO_TOKEN);
+// Sem acesso ao keychain (ex.: simulador sem assinatura) segue sem sessão, em vez de travar toda chamada.
+export const lerToken = () => SecureStore.getItemAsync(CHAVE_DO_TOKEN).catch(() => null);
 export const gravarToken = (token: string) => SecureStore.setItemAsync(CHAVE_DO_TOKEN, token);
 export const apagarToken = () => SecureStore.deleteItemAsync(CHAVE_DO_TOKEN);
 

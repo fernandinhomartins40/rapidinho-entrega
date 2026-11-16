@@ -100,7 +100,7 @@ jobs:
           loja|/loja/$C/$L
           produto|/produto/$C/66fc5264-0fb8-4255-ad10-4cc9d709927a
           lista|/lista
-          busca|/busca
+          mercado|/loja/$C/mercado-vila-nova
           EOF
           sips -g pixelWidth -g pixelHeight "$RUNNER_TEMP"/prints/*.png
           # Diagnóstico: o que o app registrou (rede, erros de JS).
