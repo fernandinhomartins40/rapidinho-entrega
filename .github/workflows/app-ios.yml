@@ -104,6 +104,20 @@ jobs:
             DEVELOPMENT_TEAM="$TEAM_ID" \
             archive | tail -80
 
+      # O archive sem assinatura não grava as permissões (entitlements), e o
+      # export só reassina o que já está lá: sem isto o app chegava à Apple sem
+      # aps-environment, e o login por SMS caía sempre no captcha. Assinatura
+      # provisória (ad hoc) com as permissões; o export troca pela de distribuição.
+      - name: Permissões do app no archive
+        run: |
+          APP="$RUNNER_TEMP/Rapidinho.xcarchive/Products/Applications/Rapidinho.app"
+          find "$APP/Frameworks" -maxdepth 1 \( -name '*.framework' -o -name '*.dylib' \) \
+            -exec codesign --force --sign - {} \; 2>/dev/null || true
+          codesign --force --sign - \
+            --entitlements apps/mobile/ios/Rapidinho/Rapidinho.entitlements "$APP"
+          codesign -d --entitlements :- "$APP" 2>/dev/null | grep -q aps-environment \
+            || { echo "::error::aps-environment não entrou no archive"; exit 1; }
+
       - name: Exportar e enviar ao App Store Connect
         run: |
           set -o pipefail
