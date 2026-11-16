@@ -1,12 +1,14 @@
 # Vídeo de uso para a revisão da Apple (gravado em .github/workflows/app-ios-prints.yml).
 # Entra com a conta de revisão, navega, põe um item na sacola e exclui a conta.
 # TELEFONE (só dígitos) e CODIGO vêm dos secrets APP_REVISAO_*.
+# O Maestro enxerga o accessibilityLabel, que esconde o texto de dentro
+# (ex.: o botão da cidade é "Trocar cidade", não "Entregar em").
 appId: br.com.rapidinhoentrega.app
 ---
 - launchApp
 # A primeira abertura no simulador demora; só grava com a home já carregada.
 - extendedWaitUntil:
-    visible: "Entregar em"
+    visible: "Trocar cidade"
     timeout: 150000
 - waitForAnimationToEnd
 - startRecording: video-uso
@@ -28,9 +30,9 @@ appId: br.com.rapidinhoentrega.app
 # Conta nova só tem o telefone: o app pede o nome.
 - runFlow:
     when:
-      visible: "Ex.: Maria da Silva"
+      visible: "Seu nome"
     commands:
-      - tapOn: "Ex.: Maria da Silva"
+      - tapOn: "Seu nome"
       - inputText: "Cliente Rapidinho"
       - hideKeyboard
       - tapOn: "Salvar"
@@ -38,21 +40,21 @@ appId: br.com.rapidinhoentrega.app
 
 # Navegar: uma loja e um item na sacola
 - extendedWaitUntil:
-    visible: "Entregar em"
+    visible: "Trocar cidade"
     timeout: 20000
 - scrollUntilVisible:
-    element: "Peixaria e Restaurante Rio Piquiri"
+    element: "Peixaria e Restaurante Rio Piquiri.*"
     direction: DOWN
     timeout: 30000
-- tapOn: "Peixaria e Restaurante Rio Piquiri"
+- tapOn: "Peixaria e Restaurante Rio Piquiri.*"
 - extendedWaitUntil:
     visible: "Mais pedidos"
     timeout: 20000
 - scrollUntilVisible:
-    element: "Água mineral"
+    element: "Água mineral.*"
     direction: DOWN
     timeout: 30000
-- tapOn: "Água mineral"
+- tapOn: "Água mineral.*"
 - waitForAnimationToEnd
 # Com a loja fechada o botão vira "Loja fechada agora": o vídeo segue sem adicionar.
 - tapOn:
@@ -68,7 +70,7 @@ appId: br.com.rapidinhoentrega.app
 - waitForAnimationToEnd
 
 # Excluir a conta
-- tapOn: "Conta"
+- tapOn: "Conta.*"
 - scrollUntilVisible:
     element: "Excluir minha conta"
     direction: DOWN
