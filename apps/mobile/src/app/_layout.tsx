@@ -10,11 +10,11 @@ import {
   useFonts as useFonteDeCorpo,
 } from '@expo-google-fonts/dm-sans';
 import { focusManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { AppState } from 'react-native';
+import { AppState, Platform, Settings } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ProvedorDeCidade } from '@/api/cidade';
@@ -50,6 +50,15 @@ export default function Raiz() {
 
   useEffect(() => {
     if (pronto) void SplashScreen.hideAsync();
+  }, [pronto]);
+
+  // Prints da App Store: o simulador abre o app com `-rota /tela` (vira
+  // NSUserDefaults), sem o diálogo que o link rapidinho:// mostra no iOS.
+  useEffect(() => {
+    const rota = pronto && Platform.OS === 'ios' ? Settings.get('rota') : null;
+    if (typeof rota === 'string' && rota.startsWith('/')) {
+      setTimeout(() => router.push(rota as never), 300);
+    }
   }, [pronto]);
 
   if (!pronto) return null;

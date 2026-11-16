@@ -1,0 +1,110 @@
+# =============================================================================
+# Prints do app para a App Store, no simulador de iPhone do macOS do GitHub
+# (nada roda no PC do dono). Compila o app para o simulador com a API de
+# produção, abre cada tela com o argumento `-rota` (lido em src/app/_layout.tsx)
+# e salva as capturas no tamanho de 6,9" (1320x2868) como artefato.
+# Manual (Run workflow).
+# =============================================================================
+name: App iOS - prints da loja
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prints:
+    runs-on: macos-26
+    timeout-minutes: 75
+    env:
+      EXPO_PUBLIC_API_URL: https://rapidinhoentrega.com.br
+      NODE_ENV: production
+      APP_ID: br.com.rapidinhoentrega.app
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/mobile/pnpm-lock.yaml
+
+      - name: Instalar dependências
+        working-directory: apps/mobile
+        run: pnpm install --frozen-lockfile --ignore-workspace
+
+      - name: Plist do Firebase
+        env:
+          PLIST_B64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
+        run: |
+          printf '%s' "$PLIST_B64" | base64 -D > "$RUNNER_TEMP/GoogleService-Info.plist"
+          echo "GOOGLE_SERVICE_INFO_PLIST=$RUNNER_TEMP/GoogleService-Info.plist" >> "$GITHUB_ENV"
+
+      - name: Gerar o projeto iOS
+        working-directory: apps/mobile
+        run: |
+          pnpm exec expo prebuild --platform ios --clean
+          test -d ios/Rapidinho.xcworkspace || { echo "::error::pod install falhou (veja acima)"; exit 1; }
+
+      - name: Compilar para o simulador (Release)
+        working-directory: apps/mobile/ios
+        run: |
+          set -o pipefail
+          xcodebuild -workspace Rapidinho.xcworkspace -scheme Rapidinho -configuration Release \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/dd" CODE_SIGNING_ALLOWED=NO build | tail -40
+
+      - name: Tirar os prints
+        run: |
+          # iPhone de 6,9" (1320x2868): o maior "Pro Max" disponível no Xcode do runner.
+          DISPOSITIVO=$(xcrun simctl list devices available | grep -E "iPhone [0-9]+ Pro Max" | tail -1 | sed -E 's/^ *(.*) \(([0-9A-F-]+)\).*/\2/')
+          test -n "$DISPOSITIVO" || { xcrun simctl list devices available; exit 1; }
+          xcrun simctl list devices available | grep "$DISPOSITIVO"
+          xcrun simctl boot "$DISPOSITIVO"
+          xcrun simctl bootstatus "$DISPOSITIVO" -b
+          xcrun simctl ui "$DISPOSITIVO" appearance light
+          xcrun simctl status_bar "$DISPOSITIVO" override --time 9:41 --batteryState charged \
+            --batteryLevel 100 --cellularMode active --cellularBars 4 --wifiBars 3 --dataNetwork wifi
+          xcrun simctl install "$DISPOSITIVO" "$(find "$RUNNER_TEMP/dd/Build/Products" -maxdepth 2 -name 'Rapidinho.app' | head -1)"
+          xcrun simctl privacy "$DISPOSITIVO" grant location "$APP_ID" || true
+
+          mkdir -p "$RUNNER_TEMP/prints"
+          # Primeira abertura: deixa a lista de cidades e a vitrine chegarem.
+          xcrun simctl launch "$DISPOSITIVO" "$APP_ID"; sleep 25
+          xcrun simctl terminate "$DISPOSITIVO" "$APP_ID" || true
+
+          C=palmital-pr
+          L=peixaria-e-restaurante-rio-piquiri
+          n=0
+          while IFS='|' read -r nome rota; do
+            n=$((n + 1))
+            if [ "$rota" = "/" ]; then
+              xcrun simctl launch "$DISPOSITIVO" "$APP_ID"
+            else
+              xcrun simctl launch "$DISPOSITIVO" "$APP_ID" -rota "$rota"
+            fi
+            sleep 14
+            xcrun simctl io "$DISPOSITIVO" screenshot "$RUNNER_TEMP/prints/0${n}-${nome}.png"
+            xcrun simctl terminate "$DISPOSITIVO" "$APP_ID" || true
+            sleep 2
+          done <<EOF
+          inicio|/
+          categoria|/categoria/$C/restaurante
+          loja|/loja/$C/$L
+          produto|/produto/$C/66fc5264-0fb8-4255-ad10-4cc9d709927a
+          lista|/lista
+          busca|/busca
+          EOF
+          sips -g pixelWidth -g pixelHeight "$RUNNER_TEMP"/prints/*.png
+
+      - name: Artefato (prints)
+        uses: actions/upload-artifact@v4
+        with:
+          name: prints-ios
+          path: ${{ runner.temp }}/prints/*.png
+          if-no-files-found: error
