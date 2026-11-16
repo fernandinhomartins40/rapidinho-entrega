@@ -1,0 +1,82 @@
+# Vídeo de uso para a revisão da Apple (gravado em .github/workflows/app-ios-prints.yml).
+# Entra com a conta de revisão, navega, põe um item na sacola e exclui a conta.
+# TELEFONE (só dígitos) e CODIGO vêm dos secrets APP_REVISAO_*.
+appId: br.com.rapidinhoentrega.app
+---
+- launchApp
+- extendedWaitUntil:
+    visible: "Entregar em"
+    timeout: 40000
+- waitForAnimationToEnd
+
+# Entrar
+- tapOn: "Entre ou cadastre-se"
+- tapOn: "Celular com DDD"
+- inputText: ${TELEFONE}
+- tapOn: "Li e aceito os termos e a privacidade"
+- tapOn: "Receber código por SMS"
+- extendedWaitUntil:
+    visible: "Código de 6 números"
+    timeout: 20000
+- tapOn: "Código de 6 números"
+- inputText: ${CODIGO}
+- tapOn: "Confirmar"
+- waitForAnimationToEnd
+
+# Conta nova só tem o telefone: o app pede o nome.
+- runFlow:
+    when:
+      visible: "Ex.: Maria da Silva"
+    commands:
+      - tapOn: "Ex.: Maria da Silva"
+      - inputText: "Cliente Rapidinho"
+      - hideKeyboard
+      - tapOn: "Salvar"
+      - waitForAnimationToEnd
+
+# Navegar: uma loja e um item na sacola
+- extendedWaitUntil:
+    visible: "Entregar em"
+    timeout: 20000
+- scrollUntilVisible:
+    element: "Peixaria e Restaurante Rio Piquiri"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Peixaria e Restaurante Rio Piquiri"
+- extendedWaitUntil:
+    visible: "Mais pedidos"
+    timeout: 20000
+- scrollUntilVisible:
+    element: "Água mineral"
+    direction: DOWN
+    timeout: 30000
+- tapOn: "Água mineral"
+- waitForAnimationToEnd
+# Com a loja fechada o botão vira "Loja fechada agora": o vídeo segue sem adicionar.
+- tapOn:
+    text: "Adicionar.*"
+    optional: true
+- waitForAnimationToEnd
+- tapOn:
+    text: "Voltar"
+    optional: true
+- tapOn:
+    text: "Voltar"
+    optional: true
+- waitForAnimationToEnd
+
+# Excluir a conta
+- tapOn: "Conta"
+- scrollUntilVisible:
+    element: "Excluir minha conta"
+    direction: DOWN
+    timeout: 20000
+- tapOn: "Excluir minha conta"
+- extendedWaitUntil:
+    visible: "Excluir sua conta?"
+    timeout: 10000
+- tapOn: "Excluir"
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible: "Entre.*"
+    timeout: 20000

@@ -57,13 +57,15 @@ jobs:
           set -o pipefail
           xcodebuild -workspace Rapidinho.xcworkspace -scheme Rapidinho -configuration Release \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath "$RUNNER_TEMP/dd" CODE_SIGNING_ALLOWED=NO build | tail -40
+            -derivedDataPath "$RUNNER_TEMP/dd"             CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER=             build | tail -40
+          # Assinatura local (ad hoc): sem ela o simulador nega o keychain e o login não fica salvo.
 
       - name: Tirar os prints
         run: |
           # iPhone de 6,9" (1320x2868): o maior "Pro Max" disponível no Xcode do runner.
           DISPOSITIVO=$(xcrun simctl list devices available | grep -E "iPhone [0-9]+ Pro Max" | tail -1 | sed -E 's/^ *(.*) \(([0-9A-F-]+)\).*/\2/')
           test -n "$DISPOSITIVO" || { xcrun simctl list devices available; exit 1; }
+          echo "DISPOSITIVO=$DISPOSITIVO" >> "$GITHUB_ENV"
           xcrun simctl list devices available | grep "$DISPOSITIVO"
           xcrun simctl boot "$DISPOSITIVO"
           xcrun simctl bootstatus "$DISPOSITIVO" -b
@@ -105,11 +107,34 @@ jobs:
           sips -g pixelWidth -g pixelHeight "$RUNNER_TEMP"/prints/*.png
           # Diagnóstico: o que o app registrou (rede, erros de JS).
           xcrun simctl spawn "$DISPOSITIVO" log show --last 15m --style compact             --predicate 'process == "Rapidinho"' > "$RUNNER_TEMP/prints/log-do-app.txt" || true
-          grep -iE "error|fail|nsurl|tls|network|ReactNativeJS" "$RUNNER_TEMP/prints/log-do-app.txt" | head -60 || true
 
-      - name: Artefato (prints)
+      # Vídeo de uso para a revisão da Apple: entrar com a conta de revisão,
+      # navegar, pôr um item na sacola e excluir a conta. O próximo login com o
+      # mesmo número recria a conta (vazia).
+      - name: Gravar o vídeo
+        env:
+          TELEFONE: ${{ secrets.APP_REVISAO_TELEFONE }}
+          CODIGO: ${{ secrets.APP_REVISAO_CODIGO }}
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          export PATH="$HOME/.maestro/bin:$PATH"
+          xcrun simctl terminate "$DISPOSITIVO" "$APP_ID" || true
+          xcrun simctl io "$DISPOSITIVO" recordVideo --codec h264 --force "$RUNNER_TEMP/prints/video-uso.mp4" &
+          GRAVADOR=$!
+          sleep 3
+          set +e
+          maestro test -e TELEFONE="$TELEFONE" -e CODIGO="$CODIGO"             --debug-output "$RUNNER_TEMP/maestro" apps/mobile/.maestro/video.yaml
+          RESULTADO=$?
+          set -e
+          sleep 2
+          kill -INT "$GRAVADOR"; wait "$GRAVADOR" || true
+          cp -R "$RUNNER_TEMP/maestro" "$RUNNER_TEMP/prints/maestro" 2>/dev/null || true
+          exit $RESULTADO
+
+      - name: Artefato (prints e vídeo)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: prints-ios
-          path: ${{ runner.temp }}/prints/*
+          path: ${{ runner.temp }}/prints/
           if-no-files-found: error
