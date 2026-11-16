@@ -84,6 +84,8 @@ jobs:
           node -e "const f='app.json',j=require('./'+f);j.expo.ios.buildNumber=process.env.BUILD;require('fs').writeFileSync(f,JSON.stringify(j,null,2))"
           echo "VERSAO=$(node -p "require('./app.json').expo.version")" >> "$GITHUB_ENV"
           pnpm exec expo prebuild --platform ios --clean
+          # O prebuild não falha quando o pod install falha: sem o workspace, para aqui.
+          test -d ios/Rapidinho.xcworkspace || { echo "::error::pod install falhou (veja acima)"; exit 1; }
 
       - name: Xcode
         run: xcodebuild -version
