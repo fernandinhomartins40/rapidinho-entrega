@@ -24,7 +24,10 @@ appId: br.com.rapidinhoentrega.app
     timeout: 20000
 - tapOn: "Código de 6 números"
 - inputText: ${CODIGO}
-- tapOn: "Confirmar"
+# O app confirma sozinho no 6º número; o botão só se ainda estiver na tela.
+- tapOn:
+    text: "Confirmar"
+    optional: true
 - waitForAnimationToEnd
 
 # Conta nova só tem o telefone: o app pede o nome.
