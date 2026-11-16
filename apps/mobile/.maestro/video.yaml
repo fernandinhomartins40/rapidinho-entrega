@@ -4,10 +4,12 @@
 appId: br.com.rapidinhoentrega.app
 ---
 - launchApp
+# A primeira abertura no simulador demora; só grava com a home já carregada.
 - extendedWaitUntil:
     visible: "Entregar em"
-    timeout: 40000
+    timeout: 150000
 - waitForAnimationToEnd
+- startRecording: video-uso
 
 # Entrar
 - tapOn: "Entre ou cadastre-se"
@@ -80,3 +82,4 @@ appId: br.com.rapidinhoentrega.app
 - extendedWaitUntil:
     visible: "Entre.*"
     timeout: 20000
+- stopRecording

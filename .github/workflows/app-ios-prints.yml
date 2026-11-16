@@ -92,7 +92,7 @@ jobs:
             else
               xcrun simctl launch "$DISPOSITIVO" "$APP_ID" -rota "$rota"
             fi
-            sleep 14
+            sleep 22
             xcrun simctl io "$DISPOSITIVO" screenshot "$RUNNER_TEMP/prints/0${n}-${nome}.png"
             xcrun simctl terminate "$DISPOSITIVO" "$APP_ID" || true
             sleep 2
@@ -119,16 +119,15 @@ jobs:
           curl -fsSL "https://get.maestro.mobile.dev" | bash
           export PATH="$HOME/.maestro/bin:$PATH"
           xcrun simctl terminate "$DISPOSITIVO" "$APP_ID" || true
-          xcrun simctl io "$DISPOSITIVO" recordVideo --codec h264 --force "$RUNNER_TEMP/prints/video-uso.mp4" &
-          GRAVADOR=$!
-          sleep 3
+          # O Maestro grava sozinho (startRecording no roteiro), já com a home carregada.
+          mkdir -p "$RUNNER_TEMP/maestro"
+          cd "$RUNNER_TEMP/maestro"
           set +e
-          maestro test -e TELEFONE="$TELEFONE" -e CODIGO="$CODIGO"             --debug-output "$RUNNER_TEMP/maestro" apps/mobile/.maestro/video.yaml
+          maestro test -e TELEFONE="$TELEFONE" -e CODIGO="$CODIGO"             --debug-output "$RUNNER_TEMP/maestro/debug" "$GITHUB_WORKSPACE/apps/mobile/.maestro/video.yaml"
           RESULTADO=$?
           set -e
-          sleep 2
-          kill -INT "$GRAVADOR"; wait "$GRAVADOR" || true
-          cp -R "$RUNNER_TEMP/maestro" "$RUNNER_TEMP/prints/maestro" 2>/dev/null || true
+          find . -name 'video-uso*.mp4' -exec cp {} "$RUNNER_TEMP/prints/video-uso.mp4" \;
+          cp -R "$RUNNER_TEMP/maestro/debug" "$RUNNER_TEMP/prints/maestro" 2>/dev/null || true
           exit $RESULTADO
 
       - name: Artefato (prints e vídeo)
