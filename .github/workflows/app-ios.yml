@@ -1,0 +1,162 @@
+# =============================================================================
+# App iOS: gera o build assinado e envia ao App Store Connect (TestFlight), tudo
+# no macOS do GitHub, sem Mac do dono. Manual (Run workflow). Mesmo esquema do
+# Fuse Aprova; aqui o projeto Xcode é gerado na hora (expo prebuild) a partir de
+# apps/mobile, como o Android no deploy.
+#
+# Assinatura automática pela chave de API do App Store Connect: o Xcode cria/usa
+# o certificado de distribuição gerenciado na nuvem da Apple e o perfil da App
+# Store. Nenhum certificado .p12 nem perfil fica guardado aqui.
+#
+# Secrets (Settings → Secrets → Actions):
+#   APPSTORE_API_KEY_ID            Key ID da chave da API (papel Admin)
+#   APPSTORE_API_ISSUER_ID         Issuer ID da mesma tela
+#   APPSTORE_API_KEY_P8            conteúdo inteiro do AuthKey_XXXX.p8
+#   APPLE_TEAM_ID                  Team ID
+#   GOOGLE_SERVICE_INFO_PLIST_B64  GoogleService-Info.plist do app iOS no Firebase, em base64
+# =============================================================================
+name: App iOS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-ios
+  cancel-in-progress: false
+
+jobs:
+  ios:
+    name: Build iOS e envio ao TestFlight
+    # Desde 28/04/2026 a Apple só aceita builds do Xcode 26 (SDK iOS 26).
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+      ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+      TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      # O build cresce a cada execução (o App Store Connect exige número sempre maior).
+      BUILD: ${{ github.run_number }}
+      EXPO_PUBLIC_API_URL: https://rapidinhoentrega.com.br
+      NODE_ENV: production
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/mobile/pnpm-lock.yaml
+
+      # O app tem instalação própria, fora do workspace do site.
+      - name: Instalar dependências
+        working-directory: apps/mobile
+        run: pnpm install --frozen-lockfile --ignore-workspace
+
+      - name: Tipos
+        working-directory: apps/mobile
+        run: pnpm exec tsc --noEmit
+
+      - name: Arquivos das contas (fora do repositório)
+        env:
+          KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          PLIST_B64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_B64 }}
+        run: |
+          for nome in KEY_P8 KEY_ID ISSUER_ID TEAM_ID PLIST_B64; do
+            test -n "${!nome}" || { echo "::error::Secret ausente: $nome" >&2; exit 1; }
+          done
+          mkdir -p "$RUNNER_TEMP/chave"
+          printf '%s\n' "$KEY_P8" > "$RUNNER_TEMP/chave/AuthKey_$KEY_ID.p8"
+          printf '%s' "$PLIST_B64" | base64 -D > "$RUNNER_TEMP/chave/GoogleService-Info.plist"
+          echo "CHAVE_P8=$RUNNER_TEMP/chave/AuthKey_$KEY_ID.p8" >> "$GITHUB_ENV"
+          echo "GOOGLE_SERVICE_INFO_PLIST=$RUNNER_TEMP/chave/GoogleService-Info.plist" >> "$GITHUB_ENV"
+
+      # A versão (2.1.0) vem do app.json, a mesma do Android; o build é o desta execução.
+      - name: Gerar o projeto iOS
+        working-directory: apps/mobile
+        run: |
+          node -e "const f='app.json',j=require('./'+f);j.expo.ios.buildNumber=process.env.BUILD;require('fs').writeFileSync(f,JSON.stringify(j,null,2))"
+          echo "VERSAO=$(node -p "require('./app.json').expo.version")" >> "$GITHUB_ENV"
+          pnpm exec expo prebuild --platform ios --clean
+
+      - name: Xcode
+        run: xcodebuild -version
+
+      # Sem assinatura aqui: a assinatura automática do archive pede perfil de
+      # desenvolvimento, que exige iPhone cadastrado na conta. A de distribuição
+      # é feita no export, abaixo.
+      - name: Archive (Release, sem assinatura)
+        working-directory: apps/mobile/ios
+        run: |
+          set -o pipefail
+          xcodebuild -workspace Rapidinho.xcworkspace -scheme Rapidinho -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Rapidinho.xcarchive" \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            archive | tail -80
+
+      - name: Exportar e enviar ao App Store Connect
+        run: |
+          set -o pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+            <key>uploadSymbols</key><true/>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Rapidinho.xcarchive" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$CHAVE_P8" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" | tail -60
+          echo "::notice title=Enviado::Versão $VERSAO (build $BUILD) enviada. Em 10 a 30 min aparece no TestFlight."
+          # Mesma assinatura, agora gravada em arquivo, para conferir e guardar o .ipa.
+          sed -i '' 's#<string>upload</string>#<string>export</string>#' "$RUNNER_TEMP/ExportOptions.plist"
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Rapidinho.xcarchive" \
+            -exportPath "$RUNNER_TEMP/ipa" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$CHAVE_P8" \
+            -authenticationKeyID "$KEY_ID" \
+            -authenticationKeyIssuerID "$ISSUER_ID" | tail -20
+
+      # O login por SMS confirma o aparelho por notificação silenciosa: sem o
+      # aps-environment assinado, ele cai sempre no captcha. Fica registrado aqui.
+      - name: Conferir assinatura e permissões do .ipa
+        run: |
+          cd "$RUNNER_TEMP/ipa"
+          unzip -q -o ./*.ipa -d conferir
+          codesign -dvv conferir/Payload/Rapidinho.app 2>&1 | grep -E "Authority|TeamIdentifier" || true
+          codesign -d --entitlements :- conferir/Payload/Rapidinho.app 2>/dev/null | grep -A1 "aps-environment" \
+            || echo "::warning title=Sem notificação::O .ipa saiu sem aps-environment; o login por SMS vai usar o captcha."
+
+      - name: Artefato (.ipa)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapidinho-ios-${{ env.VERSAO }}-${{ github.run_number }}
+          path: ${{ runner.temp }}/ipa/*.ipa
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Apagar a chave do runner
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/chave"
