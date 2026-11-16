@@ -92,8 +92,13 @@ export default function Inicio() {
   // Topo preto: hora e bateria em branco só enquanto a home está na frente.
   useFocusEffect(
     useCallback(() => {
-      setStatusBarStyle('light');
-      return () => setStatusBarStyle('dark');
+      // Na abertura, o <StatusBar style="dark"> da raiz aplica depois deste
+      // efeito (setImmediate); o timer roda depois dele e o branco prevalece.
+      const timer = setTimeout(() => setStatusBarStyle('light'), 50);
+      return () => {
+        clearTimeout(timer);
+        setStatusBarStyle('dark');
+      };
     }, []),
   );
 
